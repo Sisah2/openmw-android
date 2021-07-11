@@ -1,0 +1,64 @@
+diff --git a/src/gl/hint.c b/src/gl/hint.c
+index effb8dce..35dd00da 100755
+--- a/src/gl/hint.c
++++ b/src/gl/hint.c
+@@ -11,7 +11,13 @@ void pandora_set_gamma();
+ #endif
+ 
+ void gl4es_glHint(GLenum pname, GLenum mode) {
+-    
++
++//save precomipled shader archive
++if(pname == 0xB10A){
++    fpe_writePSA();
++    return;
++}
++
+     FLUSH_BEGINEND;
+ 
+     LOAD_GLES(glHint);
+@@ -132,4 +138,4 @@ void gl4es_glHint(GLenum pname, GLenum mode) {
+             gles_glHint(pname, mode);
+     }
+ }
+-void glHint(GLenum pname, GLenum mode) AliasExport("gl4es_glHint");
+\ No newline at end of file
++void glHint(GLenum pname, GLenum mode) AliasExport("gl4es_glHint");
+diff --git a/src/gl/init.c b/src/gl/init.c
+index e5c5b494..a1ff8de2 100755
+--- a/src/gl/init.c
++++ b/src/gl/init.c
+@@ -633,6 +633,7 @@ void initialize_gl4es() {
+         env(LIBGL_NOPSA, globals4es.nopsa, "Don't use PrecompiledShaderArchive");
+         if(globals4es.nopsa==0) {
+             cwd[0]='\0';
++/*
+             // TODO: What to do on ANDROID and EMSCRIPTEN?
+ #ifdef __linux__
+             const char* home = GetEnvVar("HOME");
+@@ -643,8 +644,12 @@ void initialize_gl4es() {
+ #elif defined AMIGAOS4
+             strcpy(cwd, "PROGDIR:");
+ #endif
++*/
++            strcpy(cwd, "/storage/emulated/0/omw_nightly/");
++
+             if(strlen(cwd)) {
+                 strcat(cwd, ".gl4es.psa");
++                SHUT_LOGD("Shader archive file: %s\n", cwd);
+                 fpe_InitPSA(cwd);
+                 fpe_readPSA();
+             }
+diff --git a/src/glx/hardext.c b/src/glx/hardext.c
+index 9790fc3e..0df88455 100755
+--- a/src/glx/hardext.c
++++ b/src/glx/hardext.c
+@@ -345,7 +345,7 @@ void GetHardwareExtensions(int notest)
+         gles_glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &hardext.maxvattrib);
+         SHUT_LOGD("Max vertex attrib: %d\n", hardext.maxvattrib);
+         S("GL_OES_standard_derivatives ", derivatives, 1);
+-        S("GL_OES_get_program ", prgbinary, 1);
++        S("GL_OES_get_program_binary ", prgbinary, 1);
+         if(hardext.prgbinary) {
+             gles_glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS_OES, &hardext.prgbin_n);
+             SHUT_LOGD("Number of supported Program Binary Format: %d\n", hardext.prgbin_n);
