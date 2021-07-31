@@ -6,7 +6,7 @@ jobs:
   build:
     strategy:
       matrix:
-        arch: [arm, arm64, x86, x86_64]
+        arch: [arm64]
 
     runs-on: ubuntu-18.04
 
