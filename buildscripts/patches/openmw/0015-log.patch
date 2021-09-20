@@ -1,0 +1,25 @@
+From df10138806cbb80bca457d27b76bf3f31f38771e Mon Sep 17 00:00:00 2001
+From: Dmitry <docent27@ukr.net>
+Date: Sat, 10 Jul 2021 19:34:26 +0300
+Subject: [PATCH] minimal log
+
+---
+ components/debug/debugging.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/components/debug/debugging.cpp b/components/debug/debugging.cpp
+index 0e37294..d1e89d9 100644
+--- a/components/debug/debugging.cpp
++++ b/components/debug/debugging.cpp
+@@ -132,7 +132,7 @@ namespace Debug
+             return;
+         }
+ 
+-        CurrentDebugLevel = Verbose;
++        CurrentDebugLevel = Error;
+     }
+ }
+ 
+--
+libgit2 0.28.4
+
