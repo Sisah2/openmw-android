@@ -346,6 +346,19 @@ class MainActivity : AppCompatActivity() {
         deleteRecursive(File(Constants.USER_CONFIG))
     }
 
+    /**
+     * Reset user resource files to default
+     */
+    private fun removeResourceFiles() {
+        reinstallStaticFiles()
+        deleteRecursive(File(Constants.USER_FILE_STORAGE + "/resources/"))
+
+        var src = File(Constants.RESOURCES)
+        var dst = File(Constants.USER_FILE_STORAGE + "/resources/")
+        dst.mkdirs()
+        src.copyRecursively(dst, true) 
+    }
+
     private fun configureDefaultsBin(args: Map<String, String>) {
         val defaults = File(Constants.DEFAULTS_BIN).readText()
         val decoded = String(Base64.getDecoder().decode(defaults))
@@ -388,7 +401,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            Os.setenv("OPENMW_GAMMA", "%.2f".format(Locale.ROOT, gamma), true)
+            Os.setenv("LIBGL_GAMMA", "%.2f".format(Locale.ROOT, gamma), true)
         } catch (e: ErrnoException) {
             // can't really do much if that fails...
         }
@@ -430,6 +443,13 @@ class MainActivity : AppCompatActivity() {
                 file.Writer.write(Constants.OPENMW_CFG, "data", "\"" + inst.findDataFiles() + "\"")
 
                 file.Writer.write(Constants.OPENMW_CFG, "encoding", prefs!!.getString("pref_encoding", GameInstaller.DEFAULT_CHARSET_PREF)!!)
+
+                var src = File(Constants.RESOURCES)
+                var dst = File(Constants.USER_FILE_STORAGE + "/resources/")
+                val resourcesDirCreated :Boolean = dst.mkdirs()
+
+                if(resourcesDirCreated)
+                    src.copyRecursively(dst, false) 
 
                 configureDefaultsBin(mapOf(
                         "scaling factor" to "%.2f".format(Locale.ROOT, scaling),
@@ -509,9 +529,21 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_reset_config -> {
-                removeUserConfig()
                 removeStaticFiles()
                 Toast.makeText(this, getString(R.string.config_was_reset), Toast.LENGTH_SHORT).show()
+                true
+            }
+
+            R.id.action_reset_user_config -> {
+                removeUserConfig()
+                Toast.makeText(this, getString(R.string.user_config_was_reset), Toast.LENGTH_SHORT).show()
+                true
+            }
+
+            R.id.action_reset_user_resources -> {
+                removeStaticFiles()
+                removeResourceFiles()
+                Toast.makeText(this, getString(R.string.user_resources_was_reset), Toast.LENGTH_SHORT).show()
                 true
             }
 

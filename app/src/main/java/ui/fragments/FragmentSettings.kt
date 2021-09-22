@@ -182,6 +182,9 @@ class FragmentSettings : PreferenceFragment(), OnSharedPreferenceChangeListener 
         val sharedPref = preferenceScreen.sharedPreferences
         findPreference("pref_gamma").isEnabled =
                 sharedPref.getString("pref_graphicsLibrary_v2", "") != "gles1"
+
+        findPreference("pref_nohighp").isEnabled =
+                sharedPref.getString("pref_shadersDir_v2", "") == "modified"
     }
 
 }

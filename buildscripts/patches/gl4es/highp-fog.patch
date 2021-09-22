@@ -1,0 +1,71 @@
+diff --git a/src/gl/fpe_shader.c b/src/gl/fpe_shader.c
+index 705d6ee6..d819603c 100644
+--- a/src/gl/fpe_shader.c
++++ b/src/gl/fpe_shader.c
+@@ -186,7 +186,7 @@ const char* const* fpe_VertexShader(shaderconv_need_t* need, fpe_state_t *state)
+     int cm_back_nullexp = state->cm_back_nullexp;
+     int texgens = 0;
+     int texmats = 0;
+-    const char* fogp = hardext.highp?"highp":"mediump";
++    const char* fogp = "highp";
+ 
+     for (int i=0; i<hardext.maxtex; ++i) {
+         if(state->texgen[i].texgen_s || state->texgen[i].texgen_t || state->texgen[i].texgen_r || state->texgen[i].texgen_q)
+@@ -836,7 +836,7 @@ const char* const* fpe_FragmentShader(shaderconv_need_t* need, fpe_state_t *stat
+     int texenv_combine = 0;
+     int texturing = 0;
+     char buff[1024];
+-    const char* fogp = hardext.highp?"highp":"mediump";
++    const char* fogp = "highp";
+ 
+ 
+     strcpy(shad, fpeshader_signature);
+@@ -1369,7 +1369,7 @@ const char* const* fpe_FragmentShader(shaderconv_need_t* need, fpe_state_t *stat
+                 sprintf(buff, "%s float FogF = clamp(exp(-(gl_Fog.density * fog_c)*(gl_Fog.density * fog_c)), 0., 1.);\n", fogp);
+                 break;
+             case FPE_FOG_LINEAR:
+-                sprintf(buff, "%s float FogF = clamp((gl_Fog.end - fog_c) %s, 0., 1.);\n", fogp, hardext.highp?"* gl_Fog.scale":"/ (gl_Fog.end - gl_Fog.start)");
++                sprintf(buff, "%s float FogF = clamp((gl_Fog.end - fog_c) * gl_Fog.scale, 0., 1.);\n", fogp);
+                 break;
+         }
+         ShadAppend(buff);
+diff --git a/src/gl/shaderconv.c b/src/gl/shaderconv.c
+index e25ea8c3..839892a6 100644
+--- a/src/gl/shaderconv.c
++++ b/src/gl/shaderconv.c
+@@ -196,15 +196,6 @@ static const char* gl4es_FogParametersSource =
+ "struct gl_FogParameters {\n"
+ "    lowp vec4 color;\n"
+ "    mediump float density;\n"
+-"    mediump float start;\n"
+-"    mediump float end;\n"
+-"    mediump float scale;\n"   // Derived:   1.0 / (end - start) 
+-"};\n"
+-"uniform gl_FogParameters gl_Fog;\n";
+-static const char* gl4es_FogParametersSourceHighp =
+-"struct gl_FogParameters {\n"
+-"    lowp vec4 color;\n"
+-"    mediump float density;\n"
+ "    highp   float start;\n"
+ "    highp   float end;\n"
+ "    highp   float scale;\n"   // Derived:   1.0 / (end - start) 
+@@ -890,8 +881,9 @@ char* ConvertShader(const char* pEntry, int isVertex, shaderconv_need_t *need)
+               if(builtin_matrix[i].matrix == MAT_MV) {
+                 if(need->need_mvmatrix && !hardext.highp)
+                   ishighp = 0;
+-                if(!hardext.highp && !isVertex)
++                if(/*!hardext.highp &&*/ !isVertex)
+                   need->need_mvmatrix = 1;
++                ishighp = 1; //force this shit
+               }
+               if(builtin_matrix[i].matrix == MAT_MVP) {
+                 if(need->need_mvpmatrix && !hardext.highp)
+@@ -1029,7 +1021,7 @@ char* ConvertShader(const char* pEntry, int isVertex, shaderconv_need_t *need)
+     Tmp = InplaceReplace(Tmp, &tmpsize, "gl_Point", "_gl4es_Point");
+   if(strstr(Tmp, "gl_FogParameters") || strstr(Tmp, "gl_Fog"))
+     {
+-      Tmp = InplaceInsert(GetLine(Tmp, headline), hardext.highp?gl4es_FogParametersSourceHighp:gl4es_FogParametersSource, Tmp, &tmpsize);
++      Tmp = InplaceInsert(GetLine(Tmp, headline), gl4es_FogParametersSource, Tmp, &tmpsize);
+       headline+=CountLine(gl4es_FogParametersSource);
+       Tmp = InplaceReplace(Tmp, &tmpsize, "gl_FogParameters", "_gl4es_FogParameters");
+     }

@@ -33,14 +33,6 @@
             />
 
         <EditTextPreference
-            android:key="pref_gamma"
-            android:title="@string/pref_gamma"
-            android:dialogTitle="@string/pref_gamma"
-            android:inputType="numberDecimal"
-            android:hint="1.0"
-            />
-
-        <EditTextPreference
             android:key="pref_uiScaling"
             android:title="@string/pref_uiScaling"
             android:dialogTitle="@string/pref_uiScaling"
@@ -74,13 +66,6 @@
             android:key="pref_show_fn"
             android:title="@string/pref_show_fn" />
 
-        <EditTextPreference
-            android:key="pref_customResolution"
-            android:title="@string/pref_customResolution"
-            android:dialogTitle="@string/pref_customResolution"
-            android:hint="640x480"
-            />
-
         <CheckBoxPreference
             android:key="pref_screen_keeper"
             android:title="@string/pref_screen_keeper"/>
@@ -96,6 +81,52 @@
             android:defaultValue="@string/pref_physicsFPS2_default"
             android:summary="%s"
             />
+
+        <CheckBoxPreference
+            android:key="pref_nohighp"
+            android:title="@string/pref_nohighp"/>
+
+        <CheckBoxPreference
+            android:key="pref_OSGVBO"
+            android:title="@string/pref_OSGVBO"
+            android:defaultValue="true"/>
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/pref_graphics">
+        <EditTextPreference
+            android:key="pref_customResolution"
+            android:title="@string/pref_customResolution"
+            android:dialogTitle="@string/pref_customResolution"
+            android:hint="640x480"
+            />
+
+        <EditTextPreference
+            android:key="pref_gamma"
+            android:title="@string/pref_gamma"
+            android:dialogTitle="@string/pref_gamma"
+            android:inputType="numberDecimal"
+            android:hint="1.0"
+            />
+
+        <ListPreference
+            android:key="pref_textureShrinking_v2"
+            android:title="@string/pref_textureShrinking"
+            android:dialogTitle="@string/pref_textureShrinking"
+            android:entries="@array/pref_textureShrinking_entries"
+            android:entryValues="@array/pref_textureShrinking_values"
+            android:defaultValue="@string/pref_textureShrinking_default"
+            android:summary="%s"
+        />
+
+        <ListPreference
+            android:key="pref_shadersDir_v2"
+            android:title="@string/pref_shadersDir"
+            android:dialogTitle="@string/pref_shadersDir"
+            android:entries="@array/pref_shadersDir_entries"
+            android:entryValues="@array/pref_shadersDir_values"
+            android:defaultValue="@string/pref_shadersDir_default"
+            android:summary="%s"
+        />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/pref_advanced">
@@ -108,7 +139,7 @@
             android:key="envLine"
             android:title="@string/pref_envLine"
             />
-
+<!--
         <ListPreference
             android:key="pref_graphicsLibrary_v2"
             android:title="@string/pref_graphicsLibrary"
@@ -118,6 +149,7 @@
             android:defaultValue="@string/pref_graphicsLibrary_default"
             android:summary="%s"
         />
+-->
     </PreferenceCategory>
 
 </PreferenceScreen>
