@@ -42,30 +42,19 @@
     <string name="pref_graphicsLibrary">Graphics library</string>
     <string name="pref_graphicsLibrary_default">gles2</string>
     <string name="pref_advanced">Advanced</string>
-    <string name="pref_graphics">Graphics</string>
     <string name="pref_commandLine">Custom command line arguments</string>
     <string name="pref_envLine">Custom environment flags</string>
-    <string name="pref_nohighp">Medium shader precision</string>
-    <string name="pref_OSGVBO">OSG VBO vertex buffer hint</string>
     <string name="pref_ui">User interface</string>
-    <string name="pref_textureShrinking">Texture shrinking</string>
-    <string name="pref_textureShrinking_default">none</string>
-    <string name="pref_shadersDir">Shaders preset</string>
-    <string name="pref_shadersDir_default">modified</string>
     <string name="pref_gamma">Gamma</string>
     <string name="pref_uiScaling">UI scaling factor</string>
     <string name="uiScaling_auto">Auto (%1$.2f)</string>
     <string name="pref_screen_keeper">Keep screen always on</string>
     <string name="pref_touchpadSensitivity">Virtual touchpad sensitivity</string>
-    <string name="action_reset_config">Reset static configuration files</string>
-    <string name="action_reset_user_config">Reset user configuration files</string>
-    <string name="action_reset_user_resources">Reset user resources</string>
+    <string name="action_reset_config">Reset configuration files</string>
     <string name="action_reset_screen_controls">Reset on-screen controls</string>
     <string name="action_show_screen_controls">On-screen controls…</string>
     <string name="pref_hide_controls">Hide on-screen buttons</string>
-    <string name="config_was_reset">Static configuration was reset to default values</string>
-    <string name="user_config_was_reset">User configuration was reset to default values</string>
-    <string name="user_resources_was_reset">User resources was reset to default values</string>
+    <string name="config_was_reset">Configuration was reset to default values</string>
     <string name="pref_lang">Language settings</string>
     <string name="pref_encoding">Game language</string>
     <string name="pref_encoding_default">win1252</string>
@@ -87,36 +76,8 @@
     </string-array>
 
     <string-array name="pref_physicsFPS2_entries">
-        <item>20</item>
         <item>30</item>
         <item>60</item>
-    </string-array>
-
-
-    <string-array name="pref_textureShrinking_entries">
-        <item>None</item>
-        <item>Low</item>
-        <item>Medium</item>
-        <item>High</item>
-    </string-array>
-
-    <string-array name="pref_textureShrinking_values">
-        <item>none</item>
-        <item>low</item>
-        <item>medium</item>
-        <item>high</item>
-    </string-array>
-
-    <string-array name="pref_shadersDir_entries">
-        <item>Modified</item>
-        <item>Vtastek PBR</item>
-        <item>Original</item>
-    </string-array>
-
-    <string-array name="pref_shadersDir_values">
-        <item>modified</item>
-        <item>pbr</item>
-        <item>none</item>
     </string-array>
 
     <string name="pref_unsafe_state_graph">Enable unsafe graphics optimizations</string>

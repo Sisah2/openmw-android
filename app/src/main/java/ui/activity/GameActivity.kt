@@ -78,6 +78,7 @@ class GameActivity : SDLActivity() {
                 Log.e("OpenMW", "Failed setting environment variables.")
                 e.printStackTrace()
             }
+
         }
 
         System.loadLibrary("c++_shared")
@@ -93,25 +94,6 @@ class GameActivity : SDLActivity() {
             }
 
         }
-
-        val textureShrinkingOption = prefs!!.getString("pref_textureShrinking_v2", "")
-        if (textureShrinkingOption == "low") Os.setenv("LIBGL_SHRINK", "2", true)
-        if (textureShrinkingOption == "medium") Os.setenv("LIBGL_SHRINK", "7", true)
-        if (textureShrinkingOption == "high") Os.setenv("LIBGL_SHRINK", "6", true)
-
-        val shaderDirOption = prefs!!.getString("pref_shadersDir_v2", "")
-        if (shaderDirOption == "modified") Os.setenv("OPENMW_SHADERS", "modified", true)
-        if (shaderDirOption == "pbr") Os.setenv("OPENMW_SHADERS", "pbr", true)
-
-        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_nohighp", false) && shaderDirOption == "modified") {
-            Os.setenv("LIBGL_NOHIGHP", "1", true)
-        }
-
-        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_OSGVBO", false)) {
-            Os.setenv("OSG_VERTEX_BUFFER_HINT", "VBO", true)
-        }
-
-        Os.setenv("OPENMW_USER_FILE_STORAGE", Constants.USER_FILE_STORAGE + "/", true)
 
         val envline: String = PreferenceManager.getDefaultSharedPreferences(this).getString("envLine", "").toString()
         if (envline.length > 0) {
@@ -179,7 +161,7 @@ class GameActivity : SDLActivity() {
 
     override fun getArguments(): Array<String> {
         val cmd = PreferenceManager.getDefaultSharedPreferences(this).getString("commandLine", "")
-        val commandlineParser = CommandlineParser("--resources " + Constants.USER_FILE_STORAGE + "/resources " + cmd!!)
+        val commandlineParser = CommandlineParser(cmd!!)
         return commandlineParser.argv
     }
 
