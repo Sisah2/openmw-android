@@ -401,7 +401,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            Os.setenv("OPENMW_GAMMA", "%.2f".format(Locale.ROOT, gamma), true)
+            Os.setenv("LIBGL_GAMMA", "%.2f".format(Locale.ROOT, gamma), true)
         } catch (e: ErrnoException) {
             // can't really do much if that fails...
         }

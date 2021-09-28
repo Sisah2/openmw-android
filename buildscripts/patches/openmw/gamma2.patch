@@ -1,5 +1,5 @@
 diff --git a/apps/openmw/mwrender/renderingmanager.cpp b/apps/openmw/mwrender/renderingmanager.cpp
-index a634bdd29..65c907641 100644
+index c3d9e5909..15bea8071 100644
 --- a/apps/openmw/mwrender/renderingmanager.cpp
 +++ b/apps/openmw/mwrender/renderingmanager.cpp
 @@ -71,6 +71,32 @@
@@ -35,10 +35,11 @@ index a634bdd29..65c907641 100644
  namespace MWRender
  {
      class GroundcoverUpdater : public SceneUtil::StateSetUpdater
-@@ -208,6 +234,18 @@ namespace MWRender
+@@ -208,6 +234,20 @@ namespace MWRender
              }
              else
                  stateset->removeAttribute(osg::StateAttribute::POLYGONMODE);
++
 +            {
 +                static bool init = false;
 +                static float gamma = 0;
@@ -51,10 +52,11 @@ index a634bdd29..65c907641 100644
 +                osg::ref_ptr<GammaCorrection> gammaAttribute = new GammaCorrection(gamma);
 +                stateset->setAttribute(gammaAttribute);
 +            }
++
          }
  
          void apply(osg::StateSet* stateset, osg::NodeVisitor*) override
-@@ -373,6 +411,10 @@ namespace MWRender
+@@ -373,6 +413,10 @@ namespace MWRender
          for (auto itr = shadowDefines.begin(); itr != shadowDefines.end(); itr++)
              globalDefines[itr->first] = itr->second;
  
@@ -65,7 +67,7 @@ index a634bdd29..65c907641 100644
          globalDefines["forcePPL"] = Settings::Manager::getBool("force per pixel lighting", "Shaders") ? "1" : "0";
          globalDefines["clamp"] = Settings::Manager::getBool("clamp lighting", "Shaders") ? "1" : "0";
          globalDefines["preLightEnv"] = Settings::Manager::getBool("apply lighting to environment maps", "Shaders") ? "1" : "0";
-@@ -512,6 +554,9 @@ namespace MWRender
+@@ -499,6 +543,9 @@ namespace MWRender
  
          mScreenshotManager.reset(new ScreenshotManager(viewer, mRootNode, sceneRoot, mResourceSystem, mWater.get()));
  
@@ -76,15 +78,14 @@ index a634bdd29..65c907641 100644
  
          osg::ref_ptr<osg::LightSource> source = new osg::LightSource;
 diff --git a/files/shaders/groundcover_fragment.glsl b/files/shaders/groundcover_fragment.glsl
-index e4a18b9e8..17f5a2941 100755
+index e4a18b9e8..f8c2b4eec 100755
 --- a/files/shaders/groundcover_fragment.glsl
 +++ b/files/shaders/groundcover_fragment.glsl
-@@ -78,4 +78,6 @@ gl_FragData[0].xyz *= lighting;
+@@ -78,4 +78,5 @@ gl_FragData[0].xyz *= lighting;
  
      gl_FragData[0].xyz = mix(gl_FragData[0].xyz, gl_Fog.color.xyz, fogValue);
  
 +    gl_FragData[0].xyz = pow(gl_FragData[0].xyz, vec3(1.0/@gamma));
-+
  }
 diff --git a/files/shaders/objects_fragment.glsl b/files/shaders/objects_fragment.glsl
 index d304b2abe..0b7273388 100644
@@ -109,13 +110,14 @@ index d304b2abe..0b7273388 100644
 +    gl_FragData[0].xyz = pow(gl_FragData[0].xyz, vec3(1.0/@gamma));
  }
 diff --git a/files/shaders/pbr/groundcover_fragment.glsl b/files/shaders/pbr/groundcover_fragment.glsl
-index fb98ee02c..0ab504e3b 100755
+index 8c0eb44d1..508ebec74 100755
 --- a/files/shaders/pbr/groundcover_fragment.glsl
 +++ b/files/shaders/pbr/groundcover_fragment.glsl
-@@ -97,4 +97,5 @@ gl_FragData[0].xyz *= lighting;
- 
+@@ -99,4 +99,6 @@ void main()
      gl_FragData[0].xyz = mix(gl_FragData[0].xyz, gl_Fog.color.xyz, fogValue);
  
+     applyShadowDebugOverlay();
++
 +    gl_FragData[0].xyz = pow(gl_FragData[0].xyz, vec3(1.0/@gamma));
  }
 diff --git a/files/shaders/pbr/objects_fragment.glsl b/files/shaders/pbr/objects_fragment.glsl
@@ -140,36 +142,6 @@ index d7d5fc61c..5ef33344d 100755
 +
 +    gl_FragData[0].xyz = pow(gl_FragData[0].xyz, vec3(1.0/@gamma));
  }
-diff --git a/files/shaders/pbr/pbr readme.txt b/files/shaders/pbr/pbr readme.txt
-deleted file mode 100755
-index 42175ae74..000000000
---- a/files/shaders/pbr/pbr readme.txt	
-+++ /dev/null
-@@ -1,24 +0,0 @@
--OpenMW PBR shaders v04 ALPHA
--Now it can render non metals without ambient reflections.
--metals and reflections after sky and post process shaders.
--
--_spec as PBR map
--means, delete all your old spec maps!!!
--
--_spec channels
--R: metalness 1.0(255) is metal
--G: roughness
--B: specular, 0.5 for 0.04(conversion is 0.16 * x^2)
--A: AO (don't have black alpha)
--
--Terrain doesn't have spec,
--instead you can put roughness into alpha of _diffusespec
--we assume there is no metal ground.
--
--MGE XE conversion
--_normals to _n
--invert G channel(openmw is DX style, MGE is OpenGL style. Yes, I know!)
--
--_parameters to _spec
--invert R channel
--make sure your alpha is not black as it is used for AO.
 diff --git a/files/shaders/pbr/terrain_fragment.glsl b/files/shaders/pbr/terrain_fragment.glsl
 index 29830c900..9b75cbba4 100755
 --- a/files/shaders/pbr/terrain_fragment.glsl

@@ -1,0 +1,51 @@
+diff --git a/src/gl/fpe_shader.c b/src/gl/fpe_shader.c
+index dd6ad8d6..307d5cde 100755
+--- a/src/gl/fpe_shader.c
++++ b/src/gl/fpe_shader.c
+@@ -1381,6 +1381,11 @@ const char* const* fpe_FragmentShader(shaderconv_need_t* need, fpe_state_t *stat
+         #endif
+     }
+ 
++    if(globals4es.gamma != 0.0) {
++        sprintf(buff, "fColor.rgb = pow(fColor.rgb, vec3(1.0/%f));\n", globals4es.gamma);
++        ShadAppend(buff);
++    }
++
+     //done
+     ShadAppend("gl_FragColor = fColor;\n");
+     ShadAppend("}");
+diff --git a/src/gl/init.c b/src/gl/init.c
+index e5c5b494..a609017f 100755
+--- a/src/gl/init.c
++++ b/src/gl/init.c
+@@ -129,11 +129,11 @@ void initialize_gl4es() {
+ #ifdef USE_FBIO
+     env(LIBGL_VSYNC, globals4es.vsync, "vsync enabled");
+ #endif
+-#ifdef PANDORA
++
+ 		if(GetEnvVarFloat("LIBGL_GAMMA",&globals4es.gamma,0.0f)) {
+       SHUT_LOGD("Set gamma to %.2f\n", globals4es.gamma);
+ 		}
+-#endif
++
+     env(LIBGL_NOBGRA, globals4es.nobgra, "Ignore BGRA texture capability");
+     env(LIBGL_NOTEXRECT, globals4es.notexrect, "Don't export Text Rectangle extension");
+     if(globals4es.usefbo) {
+diff --git a/src/gl/shaderconv.c b/src/gl/shaderconv.c
+index b2f98285..f32d7341 100755
+--- a/src/gl/shaderconv.c
++++ b/src/gl/shaderconv.c
+@@ -1202,6 +1202,12 @@ char* ConvertShader(const char* pEntry, int isVertex, shaderconv_need_t *need)
+     Tmp = InplaceReplace(Tmp, &tmpsize, "mat3x3", "mat3");
+   }
+   
++  if(globals4es.gamma != 0.0) {
++    char shaderHack[200];
++    sprintf(shaderHack, "applyShadowDebugOverlay(); \n    gl_FragData[0].xyz = pow(gl_FragData[0].xyz, vec3(1.0/%f));", globals4es.gamma);
++    Tmp = InplaceReplace(Tmp, &tmpsize, "applyShadowDebugOverlay();", shaderHack);
++  }
++
+   // finish
+   if((globals4es.dbgshaderconv&maskafter)==maskafter) {
+     printf("New Shader source:\n%s\n", Tmp);
