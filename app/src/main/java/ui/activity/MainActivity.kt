@@ -62,6 +62,8 @@ import utils.MyApp
 import utils.Utils.hideAndroidControls
 import java.util.*
 
+import android.util.Base64
+
 class MainActivity : AppCompatActivity() {
     private lateinit var prefs: SharedPreferences
 
@@ -392,7 +394,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun configureDefaultsBin(args: Map<String, String>) {
         val defaults = File(Constants.DEFAULTS_BIN).readText()
-        val decoded = String(Base64.getDecoder().decode(defaults))
+        val decoded = String(android.util.Base64.decode(defaults, android.util.Base64.DEFAULT))
         val lines = decoded.lines().map {
             for ((k, v) in args) {
                 if (it.startsWith("$k ="))
@@ -401,14 +403,9 @@ class MainActivity : AppCompatActivity() {
             it
         }
         val data = lines.joinToString("\n")
-        val encoded = Base64.getEncoder().encodeToString(data.toByteArray())
+
+        val encoded = android.util.Base64.encodeToString(data.toByteArray(), android.util.Base64.NO_WRAP)
         File(Constants.DEFAULTS_BIN).writeText(encoded)
-
-        var output = "start\n"
-        for ((k, v) in args)
-            output += k + " = " + v + "\n"
-
-        File("/storage/emulated/0/omw_nightly/config/test.cfg").writeText(output)
     }
 
     private fun startGame() {

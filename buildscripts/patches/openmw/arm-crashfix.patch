@@ -1,0 +1,24 @@
+diff --git a/components/esm/defs.hpp b/components/esm/defs.hpp
+index f87a67405..49a4962ca 100644
+--- a/components/esm/defs.hpp
++++ b/components/esm/defs.hpp
+@@ -41,8 +41,8 @@ enum RangeType
+     RT_Target = 2
+ };
+ 
+-#pragma pack(push)
+-#pragma pack(1)
++//#pragma pack(push)
++//#pragma pack(1)
+ 
+ // Position and rotation
+ struct Position
+@@ -68,7 +68,7 @@ struct Position
+         return tuple(l) < tuple(r);
+     }
+ };
+-#pragma pack(pop)
++//#pragma pack(pop)
+ 
+ bool inline operator== (const Position& left, const Position& right) noexcept
+ {

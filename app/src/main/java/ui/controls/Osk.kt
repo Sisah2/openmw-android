@@ -132,23 +132,25 @@ abstract class OskButton(
  * @param key key sent when in normal state
  * @param shiftKey key sent when shift is pressed
  */
-class OskSimpleButton(val key: Char, val shiftKey: Char, positionX: Int, positionY: Int, sizeW: Int, sizeH: Int):
+class OskSimpleButton(val key: Char, val shiftKey: Char, positionX: Int, positionY: Int, sizeW: Int, sizeH: Int, isRussian: Boolean):
     OskButton(key.toString(), positionX, positionY, sizeW, sizeH) {
 
     private val keyStr = key.toString()
     private val shiftKeyStr = shiftKey.toString()
     private var curKeyStr = keyStr
 
+    val russian = isRussian
+
     val mKeyCharacterMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
     val keyEvent = mKeyCharacterMap.getEvents(key.toString().toCharArray())
 
     override fun pressed() {
-        SDLActivity.onNativeKeyDown(keyEvent[0].getKeyCode())
+        if(russian == false) SDLActivity.onNativeKeyDown(keyEvent[0].getKeyCode())
     }
 
     override fun released() {
         SDLActivity.nativeCommitText(curKeyStr, 0)
-        SDLActivity.onNativeKeyUp(keyEvent[0].getKeyCode())
+        if(russian == false) SDLActivity.onNativeKeyUp(keyEvent[0].getKeyCode())
     }
 
     fun shift(on: Boolean) {
@@ -267,7 +269,7 @@ class Osk {
             curX = lineOffset[i]
 
             for (j in 0..(line.length - 1) step 2) {
-                simpleButtons.add(OskSimpleButton(line[j], line[j + 1], curX, curY, buttonWidth, buttonHeight))
+                simpleButtons.add(OskSimpleButton(line[j], line[j + 1], curX, curY, buttonWidth, buttonHeight, isRussian))
                 curX += buttonWidth + buttonMarginX
             }
             curY += buttonHeight + buttonMarginY
@@ -304,7 +306,7 @@ class Osk {
         elements.add(OskLanguage(this, offsetX, curY, (buttonWidth * 1.5).toInt(), buttonHeight))
 
         // Spacebar
-        elements.add(OskSimpleButton(' ', ' ', offsetX + buttonWidth * 3, curY, buttonWidth * 7, buttonHeight))
+        elements.add(OskSimpleButton(' ', ' ', offsetX + buttonWidth * 3, curY, buttonWidth * 7, buttonHeight, isRussian))
 
         // Arrows
         var arrowsCurX = lineOffset[3] + (buttonWidth + buttonMarginX) * keyboardLayout[3].length / 2 + buttonWidth
