@@ -182,17 +182,11 @@ class MainActivity : AppCompatActivity() {
                 .show()
             return
         }
-
+/**
         // Second, check if user has at least one mod enabled
-	var dataFilesList = ArrayList<String>()
-	dataFilesList.add(inst.findDataFiles())
-
-	File(inst.findDataFiles().dropLast(10)).listFiles().forEach {
-	    if (!it.isFile())
-	        dataFilesList.add(inst.findDataFiles().dropLast(10) + it.getName())
-	}
-
-        val plugins = ModsCollection(ModType.Plugin, dataFilesList,
+	var dataDirs = ArrayList<String>()
+	dataDirs.add(inst.findDataFiles())
+        val plugins = ModsCollection(ModType.Plugin, dataDirs,
             ModsDatabaseOpenHelper.getInstance(this))
         if (plugins.mods.count { it.enabled } == 0) {
             // No mods enabled, show a warning
@@ -210,7 +204,7 @@ class MainActivity : AppCompatActivity() {
 
             return
         }
-
+*/
         // If everything's alright, start the game
         startGame()
     }
@@ -562,7 +556,7 @@ class MainActivity : AppCompatActivity() {
                         "strength influences hand to hand" to prefs.getString("gs_factor_strength_into_hand-to-hand_combat", "0").toString(),
 
 			// Visuals graphics
-                        //"antialiasing" to prefs.getString("gs_antialiasing", "0").toString(),
+                        "antialiasing" to prefs.getString("gs_antialiasing", "0").toString(),
                         "framerate limit" to prefs.getString("gs_framerate_limit", "60").toString(),
 
 			// Visuals animations

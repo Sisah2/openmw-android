@@ -60,8 +60,7 @@ index dfed077e3..75fca4e3c 100644
  
 +extern osg::ref_ptr<osgViewer::Viewer> g_viewer;
 +
- int wrapApplication(int (*innerApplication)(int argc, char *argv[]), int argc, char *argv[],
-                    const std::string& appName, bool autoSetupLogging)
+ int wrapApplication(int (*innerApplication)(int argc, char *argv[]), int argc, char *argv[], const std::string& appName)
  {
  #if defined _WIN32
 @@ -139,6 +143,7 @@ int wrapApplication(int (*innerApplication)(int argc, char *argv[]), int argc, c

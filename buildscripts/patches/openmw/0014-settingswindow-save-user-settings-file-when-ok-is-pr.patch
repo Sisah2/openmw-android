@@ -1,0 +1,78 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Ilya Zhuravlev <whatever@xyz.is>
+Date: Sun, 9 Jun 2019 11:32:56 -0400
+Subject: [PATCH] settingswindow: save user settings file when "ok" is pressed
+
+---
+ apps/openmw/main.cpp                 | 3 +++
+ apps/openmw/mwgui/settingswindow.cpp | 5 +++++
+ components/settings/settings.hpp     | 2 +-
+ 3 files changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/apps/openmw/main.cpp b/apps/openmw/main.cpp
+index 709ffda2c..cfc5db224 100644
+--- a/apps/openmw/main.cpp
++++ b/apps/openmw/main.cpp
+@@ -278,6 +278,8 @@ namespace
+     };
+ }
+ 
++Files::ConfigurationManager *g_cfgMgr;
++
+ int runApplication(int argc, char *argv[])
+ {
+ #ifdef __APPLE__
+@@ -288,6 +290,7 @@ int runApplication(int argc, char *argv[])
+ 
+     osg::setNotifyHandler(new OSGLogHandler());
+     Files::ConfigurationManager cfgMgr;
++    g_cfgMgr = &cfgMgr;
+     std::unique_ptr<OMW::Engine> engine;
+     engine.reset(new OMW::Engine(cfgMgr));
+ 
+diff --git a/apps/openmw/mwgui/settingswindow.cpp b/apps/openmw/mwgui/settingswindow.cpp
+index 3b4afc852..a05f80b4c 100644
+--- a/apps/openmw/mwgui/settingswindow.cpp
++++ b/apps/openmw/mwgui/settingswindow.cpp
+@@ -21,6 +21,7 @@
+ #include <components/resource/resourcesystem.hpp>
+ #include <components/resource/scenemanager.hpp>
+ #include <components/sceneutil/lightmanager.hpp>
++#include <components/files/configurationmanager.hpp>
+ 
+ #include "../mwbase/environment.hpp"
+ #include "../mwbase/world.hpp"
+@@ -125,6 +126,8 @@ namespace
+     }
+ }
+ 
++extern Files::ConfigurationManager *g_cfgMgr;
++
+ namespace MWGui
+ {
+     void SettingsWindow::configureWidgets(MyGUI::Widget* widget, bool init)
+@@ -324,6 +327,8 @@ namespace MWGui
+ 
+     void SettingsWindow::onOkButtonClicked(MyGUI::Widget* _sender)
+     {
++        const std::string settingspath = (g_cfgMgr->getUserConfigPath() / "settings.cfg").string();
++        Settings::Manager::saveUser(settingspath);
+         MWBase::Environment::get().getWindowManager()->removeGuiMode(GM_Settings);
+     }
+ 
+diff --git a/components/settings/settings.hpp b/components/settings/settings.hpp
+index ecc5aa5fd..6f20535be 100644
+--- a/components/settings/settings.hpp
++++ b/components/settings/settings.hpp
+@@ -32,7 +32,7 @@ namespace Settings
+         void loadUser (const std::string& file);
+         ///< load file as user settings
+ 
+-        void saveUser (const std::string& file);
++        static void saveUser (const std::string& file);
+         ///< save user settings to file
+ 
+         static void resetPendingChange(const std::string &setting, const std::string &category);
+-- 
+2.31.1
+
