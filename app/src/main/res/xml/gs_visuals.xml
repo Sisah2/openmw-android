@@ -2,7 +2,7 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
     <PreferenceCategory android:title="Graphics">
-
+<!--
         <ListPreference
             android:key="gs_antialiasing"
             android:summary="%s"
@@ -11,7 +11,7 @@
             android:entries="@array/gs_antialiasing_entries"
             android:entryValues="@array/gs_antialiasing_values"
             android:defaultValue="0" />
-
+-->
         <EditTextPreference
             android:key="gs_framerate_limit"
             android:title="Framerate Limit"

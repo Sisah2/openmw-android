@@ -37,7 +37,7 @@ set(MYGUI_VERSION 3.4.1)
 set(MYGUI_HASH SHA256=d1d5f294670ae71f7200ed4b30859018281d8cfd45d6a38d18b97a4aba604c42)
 
 # https://github.com/ptitSeb/gl4es/releases
-set(GL4ES_VERSION b2d42913871f3c31ff69b243789e5a451f59b44b)
+set(GL4ES_VERSION v1.1.4)
 set(GL4ES_HASH SHA256=b565e717c7d192e936bda25f3cb90ad8db398af56414ec08294b6716574c1a6d)
 
 # https://github.com/openscenegraph/OpenSceneGraph/releases
@@ -53,7 +53,7 @@ set(LUAJIT_VERSION 2.1.0-beta3)
 set(LUAJIT_HASH SHA256=1ad2e34b111c802f9d0cdf019e986909123237a28c746b21295b63c9e785d9c3)
 
 # https://github.com/OpenMW/openmw/commits/master
-set(OPENMW_VERSION 91d980717dc1b93b2b2e3531d78af7c2eb29aec2)
+set(OPENMW_VERSION 3104ae91f3ef94c348a07bb89e8464f0bf57dc14)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
@@ -321,12 +321,11 @@ ExternalProject_Add(gl4es
 	#URL_HASH ${GL4ES_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
-	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/gl4es/shared-library.patch
-	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/gl4es/gamma.patch
-	#COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/gl4es/gamma-hack.patch
+	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/gl4es/shared-library.patch-1.1.4
+	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/gl4es/gamma.patch-1.1.4
 	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/gl4es/disable-shader-hacks.patch
-	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/gl4es/psa.patch
-	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/gl4es/highp-fog.patch
+	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/gl4es/psa.patch-1.1.4
+	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/gl4es/highp-fog.patch-1.1.4
 
 	CONFIGURE_COMMAND ""
 
@@ -343,11 +342,10 @@ ExternalProject_Add(mygui
 	DEPENDS freetype2
 
 	URL https://github.com/MyGUI/mygui/archive/MyGUI${MYGUI_VERSION}.tar.gz
-	https://github.com/xyzz/openmw-deps/releases/download/v0/MyGUI${MYGUI_VERSION}.tar.gz
-#URL_HASH ${MYGUI_HASH}
+        #URL_HASH ${MYGUI_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
-#PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/mygui-dont-set-debug-postfix.patch
+        #PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/mygui-dont-set-debug-postfix.patch
 
 	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
 	${COMMON_CMAKE_ARGS}
@@ -518,7 +516,6 @@ ExternalProject_Add(osg
 	DEPENDS libjpeg-turbo libpng gl4es freetype2 libcollada
 
 	URL https://github.com/openmw/osg/archive/${OSG_VERSION}.tar.gz
-#	https://github.com/xyzz/openmw-deps/releases/download/v0/OpenSceneGraph-${OSG_VERSION}.tar.gz
 #	URL_HASH ${OSG_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
@@ -543,39 +540,33 @@ set(OPENMW_COMMON
 	-DBUILD_ESSIMPORTER=0
 	-DBUILD_OPENCS=0
 	-DBUILD_NAVMESHTOOL=0
-	-DOPENMW_USE_SYSTEM_SQLITE3=OFF
 	-DBUILD_WIZARD=0
 	-DBUILD_MYGUI_PLUGIN=0
- 	-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
- 	-DCMAKE_POLICY_DEFAULT_CMP0069=NEW
-	-DOPENMW_LTO_BUILD=1
-	-DOPENGL_opengl_LIBRARY=${prefix}/lib/libGL.so
-	-DOPENGL_glx_LIBRARY=${prefix}/lib/libGL.so
-	-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
-	-DOPENMW_GL4ES_MANUAL_INIT=ON
+	-DOPENMW_USE_SYSTEM_SQLITE3=OFF
+ 	#-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+ 	#-DCMAKE_POLICY_DEFAULT_CMP0069=NEW
+	#-DOPENMW_LTO_BUILD=1
+	#-DOPENGL_opengl_LIBRARY=${prefix}/lib/libGL.so
+	#-DOPENGL_glx_LIBRARY=${prefix}/lib/libGL.so
+	#-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
+	#-DOPENMW_GL4ES_MANUAL_INIT=ON
 	-DOPENAL_INCLUDE_DIR=${prefix}/include/AL/
 	-DBullet_INCLUDE_DIR=${prefix}/include/bullet/
-	-DOPENGL_ES=OFF
 	-DOSG_STATIC=TRUE
 	-DMyGUI_LIBRARY=${prefix}/lib/libMyGUIEngineStatic.a
 )
 
 set(OPENMW_PATCH
-#patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/gamma.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0001-loadingscreen-disable-for-now.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0009-windowmanagerimp-always-show-mouse-when-possible-pat.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0010-android-fix-context-being-lost-on-app-minimize.patch &&
-#patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0010-android-fix-context-being-lost-on-app-minimize.patch2 &&
-	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0014-settingswindow-save-user-settings-file-when-ok-is-pr.patch &&
-#	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0012-components-misc-stringops-use-boost-format-instead-o.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/fix-build.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/psa.patch &&
-	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/arm-crashfix.patch &&
 	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/android_main.cpp
 )
 
 ExternalProject_Add(openmw
-	DEPENDS boost openal gl4es osg mygui ffmpeg sdl2 bullet lz4 luajit
+	DEPENDS boost openal osg mygui ffmpeg sdl2 bullet lz4 luajit
 
 	URL https://github.com/sisah2/openmw/archive/${OPENMW_VERSION}.tar.gz
 #	URL_HASH ${OPENMW_HASH}
