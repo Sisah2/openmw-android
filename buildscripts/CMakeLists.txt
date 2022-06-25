@@ -52,6 +52,9 @@ set(LZ4_HASH SHA256=030644df4611007ff7dc962d981f390361e6c97a34e5cbc393ddfbe019ff
 set(LUAJIT_VERSION 2.1.0-beta3)
 set(LUAJIT_HASH SHA256=1ad2e34b111c802f9d0cdf019e986909123237a28c746b21295b63c9e785d9c3)
 
+set(LIBICU_VERSION 70-1)
+set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
+
 # https://github.com/OpenMW/openmw/commits/master
 set(OPENMW_VERSION 0e51f40ca30803cd8b44a4f010fd894bf6848ba0)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
@@ -158,6 +161,28 @@ ExternalProject_Add(libpng
 	INSTALL_COMMAND ${wrapper_command} $(MAKE) install check_PROGRAMS= bin_PROGRAMS=
 )
 
+
+set(libicu_flags
+		--disable-tests
+		--disable-samples
+		--disable-icuio
+		--disable-extras
+		--with-cross-build=${CMAKE_SOURCE_DIR}/build/icu-host-build)
+
+ExternalProject_Add(libicu
+		URL https://github.com/unicode-org/icu/archive/refs/tags/release-${LIBICU_VERSION}.zip
+		URL_HASH ${LIBICU_HASH}
+		DOWNLOAD_DIR ${download_dir}
+
+		CONFIGURE_COMMAND ${wrapper_command} <SOURCE_DIR>/icu4c/source/configure
+		${COMMON_AUTOCONF_FLAGS}
+		${libicu_flags}
+
+		BUILD_COMMAND ${wrapper_command} $(MAKE) check_PROGRAMS= bin_PROGRAMS=
+
+		INSTALL_COMMAND ${wrapper_command} $(MAKE) install check_PROGRAMS= bin_PROGRAMS=
+		)
+
 ExternalProject_Add(freetype2
 	URL https://download.savannah.gnu.org/releases/freetype/freetype-${FREETYPE2_VERSION}.tar.gz
 	https://github.com/xyzz/openmw-deps/releases/download/v0/freetype-${FREETYPE2_VERSION}.tar.gz
@@ -213,6 +238,7 @@ ExternalProject_Add(boost
 	--with-program_options
 	--with-system
 	--with-iostreams
+	--with-regex
 	--ignore-site-config
 	toolset=clang-android
 	architecture=${BOOST_ARCH}
@@ -226,10 +252,10 @@ ExternalProject_Add(boost
 	link=static
 	runtime-link=static
 	install
-	COMMAND ${host}-ranlib ${prefix}/lib/libboost_filesystem.a
-	COMMAND ${host}-ranlib ${prefix}/lib/libboost_program_options.a
-	COMMAND ${host}-ranlib ${prefix}/lib/libboost_system.a
-	COMMAND ${host}-ranlib ${prefix}/lib/libboost_iostreams.a
+	COMMAND llvm-ranlib ${prefix}/lib/libboost_filesystem.a
+	COMMAND llvm-ranlib ${prefix}/lib/libboost_program_options.a
+	COMMAND llvm-ranlib ${prefix}/lib/libboost_system.a
+	COMMAND llvm-ranlib ${prefix}/lib/libboost_iostreams.a
 )
 
 ExternalProject_Add(ffmpeg
@@ -242,7 +268,7 @@ ExternalProject_Add(ffmpeg
 	${ffmpeg_configure_flags}
 	--target-os=android
 	--enable-cross-compile
-	--cross-prefix=${host}-
+	--cross-prefix=llvm-
 	--cc=${host}-clang
 	--arch=${ARCH}
 	--cpu=${FFMPEG_CPU}
@@ -382,7 +408,7 @@ set(LUAJIT_MAKE_FLAGS
 	HOST_CC=${LUAJIT_HOST_CC}
 	CFLAGS=
 	TARGET_CFLAGS=$ENV{CFLAGS}
-	CROSS=${host}-
+	CROSS=llvm-
 	STATIC_CC=${host}-clang
 	DYNAMIC_CC=${host}-clang\ -fPIC
 	TARGET_LD=${host}-clang
@@ -544,8 +570,7 @@ set(OPENMW_COMMON
 	-DBUILD_BULLETOBJECTTOOL=0
 	-DOPENMW_USE_SYSTEM_SQLITE3=OFF
 	-DOPENMW_USE_SYSTEM_YAML_CPP=OFF
-	-DOPENMW_USE_SYSTEM_ICU=OFF
-	-DOPENMW_ICU_HOST_BUILD_DIR=${prefix}/../../build/icu-host-build
+	-DOPENMW_USE_SYSTEM_ICU=ON
  	#-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
  	#-DCMAKE_POLICY_DEFAULT_CMP0069=NEW
 	#-DOPENMW_LTO_BUILD=1
@@ -569,7 +594,7 @@ set(OPENMW_PATCH
 )
 
 ExternalProject_Add(openmw
-	DEPENDS boost openal osg mygui ffmpeg sdl2 bullet lz4 luajit
+	DEPENDS boost openal osg mygui ffmpeg sdl2 bullet lz4 luajit libicu
 
 	URL https://github.com/sisah2/openmw/archive/${OPENMW_VERSION}.tar.gz
 #	URL_HASH ${OPENMW_HASH}
