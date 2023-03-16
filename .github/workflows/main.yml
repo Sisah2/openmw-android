@@ -27,7 +27,7 @@ jobs:
       run: |
         export PATH=/home/runner/cmake-$CMAKE_VERSION-Linux-x86_64/bin/:$PATH
         cd buildscripts
-        ./build.sh --arch ${{ matrix.arch }}
+        ./build.sh --arch ${{ matrix.arch }} --release
 
     - name: Build the APK
       run: |
