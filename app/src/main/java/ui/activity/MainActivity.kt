@@ -774,15 +774,29 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_reset_user_config -> {
-                removeUserConfig()
-                Toast.makeText(this, getString(R.string.user_config_was_reset), Toast.LENGTH_SHORT).show()
+                AlertDialog.Builder(this)
+                    .setTitle("Confirmation")
+                    .setMessage("Are you sure you want to reset user configuration?")
+                    .setPositiveButton("Yes") { _, _ ->
+                        removeUserConfig()
+                        Toast.makeText(this, getString(R.string.user_config_was_reset), Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("No", null)
+                    .show()
                 true
             }
-
+            
             R.id.action_reset_user_resources -> {
-                removeStaticFiles()
-                removeResourceFiles()
-                Toast.makeText(this, getString(R.string.user_resources_was_reset), Toast.LENGTH_SHORT).show()
+                AlertDialog.Builder(this)
+                    .setTitle("Confirmation")
+                    .setMessage("Are you sure you want to reset user resources?")
+                    .setPositiveButton("Yes") { _, _ ->
+                        removeStaticFiles()
+                        removeResourceFiles()
+                        Toast.makeText(this, getString(R.string.user_resources_was_reset), Toast.LENGTH_SHORT).show()
+                    }
+                    .setNegativeButton("No", null)
+                    .show()
                 true
             }
 
