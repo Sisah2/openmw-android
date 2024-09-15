@@ -465,7 +465,7 @@ ExternalProject_Add(libxml
 set(LIBCOLLADA_PATCH patch -d <SOURCE_DIR> -p0 -t -N < ${CMAKE_SOURCE_DIR}/patches/libcollada-minizip-fix.patch)
 
 ExternalProject_Add(libcollada
-	DEPENDS libxml
+	DEPENDS libxml boost
 
 	URL https://github.com/rdiankov/collada-dom/archive/v2.5.0.tar.gz
 	URL_HASH SHA256=3be672407a7aef60b64ce4b39704b32816b0b28f61ebffd4fbd02c8012901e0d
