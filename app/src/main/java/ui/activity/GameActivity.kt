@@ -91,8 +91,8 @@ class GameActivity : SDLActivity() {
         System.loadLibrary("SDL2")
 
         try {
-            Os.setenv("OPENMW_GLES_VERSION", "2", true)
-            Os.setenv("LIBGL_ES", "2", true)
+            Os.setenv("OPENMW_GLES_VERSION", "3", true)
+            Os.setenv("LIBGL_ES", "3", true)
         } catch (e: ErrnoException) {
             Log.e("OpenMW", "Failed setting environment variables.")
             e.printStackTrace()
