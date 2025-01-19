@@ -124,7 +124,7 @@ class GameActivity : SDLActivity() {
             }
         }
 
-        System.loadLibrary("GL")
+        System.loadLibrary("ng_gl4es")
         System.loadLibrary("openmw")
     }
 

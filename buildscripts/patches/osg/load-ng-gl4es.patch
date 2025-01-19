@@ -1,0 +1,13 @@
+diff --git a/src/osg/GLExtensions.cpp b/src/osg/GLExtensions.cpp
+index 5ecf63a5e..54fb61408 100644
+--- a/src/osg/GLExtensions.cpp
++++ b/src/osg/GLExtensions.cpp
+@@ -336,7 +336,7 @@ OSG_INIT_SINGLETON_PROXY(GLExtensionDisableStringInitializationProxy, osg::getGL
+         #elif defined(OSG_GLES2_AVAILABLE)
+             static void *handle = dlopen("libGLESv2.so", RTLD_NOW);
+         #elif defined(OSG_GL1_AVAILABLE)
+-            static void *handle = dlopen("libGL.so", RTLD_NOW);
++            static void *handle = dlopen("ng_gl4es.so", RTLD_NOW);
+         #endif
+         return dlsym(handle, funcName);
+ 
