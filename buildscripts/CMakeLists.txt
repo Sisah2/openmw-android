@@ -347,6 +347,8 @@ ExternalProject_Add(NG-GL4ES
 	#URL_HASH ${GL4ES_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
+        BUILD_IN_SOURCE 1
+	
 	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
 	${COMMON_CMAKE_ARGS}
 
@@ -580,7 +582,7 @@ set(OPENMW_COMMON
  	#-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
  	#-DCMAKE_POLICY_DEFAULT_CMP0069=NEW
 	#-DOPENMW_LTO_BUILD=1
-	-DOPENGL_opengl_LIBRARY=${prefix}/lib/libng_gl4es.so
+	-DOPENGL_gl_LIBRARY=${prefix}/lib/libng_gl4es.so
 	-DOPENGL_glx_LIBRARY=${prefix}/lib/libng_gl4es.so
 	-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
 	#-DOPENMW_GL4ES_MANUAL_INIT=ON
