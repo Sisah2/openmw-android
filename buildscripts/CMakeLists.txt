@@ -353,7 +353,7 @@ ExternalProject_Add(NG-GL4ES
 	BUILD_COMMAND ${wrapper_command} $(MAKE)
 
 	INSTALL_COMMAND mkdir -p ${prefix}/lib/
-	COMMAND cp libng_gl4es.so ${prefix}/lib/
+	COMMAND cp libGL.so ${prefix}/lib/
 	COMMAND cp <SOURCE_DIR>/libraries/arm64-v8a/libspirv-cross-c-shared.so ${prefix}/lib/
 	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/include/gl4es/
 	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
