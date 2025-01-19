@@ -580,8 +580,8 @@ set(OPENMW_COMMON
  	#-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
  	#-DCMAKE_POLICY_DEFAULT_CMP0069=NEW
 	#-DOPENMW_LTO_BUILD=1
-	-DOPENGL_opengl_LIBRARY=${prefix}/lib/ng_gl4es.so
-	-DOPENGL_glx_LIBRARY=${prefix}/lib/ng_gl4es.so
+	-DOPENGL_opengl_LIBRARY=${prefix}/lib/libng_gl4es.so
+	-DOPENGL_glx_LIBRARY=${prefix}/lib/libng_gl4es.so
 	-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
 	#-DOPENMW_GL4ES_MANUAL_INIT=ON
 	-DOPENAL_INCLUDE_DIR=${prefix}/include/AL/
