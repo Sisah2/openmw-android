@@ -190,7 +190,7 @@ find build/$ARCH/openmw-prefix/ -iname "libopenmw.so" -exec cp "{}" ../app/src/m
 cp tool/libdelta_plugin.so ../app/src/main/jniLibs/$ABI/
 
 # copy over libs we compiled
-cp prefix/$ARCH/lib/{libopenal,libSDL2,libhidapi,libGL,libspirv-cross-c-shared,libcollada-dom2.5-dp}.so ../app/src/main/jniLibs/$ABI/
+cp prefix/$ARCH/lib/{libopenal,libSDL2,libhidapi,libng_gl4es,libspirv-cross-c-shared,libcollada-dom2.5-dp}.so ../app/src/main/jniLibs/$ABI/
 
 # copy over libc++_shared
 find ./toolchain/$ARCH/sysroot/usr/lib/$NDK_TRIPLET -iname "libc++_shared.so" -exec cp "{}" ../app/src/main/jniLibs/$ABI/ \;
@@ -225,7 +225,7 @@ cp "./build/$ARCH/openal-prefix/src/openal-build/libopenal.so" "./symbols/$ABI/"
 cp "./build/$ARCH/sdl2-prefix/src/sdl2-build/libSDL2.so" "./symbols/$ABI/"
 cp "./build/$ARCH/sdl2-prefix/src/sdl2-build/libhidapi.so" "./symbols/$ABI/"
 cp "./build/$ARCH/openmw-prefix/src/openmw-build/libopenmw.so" "./symbols/$ABI/libopenmw.so"
-cp "./build/$ARCH/gl4es-prefix/src/gl4es-build/obj/local/$ABI/libGL.so" "./symbols/$ABI/"
+#cp "./build/$ARCH/gl4es-prefix/src/gl4es-build/obj/local/$ABI/libGL.so" "./symbols/$ABI/"
 cp "../app/src/main/jniLibs/$ABI/libc++_shared.so" "./symbols/$ABI/"
 
 if [ $ASAN = true ]; then

@@ -342,19 +342,19 @@ ExternalProject_Add(bullet
 	INSTALL_COMMAND $(MAKE) install
 )
 
-ExternalProject_Add(gl4es
-	URL https://github.com/sisah2/NG-GL4ES/archive/c6739c216fae02779627d8c62cfa0301a52108a1.tar.gz
+ExternalProject_Add(NG-GL4ES
+	URL https://github.com/sisah2/NG-GL4ES/archive/40303ce10c660e813350e00a93cdc121e45ab9df.tar.gz
 	#URL_HASH ${GL4ES_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
-	CONFIGURE_COMMAND ""
+	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
+	${COMMON_CMAKE_ARGS}
 
-	BUILD_COMMAND ${wrapper_command} ndk-build
-	${COMMON_NDK_BUILD_FLAGS}
+	BUILD_COMMAND ${wrapper_command} $(MAKE)
 
 	INSTALL_COMMAND mkdir -p ${prefix}/lib/
-	COMMAND cp libs/${app_abi}/libGL.so ${prefix}/lib/
-        COMMAND cp -r <SOURCE_DIR>/libraries/arm64-v8a/libspirv-cross-c-shared.so ${prefix}/
+	COMMAND cp libng_gl4es.so ${prefix}/lib/
+	COMMAND cp <SOURCE_DIR>/libraries/arm64-v8a/libspirv-cross-c-shared.so ${prefix}/lib/
 	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/include/gl4es/
 	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
 )
@@ -536,13 +536,13 @@ set(OSG_PATCH
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0004-IncrementalCompileOperation-wrap-some-stuff-in-atomi.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/force-add-plugins.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/dae_collada.patch &&
-	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/mipmaps.patch &&
+	#patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/mipmaps.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/cubic-filtering.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0005-CullSettings-make-inheritanceMask-atomic-to-silence-.patch
 )
 
 ExternalProject_Add(osg
-	DEPENDS libjpeg-turbo libpng gl4es freetype2 libcollada
+	DEPENDS libjpeg-turbo libpng NG-GL4ES freetype2 libcollada
 
 	URL https://github.com/openmw/osg/archive/${OSG_VERSION}.tar.gz
 #	URL_HASH ${OSG_HASH}
