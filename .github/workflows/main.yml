@@ -54,13 +54,13 @@ jobs:
         echo "symbols_file=$(ls symbols-*.7z | sed 's/\(.*\)\..*/\1/')" >> $GITHUB_ENV
 
     - name: Upload the APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.apk_file }}
         path: ${{ env.apk_file }}.apk
 
     - name: Upload debug symbols
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.symbols_file }}
         path: ${{ env.symbols_file }}.7z
