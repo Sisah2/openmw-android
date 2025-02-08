@@ -297,14 +297,13 @@ ExternalProject_Add(driver_helper
 
 ExternalProject_Add(sdl2
         DEPENDS driver_helper
-	URL https://github.com/sandstranger/SDL/archive/17ac484b3366cd62c540933b0462b6889e216a61.tar.gz
+	URL https://github.com/sisah2/SDL/archive/898bd6cf1c902e755f53fa3bce1595547aa5f8d9.tar.gz
 	DOWNLOAD_DIR ${download_dir}
 
 	CONFIGURE_COMMAND ""
 
 	BUILD_COMMAND ${wrapper_command} ndk-build
 	${COMMON_NDK_BUILD_FLAGS}
-#        -EXTRA_LIBS=${prefix}/lib/libnsbypass.so
 
 	INSTALL_COMMAND mkdir -p ${prefix}/lib/
 
