@@ -30,7 +30,9 @@ import android.system.Os
 import android.util.Log
 import android.view.WindowManager
 import android.widget.RelativeLayout
+//import android.widget.FrameLayout
 import com.libopenmw.openmw.R
+import android.view.View
 
 import org.libsdl.app.SDLActivity
 
@@ -76,41 +78,24 @@ class GameActivity : SDLActivity() {
 
     override fun loadLibraries() {
         prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val physicsFPS = prefs!!.getString("pref_physicsFPS2", "")
-        if (!physicsFPS!!.isEmpty()) {
-            try {
-                Os.setenv("OPENMW_PHYSICS_FPS", physicsFPS, true)
-            } catch (e: ErrnoException) {
-                Log.e("OpenMW", "Failed setting environment variables.")
-                e.printStackTrace()
-            }
-        }
 
         System.loadLibrary("c++_shared")
         System.loadLibrary("openal")
-        System.loadLibrary("SDL2")
 
-        try {
-            Os.setenv("OPENMW_GLES_VERSION", "2", true)
-            Os.setenv("LIBGL_ES", "2", true)
-        } catch (e: ErrnoException) {
-            Log.e("OpenMW", "Failed setting environment variables.")
-            e.printStackTrace()
-        }
+        Os.setenv("OPENMW_PHYSICS_FPS", prefs!!.getString("pref_physicsFPS2", "30"), true)
 
-        val textureShrinkingOption = prefs!!.getString("pref_textureShrinking_v2", "")
-        if (textureShrinkingOption == "low") Os.setenv("LIBGL_SHRINK", "2", true)
-        if (textureShrinkingOption == "medium") Os.setenv("LIBGL_SHRINK", "7", true)
-        if (textureShrinkingOption == "high") Os.setenv("LIBGL_SHRINK", "6", true)
+        Os.setenv("SDL_VIDEO_GL_DRIVER","libOSMesa_8.so", true)
+        Os.setenv("VSYNC_IN_ZINK","1",true)
+        Os.setenv("MESA_LOADER_DRIVER_OVERRIDE","zink",true);
+        Os.setenv("GALLIUM_DRIVER","zink",true);
+        Os.setenv("MESA_GL_VERSION_OVERRIDE", "2.0",true);
+        Os.setenv("MESA_GLSL_VERSION_OVERRIDE", "120",true);
+        Os.setenv("NATIVE_LIB_DIR", this.applicationInfo.nativeLibraryDir, true)
+        Os.setenv("TMPDIR", this.cacheDir.absolutePath, true)
+        Os.setenv("MESA_LOG_FILE", Constants.USER_FILE_STORAGE + "/config/mesa.log", true)
 
-        val avoid16bits = prefs!!.getBoolean("pref_avoid16bits", true)
-        if (avoid16bits == true) Os.setenv("LIBGL_AVOID16BITS", "1", true)
-        else Os.setenv("LIBGL_AVOID16BITS", "0", true)
+        Os.setenv("OSG_THREADING", "SingleThreaded", true)
 
-        Os.setenv("OSG_VERTEX_BUFFER_HINT", "VBO", true)
-        Os.setenv("OPENMW_USER_FILE_STORAGE", Constants.USER_FILE_STORAGE + "/", true)
-        //Os.setenv("OSG_NOTIFY_LEVEL", "FATAL", true) //hide osg errors for now, gl4es bug.
-        
         val envline: String = PreferenceManager.getDefaultSharedPreferences(this).getString("envLine", "").toString()
         if (envline.length > 0) {
             val envs: List<String> = envline.split(" ", "\n")
@@ -124,14 +109,24 @@ class GameActivity : SDLActivity() {
             }
         }
 
-        System.loadLibrary("GL")
+/*
+        System.loadLibrary("hardware")
+        System.loadLibrary("c++")
+        System.loadLibrary("base")
+        System.loadLibrary("cutils")
+        System.loadLibrary("vulkan_freedreno")
+*/
+     //   System.loadLibrary("OSMesa_8")
+  //      System.loadLibrary("linkerhook")
+        System.loadLibrary("driver_helper")
+        System.loadLibrary("SDL2")
+        System.loadLibrary("OSMesa_8")
         System.loadLibrary("openmw")
     }
 
     override fun getMainSharedObject(): String {
         return "libopenmw.so"
     }
-
 
     private fun showProgressBar() {
         val dm = DisplayMetrics()
@@ -216,6 +211,8 @@ class GameActivity : SDLActivity() {
         if (displayInCutoutArea || android.os.Build.VERSION.SDK_INT < 29) {
             window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
+
+        window.setBackgroundDrawable(null)
 
         KeepScreenOn()
         getPathToJni(filesDir.parent, Constants.USER_FILE_STORAGE)

@@ -81,6 +81,8 @@ android {
             storeFile file("debug.keystore")
         }
     }
+
+    ndkVersion '27.2.12479018'
 }
 
 dependencies {
@@ -96,6 +98,8 @@ dependencies {
     implementation files('lib/anko-commons-0.10.8.aar')
     implementation files('lib/sqlite-base-0.10.8.aar')
     implementation files('lib/anko-sqlite-0.10.8.aar')
+
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9"
 
     implementation 'com.bugsnag:bugsnag-android-ndk:4.+'
 

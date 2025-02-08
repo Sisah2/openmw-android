@@ -36,9 +36,6 @@ set(BULLET_HASH SHA256=baa642c906576d4d98d041d0acb80d85dd6eff6e3c16a009b1abf1ccd
 set(MYGUI_VERSION 3.4.3)
 set(MYGUI_HASH SHA256=d1d5f294670ae71f7200ed4b30859018281d8cfd45d6a38d18b97a4aba604c42)
 
-# https://github.com/sisah2/gl4es/releases
-set(GL4ES_VERSION 78fdb052c9d8e7b4dfe44814f4e64f7cd4ece86a)
-set(GL4ES_HASH SHA256=b565e717c7d192e936bda25f3cb90ad8db398af56414ec08294b6716574c1a6d)
 
 # https://github.com/openscenegraph/OpenSceneGraph/releases
 set(OSG_VERSION 673f30ad3820faf2a5e901ffe403b5246b8918fe)
@@ -56,7 +53,7 @@ set(LIBICU_VERSION 70-1)
 set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
 
 # https://github.com/OpenMW/openmw/commits/master
-set(OPENMW_VERSION 3167e55383aeda5ac9f5ab8f3461531f26125b06)
+set(OPENMW_VERSION c16064e6f304ee910e3ee949ced3f241a2e4f095)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
@@ -283,41 +280,36 @@ ExternalProject_Add(ffmpeg
 	INSTALL_COMMAND ${wrapper_command} $(MAKE) install
 )
 
+ExternalProject_Add(driver_helper
+	SOURCE_DIR ${CMAKE_SOURCE_DIR}/tool/driver_helper
+
+	CONFIGURE_COMMAND ""
+
+	BUILD_COMMAND ${wrapper_command} ndk-build
+	${COMMON_NDK_BUILD_FLAGS}
+	INSTALL_COMMAND mkdir -p ${prefix}/lib/
+
+	COMMAND cp libs/${app_abi}/liblinkerhook.so ${prefix}/lib/
+	COMMAND cp libs/${app_abi}/libdriver_helper.so ${prefix}/lib/
+	COMMAND cp ${CMAKE_SOURCE_DIR}/tool/driver_helper/driver_helper/nsbypass.h ${prefix}/include/
+	COMMAND cp ${CMAKE_SOURCE_DIR}/tool/driver_helper/linkerhook/linkerhook.h ${prefix}/include/
+)
+
 ExternalProject_Add(sdl2
-	URL https://www.libsdl.org/release/SDL2-${SDL2_VERSION}.tar.gz
-	https://github.com/xyzz/openmw-deps/releases/download/v0/SDL2-${SDL2_VERSION}.tar.gz
-	URL_HASH ${SDL2_HASH}
+        DEPENDS driver_helper
+	URL https://github.com/sandstranger/SDL/archive/17ac484b3366cd62c540933b0462b6889e216a61.tar.gz
 	DOWNLOAD_DIR ${download_dir}
 
-	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-sensor.patch &&
-	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-android-120hz-gyroscope.patch
-	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-disable-declaration-after-statement-warning.patch
+	CONFIGURE_COMMAND ""
 
-	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
-	${COMMON_CMAKE_ARGS}
-        -DSDL_STATIC=OFF
-        -DHAVE_GCC_FVISIBILITY=OFF
+	BUILD_COMMAND ${wrapper_command} ndk-build
+	${COMMON_NDK_BUILD_FLAGS}
+#        -EXTRA_LIBS=${prefix}/lib/libnsbypass.so
 
-	BUILD_COMMAND ${wrapper_command} $(MAKE)
+	INSTALL_COMMAND mkdir -p ${prefix}/lib/
 
-	INSTALL_COMMAND ${wrapper_command} $(MAKE) install
-
-	COMMAND cp libSDL2.so ${prefix}/lib/
-	COMMAND cp libhidapi.so ${prefix}/lib/
-	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
-
-#	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-android-120hz-gyroscope.patch
-#	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-disable-gamma-warning.patch
-
-#	CONFIGURE_COMMAND ""
-
-#	BUILD_COMMAND ${wrapper_command} ndk-build
-#	${COMMON_NDK_BUILD_FLAGS}
-
-#	INSTALL_COMMAND mkdir -p ${prefix}/lib/
-#	COMMAND cp libs/${app_abi}/libSDL2.so ${prefix}/lib/
-#	COMMAND cp libs/${app_abi}/libhidapi.so ${prefix}/lib/
-#	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
+	COMMAND cp  <SOURCE_DIR>/../sdl2-build/libs/${app_abi}/libSDL2.so ${prefix}/lib/
+	COMMAND cp -r <SOURCE_DIR>/include/ ${prefix}/
 )
 
 ExternalProject_Add(bullet
@@ -340,22 +332,6 @@ ExternalProject_Add(bullet
 	BUILD_COMMAND ${wrapper_command} $(MAKE)
 
 	INSTALL_COMMAND $(MAKE) install
-)
-
-ExternalProject_Add(gl4es
-	URL https://github.com/sisah2/gl4es/archive/${GL4ES_VERSION}.tar.gz
-	#URL_HASH ${GL4ES_HASH}
-	DOWNLOAD_DIR ${download_dir}
-
-	CONFIGURE_COMMAND ""
-
-	BUILD_COMMAND ${wrapper_command} ndk-build
-	${COMMON_NDK_BUILD_FLAGS}
-
-	INSTALL_COMMAND mkdir -p ${prefix}/lib/
-	COMMAND cp libs/${app_abi}/libGL.so ${prefix}/lib/
-	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/include/gl4es/
-	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
 )
 
 ExternalProject_Add(mygui
@@ -490,7 +466,7 @@ ExternalProject_Add(libcollada
 )
 
 set(OSG_COMMON
-	-DOPENGL_PROFILE="GL1"
+	-DOPENGL_PROFILE="GL2"
 	-DDYNAMIC_OPENTHREADS=OFF
 	-DDYNAMIC_OPENSCENEGRAPH=OFF
 	-DBUILD_OSG_PLUGIN_OSG=ON
@@ -508,12 +484,12 @@ set(OSG_COMMON
         -DCOLLADA_DIR=${prefix}/include/collada-dom2.5/1.4
 	-DOSG_CPP_EXCEPTIONS_AVAILABLE=TRUE
 	-DOSG_GL1_AVAILABLE=ON
-	-DOSG_GL2_AVAILABLE=OFF
+	-DOSG_GL2_AVAILABLE=ON
 	-DOSG_GL3_AVAILABLE=OFF
 	-DOSG_GLES1_AVAILABLE=OFF
 	-DOSG_GLES2_AVAILABLE=OFF
 	-DOSG_GL_LIBRARY_STATIC=OFF
-	-DOSG_GL_DISPLAYLISTS_AVAILABLE=OFF
+	-DOSG_GL_DISPLAYLISTS_AVAILABLE=ON
 	-DOSG_GL_MATRICES_AVAILABLE=ON
 	-DOSG_GL_VERTEX_FUNCS_AVAILABLE=ON
 	-DOSG_GL_VERTEX_ARRAY_FUNCS_AVAILABLE=ON
@@ -521,9 +497,9 @@ set(OSG_COMMON
 	-DBUILD_OSG_APPLICATIONS=OFF
 	-DBUILD_OSG_PLUGINS_BY_DEFAULT=OFF
 	-DBUILD_OSG_DEPRECATED_SERIALIZERS=OFF
-	#-DOPENGL_opengl_LIBRARY=${prefix}/lib/libGL.so
-	#-DOPENGL_glx_LIBRARY=${prefix}/lib/libGL.so
-	#-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
+	-DOPENGL_gl_LIBRARY=${prefix}/lib/libOSMesa_8.so
+	#-DOPENGL_glx_LIBRARY=${prefix}/lib/libOSMesa_8.so
+	-DOPENGL_INCLUDE_DIR=${prefix}/include/
 )
 
 set(OSG_PATCH
@@ -535,13 +511,14 @@ set(OSG_PATCH
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0004-IncrementalCompileOperation-wrap-some-stuff-in-atomi.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/force-add-plugins.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/dae_collada.patch &&
-	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/mipmaps.patch &&
-	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/cubic-filtering.patch &&
+	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/load-libOSMesa_8.patch &&
+#	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/mipmaps.patch &&
+#	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/cubic-filtering.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0005-CullSettings-make-inheritanceMask-atomic-to-silence-.patch
 )
 
 ExternalProject_Add(osg
-	DEPENDS libjpeg-turbo libpng gl4es freetype2 libcollada
+	DEPENDS libjpeg-turbo libpng freetype2 libcollada
 
 	URL https://github.com/openmw/osg/archive/${OSG_VERSION}.tar.gz
 #	URL_HASH ${OSG_HASH}
@@ -578,9 +555,9 @@ set(OPENMW_COMMON
  	#-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
  	#-DCMAKE_POLICY_DEFAULT_CMP0069=NEW
 	#-DOPENMW_LTO_BUILD=1
-	#-DOPENGL_opengl_LIBRARY=${prefix}/lib/libGL.so
-	#-DOPENGL_glx_LIBRARY=${prefix}/lib/libGL.so
-	#-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
+	-DOPENGL_gl_LIBRARY=${prefix}/lib/libOSMesa_8.so
+	#-DOPENGL_glx_LIBRARY=${prefix}/lib/libOSMesa_8.so
+	-DOPENGL_INCLUDE_DIR=${prefix}/include/
 	#-DOPENMW_GL4ES_MANUAL_INIT=ON
 	-DOPENAL_INCLUDE_DIR=${prefix}/include/AL/
 	-DBullet_INCLUDE_DIR=${prefix}/include/bullet/

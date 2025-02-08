@@ -149,7 +149,7 @@ class OskSimpleButton(val key: Char, val shiftKey: Char, positionX: Int, positio
     }
 
     override fun released() {
-        SDLActivity.nativeCommitText(curKeyStr, 0)
+   //     SDLActivity.nativeCommitText(curKeyStr, 0)
         if(russian == false) SDLActivity.onNativeKeyUp(keyEvent[0].getKeyCode())
     }
 

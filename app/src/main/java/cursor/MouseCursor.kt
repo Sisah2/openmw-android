@@ -29,6 +29,7 @@ import android.widget.RelativeLayout
 import com.libopenmw.openmw.R
 
 import org.libsdl.app.SDLActivity
+import org.libsdl.app.SDLSurface
 
 import ui.activity.GameActivity
 import ui.activity.MainActivity
@@ -111,24 +112,27 @@ class MouseCursor(activity: GameActivity, private val osc: Osc?) : Choreographer
         } else {
             cursor.visibility = View.VISIBLE
 
-            val surface = SDLActivity.getSurface()
+           // val surface = SDLActivity.getSurface()
+
+           // val surface = SDLActivity.getZinkSurface()
+            val surface = SDLActivity.getNativeSurface()
 
             var translateX = 1.0f
             var translateY = 1.0f
-
+/*
             if (MainActivity.resolutionX > 0) {
-                translateX = 1.0f * surface.width / MainActivity.resolutionX
-                translateY = 1.0f * surface.height / MainActivity.resolutionY
+                translateX = /*1.0f * surface.width / */ MainActivity.resolutionX
+                translateY = /*1.0f * surface.height / */ MainActivity.resolutionY
             }
-
+*/
             val mouseX = SDLActivity.getMouseX()
             val mouseY = SDLActivity.getMouseY()
 
             // calling setX/setY here results in a bug cropping part of the mouse cursor
             // changing LayoutParams works as expected...
             val params = cursor.layoutParams as RelativeLayout.LayoutParams
-            params.leftMargin = (mouseX * translateX + surface.left).toInt()
-            params.topMargin = (mouseY * translateY + surface.top).toInt()
+            params.leftMargin = (mouseX * translateX/* + surface.left*/).toInt()
+            params.topMargin = (mouseY * translateY /*+ surface.top*/).toInt()
             cursor.layoutParams = params
         }
 
