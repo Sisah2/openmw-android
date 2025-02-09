@@ -523,10 +523,9 @@ set(OSG_COMMON
 	-DOSG_GL_FIXED_FUNCTION_AVAILABLE=ON
 	-DBUILD_OSG_APPLICATIONS=OFF
 	-DBUILD_OSG_PLUGINS_BY_DEFAULT=OFF
-	-DBUILD_OSG_DEPRECATED_SERIALIZERS=OFF
-	#-DOPENGL_opengl_LIBRARY=${prefix}/lib/libGL.so
-	#-DOPENGL_glx_LIBRARY=${prefix}/lib/libGL.so
-	#-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
+        -DOPENGL_gl_LIBRARY=${prefix}/lib/libng_gl4es.so
+	-DOPENGL_glx_LIBRARY=${prefix}/lib/libng_gl4es.so
+	-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
 )
 
 set(OSG_PATCH
