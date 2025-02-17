@@ -343,7 +343,7 @@ ExternalProject_Add(bullet
 )
 
 ExternalProject_Add(NG-GL4ES
-	URL https://github.com/sisah2/NG-GL4ES/archive/9fc1ffd3568af5406abcb2b7327f4357f70e4aa5.tar.gz
+	URL https://github.com/sisah2/NG-GL4ES/archive/3e54bafd2f3a3c8e046b7c37a849ab5ad5cf4cc7.tar.gz
 	#URL_HASH ${GL4ES_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
