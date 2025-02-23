@@ -36,8 +36,8 @@ set(BULLET_HASH SHA256=baa642c906576d4d98d041d0acb80d85dd6eff6e3c16a009b1abf1ccd
 set(MYGUI_VERSION 3.4.3)
 set(MYGUI_HASH SHA256=d1d5f294670ae71f7200ed4b30859018281d8cfd45d6a38d18b97a4aba604c42)
 
-# https://github.com/sisah2/gl4es/releases
-set(GL4ES_VERSION 78fdb052c9d8e7b4dfe44814f4e64f7cd4ece86a)
+# https://github.com/sisah2/ng_gl4es/releases
+set(GL4ES_VERSION 485d6ffe8bd36c71cd5c75579b9db48520f073f5)
 set(GL4ES_HASH SHA256=b565e717c7d192e936bda25f3cb90ad8db398af56414ec08294b6716574c1a6d)
 
 # https://github.com/openscenegraph/OpenSceneGraph/releases
@@ -56,7 +56,7 @@ set(LIBICU_VERSION 70-1)
 set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
 
 # https://github.com/OpenMW/openmw/commits/master
-set(OPENMW_VERSION 535e7605683db18418eabb58ca43c09e001bcea1)
+set(OPENMW_VERSION 9a36e220ed2b16a831d37064677d6cbb1fe7fca7)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
@@ -343,7 +343,7 @@ ExternalProject_Add(bullet
 )
 
 ExternalProject_Add(NG-GL4ES
-	URL https://github.com/sisah2/NG-GL4ES/archive/3e54bafd2f3a3c8e046b7c37a849ab5ad5cf4cc7.tar.gz
+	URL https://github.com/sisah2/NG-GL4ES/archive/${GL4ES_VERSION}.tar.gz
 	#URL_HASH ${GL4ES_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
@@ -524,8 +524,8 @@ set(OSG_COMMON
 	-DBUILD_OSG_APPLICATIONS=OFF
 	-DBUILD_OSG_PLUGINS_BY_DEFAULT=OFF
         -DOPENGL_gl_LIBRARY=${prefix}/lib/libng_gl4es.so
-	-DOPENGL_glx_LIBRARY=${prefix}/lib/libng_gl4es.so
-	-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
+#	-DOPENGL_glx_LIBRARY=${prefix}/lib/libng_gl4es.so
+#	-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
 )
 
 set(OSG_PATCH

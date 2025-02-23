@@ -45,6 +45,12 @@
             android:defaultValue="60"
             android:summary="Maximum rendering framerate."/>
 
+        <CheckBoxPreference
+            android:key="gs_reverse_z"
+            android:title="Reverse-z Depth Buffer"
+            android:defaultValue="true"
+            android:summary="Enabling reduce z fighting."/>
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Shaders">

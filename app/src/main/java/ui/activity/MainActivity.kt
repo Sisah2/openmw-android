@@ -109,6 +109,8 @@ class MainActivity : AppCompatActivity() {
         // create user dirs
         File(Constants.USER_CONFIG).mkdirs()
         File(Constants.USER_FILE_STORAGE + "/launcher/icons").mkdirs()
+        File(Constants.USER_FILE_STORAGE + "/launcher/delta").mkdirs()
+
         if (!File(Constants.USER_OPENMW_CFG).exists())
             File(Constants.USER_OPENMW_CFG).writeText("# This is the user openmw.cfg. Feel free to modify it as you wish.\n")
 
@@ -563,6 +565,7 @@ class MainActivity : AppCompatActivity() {
 
 	// Visuals graphics
 	writeSetting("Video", "framerate limit", prefs.getString("gs_framerate_limit", "60").toString())
+	writeSetting("Camera", "reverse z", if(prefs.getBoolean("gs_reverse_z", true)) "true" else "false")
 
 	// Visuals shaders
 	writeSetting("Shaders", "auto use object normal maps", if(prefs.getBoolean("gs_auto_use_object_normal_maps", false)) "true" else "false")

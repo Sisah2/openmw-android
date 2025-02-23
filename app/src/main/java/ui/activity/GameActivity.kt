@@ -108,7 +108,12 @@ class GameActivity : SDLActivity() {
         else Os.setenv("LIBGL_AVOID16BITS", "0", true)
 
         Os.setenv("OSG_VERTEX_BUFFER_HINT", "VBO", true)
-        Os.setenv("OPENMW_USER_FILE_STORAGE", Constants.USER_FILE_STORAGE + "/", true)
+        Os.setenv("OSG_GL_TEXTURE_STORAGE", "OFF", true)
+        Os.setenv("OSG_TEXT_SHADER_TECHNIQUE", "NONE", true)
+
+        Os.setenv("LIBGL_SIMPLE_SHADERCONV", "1", true)
+
+        //Os.setenv("OPENMW_USER_FILE_STORAGE", Constants.USER_FILE_STORAGE + "/", true)
         //Os.setenv("OSG_NOTIFY_LEVEL", "FATAL", true) //hide osg errors for now, gl4es bug.
         
         val envline: String = PreferenceManager.getDefaultSharedPreferences(this).getString("envLine", "").toString()
