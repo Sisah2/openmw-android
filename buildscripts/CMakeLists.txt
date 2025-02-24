@@ -493,7 +493,7 @@ ExternalProject_Add(libcollada
 )
 
 set(OSG_COMMON
-	-DOPENGL_PROFILE="GL1"
+	-DOPENGL_PROFILE="GL2"
 	-DDYNAMIC_OPENTHREADS=OFF
 	-DDYNAMIC_OPENSCENEGRAPH=OFF
 	-DBUILD_OSG_PLUGIN_OSG=ON
@@ -510,8 +510,8 @@ set(OSG_COMMON
         -DCOLLADA_INCLUDE_DIR=${prefix}/include/collada-dom2.5
         -DCOLLADA_DIR=${prefix}/include/collada-dom2.5/1.4
 	-DOSG_CPP_EXCEPTIONS_AVAILABLE=TRUE
-	-DOSG_GL1_AVAILABLE=ON
-	-DOSG_GL2_AVAILABLE=OFF
+	-DOSG_GL1_AVAILABLE=OFF
+	-DOSG_GL2_AVAILABLE=ON
 	-DOSG_GL3_AVAILABLE=OFF
 	-DOSG_GLES1_AVAILABLE=OFF
 	-DOSG_GLES3_AVAILABLE=OFF
@@ -529,7 +529,7 @@ set(OSG_COMMON
 )
 
 set(OSG_PATCH
-#	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/disable-polygon-offset.patch &&
+	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/disable-polygon-offset.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/remove-lib-prefix-from-plugins.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/fix-freetype-include-dirs.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0001-Replace-Atomic-impl-with-std-atomic.patch &&
@@ -593,7 +593,7 @@ set(OPENMW_COMMON
 )
 
 set(OPENMW_PATCH
-     #   patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0001-loadingscreen-disable-for-now.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0001-loadingscreen-disable-for-now.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0009-windowmanagerimp-always-show-mouse-when-possible-pat.patch &&
         #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0010-android-fix-context-being-lost-on-app-minimize.patch &&
 	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/android_main.cpp
