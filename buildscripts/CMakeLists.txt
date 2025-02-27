@@ -37,7 +37,7 @@ set(MYGUI_VERSION 3.4.3)
 set(MYGUI_HASH SHA256=d1d5f294670ae71f7200ed4b30859018281d8cfd45d6a38d18b97a4aba604c42)
 
 # https://github.com/sisah2/ng_gl4es/releases
-set(GL4ES_VERSION 1682a39b76430251c3a23d9a9a314cdd9f72b8c2)
+set(GL4ES_VERSION de10e0c486b21737f69c6ebcdb04c6bc25cbea84)
 set(GL4ES_HASH SHA256=b565e717c7d192e936bda25f3cb90ad8db398af56414ec08294b6716574c1a6d)
 
 # https://github.com/openscenegraph/OpenSceneGraph/releases
@@ -56,7 +56,7 @@ set(LIBICU_VERSION 70-1)
 set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
 
 # https://github.com/OpenMW/openmw/commits/master
-set(OPENMW_VERSION 9a36e220ed2b16a831d37064677d6cbb1fe7fca7)
+set(OPENMW_VERSION a515713385e246f7a28d4f79142d30e420ff0bbc)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
@@ -516,7 +516,7 @@ set(OSG_COMMON
 	-DOSG_GLES1_AVAILABLE=OFF
 	-DOSG_GLES3_AVAILABLE=OFF
 	-DOSG_GL_LIBRARY_STATIC=OFF
-	-DOSG_GL_DISPLAYLISTS_AVAILABLE=OFF
+	-DOSG_GL_DISPLAYLISTS_AVAILABLE=ON
 	-DOSG_GL_MATRICES_AVAILABLE=ON
 	-DOSG_GL_VERTEX_FUNCS_AVAILABLE=ON
 	-DOSG_GL_VERTEX_ARRAY_FUNCS_AVAILABLE=ON
@@ -539,6 +539,7 @@ set(OSG_PATCH
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/dae_collada.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/load-ng-gl4es.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/mipmaps.patch &&
+	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/osgtext-shader-hackfix.patch &&
 #	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/cubic-filtering.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0005-CullSettings-make-inheritanceMask-atomic-to-silence-.patch
 )

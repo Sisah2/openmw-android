@@ -109,7 +109,7 @@ class GameActivity : SDLActivity() {
 
         Os.setenv("OSG_VERTEX_BUFFER_HINT", "VBO", true)
         Os.setenv("OSG_GL_TEXTURE_STORAGE", "OFF", true)
-        Os.setenv("OSG_TEXT_SHADER_TECHNIQUE", "NONE", true)
+        Os.setenv("OSG_TEXT_SHADER_TECHNIQUE", "ALL", true)
 
         Os.setenv("LIBGL_SIMPLE_SHADERCONV", "1", true)
 
