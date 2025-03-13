@@ -195,7 +195,7 @@ find build/$ARCH/openmw-prefix/ -iname "libopenmw.so" -exec cp "{}" ../app/src/m
 cp tool/libdelta_plugin.so ../app/src/main/jniLibs/$ABI/
 
 # copy over libs we compiled
-cp prefix/$ARCH/lib/{libopenal,libSDL2,libdriver_helper,liblinkerhook,libOSMesa_8,libvulkan_freedreno,libVkLayer_khronos_timeline_semaphore,libGL_virgl_render,libvirgl_test_server,libcollada-dom2.5-dp}.so ../app/src/main/jniLibs/$ABI/
+cp prefix/$ARCH/lib/{libopenal,libSDL2,libdriver_helper,liblinkerhook,libOSMesa_8,libvulkan_freedreno,libVkLayer_khronos_timeline_semaphore,libcollada-dom2.5-dp}.so ../app/src/main/jniLibs/$ABI/
 
 # copy over libc++_shared
 find ./toolchain/$ARCH/sysroot/usr/lib/$NDK_TRIPLET -iname "libc++_shared.so" -exec cp "{}" ../app/src/main/jniLibs/$ABI/ \;
