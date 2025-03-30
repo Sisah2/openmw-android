@@ -95,12 +95,12 @@
     </string-array>
 
     <string-array name="gs_shadow_pcf_entries">
-        <item>Disabled</item>
+        <item>1 sample</item>
         <item>4 samples</item>
-        <item>2x2x4 samples</item>
-        <item>3x3x4 samples</item>
-        <item>4x4x4 samples</item>
-        <item>5x5x4 samples</item>
+        <item>9 samples</item>
+        <item>16 samples</item>
+        <item>25 samples</item>
+        <item>36 samples</item>
     </string-array>
 
     <string-array name="gs_shadow_pcf_values">

@@ -48,7 +48,7 @@
         <CheckBoxPreference
             android:key="gs_reverse_z"
             android:title="Reverse-z Depth Buffer"
-            android:defaultValue="true"
+            android:defaultValue="false"
             android:summary="Enabling reduce z fighting."/>
 
     </PreferenceCategory>

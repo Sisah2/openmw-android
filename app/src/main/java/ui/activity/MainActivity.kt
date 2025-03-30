@@ -565,7 +565,7 @@ class MainActivity : AppCompatActivity() {
 
 	// Visuals graphics
 	writeSetting("Video", "framerate limit", prefs.getString("gs_framerate_limit", "60").toString())
-	writeSetting("Camera", "reverse z", if(prefs.getBoolean("gs_reverse_z", true)) "true" else "false")
+	writeSetting("Camera", "reverse z", if(prefs.getBoolean("gs_reverse_z", /*true*/false)) "true" else "false")
 
 	// Visuals shaders
 	writeSetting("Shaders", "auto use object normal maps", if(prefs.getBoolean("gs_auto_use_object_normal_maps", false)) "true" else "false")
@@ -602,7 +602,7 @@ class MainActivity : AppCompatActivity() {
 	    writeSetting("Shadows", "compute scene bounds", prefs.getString("gs_shadow_computation_method", "bounds").toString())
 	    writeSetting("Shadows", "maximum shadow map distance", prefs.getString("gs_shadows_distance", "8192").toString())
 	    writeSetting("Shadows", "shadow fade start", prefs.getString("gs_shadows_fade_start", "0.9").toString())
-	    writeSetting("Shadows", "percentage closer filtering", prefs.getString("gs_shadows_pcf", "1").toString())
+	    writeSetting("Shadows", "percentage closer filtering", prefs.getString("gs_shadows_pcf", "0").toString())
         }
 
 	// Animations
@@ -693,8 +693,9 @@ class MainActivity : AppCompatActivity() {
                 generateOpenmwCfg()
 
                 // openmw.cfg: data, resources
+                val gameVFS = "\"" + Constants.USER_FILE_STORAGE + "resources/vfs-mw\"\n"
                 file.Writer.write(Constants.OPENMW_CFG, "resources", Constants.RESOURCES)
-                file.Writer.write(Constants.OPENMW_CFG, "data", "\"" + inst.findDataFiles() + "\"")
+                file.Writer.write(Constants.OPENMW_CFG, "data", gameVFS + "data=\"" + inst.findDataFiles() + "\"")
 
                 file.Writer.write(Constants.OPENMW_CFG, "encoding", prefs!!.getString("pref_encoding", GameInstaller.DEFAULT_CHARSET_PREF)!!)
 

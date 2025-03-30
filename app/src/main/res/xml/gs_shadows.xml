@@ -73,7 +73,7 @@
             android:dialogTitle="Shadows PCF Filter"
             android:entries="@array/gs_shadow_pcf_entries"
             android:entryValues="@array/gs_shadow_pcf_values"
-            android:defaultValue="1" />
+            android:defaultValue="0" />
     </PreferenceCategory>
 
 </PreferenceScreen>

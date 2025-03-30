@@ -81,6 +81,8 @@ android {
             storeFile file("debug.keystore")
         }
     }
+
+    ndkVersion '27.2.12479018'
 }
 
 dependencies {
