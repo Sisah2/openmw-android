@@ -113,6 +113,7 @@ class GameActivity : SDLActivity() {
 
         Os.setenv("LIBGL_SIMPLE_SHADERCONV", "1", true)
         Os.setenv("LIBGL_INSTANCING", "1", true)
+        Os.setenv("LIBGL_DXTMIPMAP", "1", true)
 
         //Os.setenv("OPENMW_USER_FILE_STORAGE", Constants.USER_FILE_STORAGE + "/", true)
         //Os.setenv("OSG_NOTIFY_LEVEL", "FATAL", true) //hide osg errors for now, gl4es bug.

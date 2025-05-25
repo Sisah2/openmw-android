@@ -58,7 +58,7 @@
 
     <string-array name="gs_groundcover_handling_entries">
         <item>Off</item>
-        <item>Paging</item>
+        <item>Paging (not in this build)</item>
         <item>Instancing</item>
     </string-array>
 
