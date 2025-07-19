@@ -117,7 +117,7 @@ class MainActivity : AppCompatActivity() {
         // create icons files hint
         if (!File(Constants.USER_FILE_STORAGE + "/launcher/icons/paste custom icons here.txt").exists())
             File(Constants.USER_FILE_STORAGE + "/launcher/icons/paste custom icons here.txt").writeText(
-"attack.png \ninventory.png \njournal.png \njump.png \nkeyboard.png \nmouse.png \npause.png \npointer_arrow.png \nrun.png \nsave.png \nsneak.png \nthird_person.png \ntoggle_magic.png \ntoggle_weapon.png \ntoggle.png \nuse.png \nwait.png")
+"attack.png \ninventory.png \njournal.png \njump.png \nkeyboard.png \nmouse.png \npause.png \npointer_arrow.png \nrun.png \nsave.png \nsneak.png \nthird_person.png \ntoggle_magic.png \ntoggle_weapon.png \ntoggle.png \nuse.png \nwait.png \nscroll_wheel.png \npostprocessing.png \nstats.png")
 
         // create current mods dir in case someone deleted it
         val modsDir = PreferenceManager.getDefaultSharedPreferences(this).getString("mods_dir", "")!!
@@ -490,7 +490,7 @@ class MainActivity : AppCompatActivity() {
     private fun writeUserSettings() {
         File(Constants.USER_CONFIG + "/settings.cfg").createNewFile()
 
-	// Write resolution to prevent issues if incorect one is set, probably need to account notch size too
+	// Write resolution to prevent issues if incorect one is set
         val displayInCutoutArea = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("pref_display_cutout_area", true)
 	val dm = DisplayMetrics()
 	windowManager.defaultDisplay.getRealMetrics(dm)

@@ -68,10 +68,6 @@
             android:title="@string/pref_show_qp" />
 
         <CheckBoxPreference
-            android:key="pref_show_fn"
-            android:title="@string/pref_show_fn" />
-
-        <CheckBoxPreference
             android:key="pref_screen_keeper"
             android:title="@string/pref_screen_keeper"/>
     </PreferenceCategory>

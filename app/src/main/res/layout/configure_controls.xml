@@ -18,6 +18,28 @@
             android:orientation="horizontal">
 
             <Button
+                android:id="@+id/btnRemove"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Remove"
+                android:onClick="clickRemoveButton"
+                />
+
+            <Button
+                android:id="@+id/btnAdd"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Add"
+                android:onClick="clickAddButton"
+                />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
                 android:id="@+id/btnOpacityPlus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

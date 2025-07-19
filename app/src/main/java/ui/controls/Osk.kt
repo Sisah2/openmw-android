@@ -259,7 +259,7 @@ class Osk {
 
         val lineOffset = arrayOf(
                 (offsetX + buttonWidth * 1.0 + buttonMarginX).toInt(),
-                (offsetX + buttonWidth * 0.5 + buttonMarginX).toInt(),
+                (offsetX + buttonWidth * 1.1 + buttonMarginX).toInt(),
                 (offsetX + buttonWidth * 1.25 + buttonMarginX).toInt(),
                 (offsetX + buttonWidth * 1.5 + buttonMarginX).toInt()
         )
@@ -275,6 +275,9 @@ class Osk {
             curY += buttonHeight + buttonMarginY
         }
         elements.addAll(simpleButtons)
+
+        // Tab
+        elements.add(OskRawButton("Tab", KeyEvent.KEYCODE_TAB, offsetX, offsetY + 1 * (buttonHeight + buttonMarginY), (buttonWidth * 1.1).toInt(), buttonHeight))
 
         // Shift
         elements.add(OskShift(simpleButtons, offsetX, offsetY + 3 * (buttonHeight + buttonMarginY), (buttonWidth * 1.5).toInt(), buttonHeight))
