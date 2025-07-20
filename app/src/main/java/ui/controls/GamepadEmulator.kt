@@ -31,10 +31,7 @@ internal object GamepadEmulator {
 
         if (!registered) {
             registered = true
-            SDLControllerManager.nativeAddJoystick(deviceId, "Virtual", "Virtual",
-                0xbad, 0xf00d,
-                false, -0x1,
-                4, 0, 0)
+            SDLControllerManager.nativeAddJoystick(deviceId, "Virtual", "Virtual", 0x045E, 0x028E, false, 0xFFFF, 4, 0b1111, 0, 0)
         }
 
         SDLControllerManager.onNativeJoy(deviceId, stickId * 2, x)

@@ -157,6 +157,10 @@ class ConfigureControls : Activity() {
         val view = callback?.currentView ?: return
         val el = view.tag as OscElement
 
+if ((el.uniqueId.length > 1 && el.uniqueId.toIntOrNull() == null)/* || (el.uniqueId.length > 1 && el.uniqueId.toIntOrNull() == null)*/) {
+Toast.makeText(this, "Build-in keys cant be removed.", Toast.LENGTH_SHORT).show()
+return
+}
         with (PreferenceManager.getDefaultSharedPreferences(this).edit()) {
             remove("osc:" + el.uniqueId + ":opacity")
             remove("osc:" + el.uniqueId + ":size")
@@ -167,13 +171,13 @@ class ConfigureControls : Activity() {
         }
 
         File(Constants.USER_FILE_STORAGE + "/launcher/controls.cfg").readLines().forEach {
-            if (!it.startsWith(el.uniqueId.toString()))
+            if (!it.startsWith(el.uniqueId))
                 buttonList.add(it + "\n")
         }
 
         var output: String = ""
 
-        buttonList.forEach { output += it/* + "\n" */}
+        buttonList.forEach { output += it}
 
         File(Constants.USER_FILE_STORAGE + "/launcher/controls.cfg").writeText(output)
 
@@ -332,7 +336,11 @@ class ConfigureControls : Activity() {
         dialog.setView(scrollView)
 
         dialog.setPositiveButton("Add") { _, _ ->
-            val key = keyBox.text.toString()
+            var key = keyBox.text.toString()
+
+            if (key.toIntOrNull() == null && key.length > 1)
+                key = key[0].toString()
+
             val name = nameBox.text.toString()
             val visibility = if (showInMenusCheckBox.isChecked() == true) OscVisibility.ESSENTIAL else OscVisibility.NORMAL
             val togglable = togglableCheckBox.isChecked()
@@ -367,8 +375,7 @@ class ConfigureControls : Activity() {
                 val togglableString = if(togglable == true) "1" else "0"
 
                 File(Constants.USER_FILE_STORAGE + "/launcher/controls.cfg").appendText(
-"\n"
-+ key + "; " 
+key + "; " 
 + name + "; " 
 + "100; "
 + "110; " 
@@ -376,7 +383,7 @@ class ConfigureControls : Activity() {
 + "70; " 
 + "0.4; " 
 + togglableString + "; "
-+ roundingSeekBar.getProgress().toString()
++ roundingSeekBar.getProgress().toString() + "\n"
 )
 
 

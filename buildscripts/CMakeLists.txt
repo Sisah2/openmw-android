@@ -25,11 +25,11 @@ set(FFMPEG_VERSION 4.4)
 set(FFMPEG_HASH SHA256=42093549751b582cf0f338a21a3664f52e0a9fbe0d238d3c992005e493607d0e)
 
 # https://www.libsdl.org/download-2.0.php
-set(SDL2_VERSION 2.0.12)
+set(SDL2_VERSION 2.32.8)
 set(SDL2_HASH SHA256=349268f695c02efbc9b9148a70b85e58cefbbf704abd3e91be654db7f1e2c863)
 
 # https://github.com/bulletphysics/bullet3/releases
-set(BULLET_VERSION 3.17)
+set(BULLET_VERSION 6c888f4abd7b46f572587360cc214985f02e5c6b)
 set(BULLET_HASH SHA256=baa642c906576d4d98d041d0acb80d85dd6eff6e3c16a009b1abf1ccd2bc0a61)
 
 # https://github.com/MyGUI/mygui/releases
@@ -49,14 +49,14 @@ set(LZ4_VERSION 1.9.3)
 set(LZ4_HASH SHA256=030644df4611007ff7dc962d981f390361e6c97a34e5cbc393ddfbe019ffe2c1)
 
 # https://luajit.org/download.html
-set(LUAJIT_VERSION 505e2c03de35e2718eef0d2d3660712e06dadf1f)
+set(LUAJIT_VERSION 2.1.ROLLING)
 set(LUAJIT_HASH SHA256=1ad2e34b111c802f9d0cdf019e986909123237a28c746b21295b63c9e785d9c3)
 
 set(LIBICU_VERSION 70-1)
 set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
 
-# https://github.com/OpenMW/openmw/commits/master
-set(OPENMW_VERSION 156b1904cd25a4c64c063136ccd57774cfcbd3be)
+# https://github.com/sisah2/openmw/commits/clean
+set(OPENMW_VERSION 8391ae41abdac667ff49704f2da936c8c09a079f)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
@@ -285,45 +285,44 @@ ExternalProject_Add(ffmpeg
 
 ExternalProject_Add(sdl2
 	URL https://www.libsdl.org/release/SDL2-${SDL2_VERSION}.tar.gz
-	https://github.com/xyzz/openmw-deps/releases/download/v0/SDL2-${SDL2_VERSION}.tar.gz
-	URL_HASH ${SDL2_HASH}
+#	https://github.com/xyzz/openmw-deps/releases/download/v0/SDL2-${SDL2_VERSION}.tar.gz
+#	URL_HASH ${SDL2_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
-	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-sensor.patch &&
-	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-android-120hz-gyroscope.patch
-	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-disable-declaration-after-statement-warning.patch
+#	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-sensor.patch &&
+#	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-android-120hz-gyroscope.patch
+#	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-disable-declaration-after-statement-warning.patch
 
-	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
-	${COMMON_CMAKE_ARGS}
-        -DSDL_STATIC=OFF
-        -DHAVE_GCC_FVISIBILITY=OFF
+#	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
+#	${COMMON_CMAKE_ARGS}
+#        -DSDL_STATIC=OFF
+#        -DHAVE_GCC_FVISIBILITY=OFF
 
-	BUILD_COMMAND ${wrapper_command} $(MAKE)
+#	BUILD_COMMAND ${wrapper_command} $(MAKE)
 
-	INSTALL_COMMAND ${wrapper_command} $(MAKE) install
+#	INSTALL_COMMAND ${wrapper_command} $(MAKE) install
 
-	COMMAND cp libSDL2.so ${prefix}/lib/
-	COMMAND cp libhidapi.so ${prefix}/lib/
-	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
+#	COMMAND cp libSDL2.so ${prefix}/lib/
+#	COMMAND cp libhidapi.so ${prefix}/lib/
+#	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
 
 #	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-android-120hz-gyroscope.patch
 #	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-disable-gamma-warning.patch
+	CONFIGURE_COMMAND ""
 
-#	CONFIGURE_COMMAND ""
+	BUILD_COMMAND ${wrapper_command} ndk-build
+	${COMMON_NDK_BUILD_FLAGS}
 
-#	BUILD_COMMAND ${wrapper_command} ndk-build
-#	${COMMON_NDK_BUILD_FLAGS}
-
-#	INSTALL_COMMAND mkdir -p ${prefix}/lib/
-#	COMMAND cp libs/${app_abi}/libSDL2.so ${prefix}/lib/
+	INSTALL_COMMAND mkdir -p ${prefix}/lib/
+	COMMAND cp libs/${app_abi}/libSDL2.so ${prefix}/lib/
 #	COMMAND cp libs/${app_abi}/libhidapi.so ${prefix}/lib/
-#	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
+	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
 )
 
 ExternalProject_Add(bullet
 	URL https://github.com/bulletphysics/bullet3/archive/${BULLET_VERSION}.tar.gz
-	https://github.com/xyzz/openmw-deps/releases/download/v0/bullet3-${BULLET_VERSION}.tar.gz
-	URL_HASH ${BULLET_HASH}
+#	https://github.com/xyzz/openmw-deps/releases/download/v0/bullet3-${BULLET_VERSION}.tar.gz
+#	URL_HASH ${BULLET_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
 	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/bullet-fix-cmake.patch
@@ -415,7 +414,7 @@ set(LUAJIT_MAKE_FLAGS
 )
 
 ExternalProject_Add(luajit
-	URL https://github.com/luaJit/LuaJIT/archive/${LUAJIT_VERSION}.tar.gz
+	URL https://github.com/luaJit/LuaJIT/archive/v${LUAJIT_VERSION}.tar.gz
 #	URL_HASH ${LUAJIT_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
@@ -592,7 +591,8 @@ set(OPENMW_PATCH
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0001-loadingscreen-disable-for-now.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0009-windowmanagerimp-always-show-mouse-when-possible-pat.patch &&
         #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0010-android-fix-context-being-lost-on-app-minimize.patch &&
-	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/android_main.cpp
+
+	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/androidmain.cpp
 )
 
 ExternalProject_Add(openmw

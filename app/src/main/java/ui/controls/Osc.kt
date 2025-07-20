@@ -40,6 +40,7 @@ import ui.activity.MouseMode
 import android.view.GestureDetector
 import android.view.View.OnTouchListener
 import android.graphics.BitmapFactory
+import android.util.TypedValue
 import constants.Constants
 import java.io.File
 
@@ -300,7 +301,7 @@ class OscJoystickLeft(
     defaultY: Int,
     defaultSize: Int,
     private val stick: Int
-) : OscElement(uniqueId, "", visibility, defaultX, defaultY, defaultSize) {
+) : OscElement(uniqueId, "", visibility, defaultX, defaultY, defaultSize, 0.0f) {
 
     override fun makeView(ctx: Context) {
         val v = JoystickLeft(ctx)
@@ -318,8 +319,9 @@ class OscJoystickRight(
     defaultX: Int,
     defaultY: Int,
     defaultSize: Int,
-    private val stick: Int
-) : OscElement(uniqueId, "", visibility, defaultX, defaultY, defaultSize) {
+    private val stick: Int,
+    defaultOpacity: Float = 0.4f
+) : OscElement(uniqueId, "", visibility, defaultX, defaultY, defaultSize, defaultOpacity) {
 
     override fun makeView(ctx: Context) {
         val v = JoystickRight(ctx)
@@ -328,7 +330,6 @@ class OscJoystickRight(
 
         view = v
     }
-
 }
 
 open class OscHiddenButton(
@@ -355,7 +356,7 @@ open class OscHiddenButton(
         val shape = GradientDrawable()
         shape.setShape(GradientDrawable.RECTANGLE)
         shape.setColor(Color.GRAY)
-        shape.setCornerRadius(radius)
+        shape.setCornerRadius(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, radius/4f, ctx.resources.displayMetrics))
         v.setBackground(shape)
 
         view = v
@@ -401,16 +402,14 @@ class Osc {
     private val btnTopToggle = OscCustomButton("toggle", "toggle.png", OscVisibility.NULL,
         R.drawable.toggle, 0, 0) { toggleTopControls() }
 
-    private val joystickLeft = OscJoystickLeft("joystickLeft", OscVisibility.NORMAL,
-        JOYSTICK_OFFSET, 400, JOYSTICK_SIZE, 0)
-    private val joystickRight = OscJoystickRight("joystickRight", OscVisibility.ESSENTIAL,
-        VIRTUAL_SCREEN_WIDTH - JOYSTICK_SIZE - JOYSTICK_OFFSET,
-        400, JOYSTICK_SIZE, 1)
-
+    private val joystickLeft = OscJoystickLeft("joystickLeft", OscVisibility.NORMAL, 0, 0, 512, 0)
+    private val joystickRight = OscJoystickRight("joystickRight", OscVisibility.NORMAL, 512, 0, 512, 1, 0.0f)
+    private val menuJoystickRight = OscJoystickRight("menuJoystickRight", OscVisibility.NORMAL, VIRTUAL_SCREEN_WIDTH - JOYSTICK_SIZE - JOYSTICK_OFFSET, 400, JOYSTICK_SIZE, 1)
 
     private var elements = arrayListOf(
         joystickLeft,
         joystickRight,
+        menuJoystickRight,
 
         btnTopToggle,
         OscGestureButton("scroll_wheel", "scroll_wheel.png", OscVisibility.ESSENTIAL,
@@ -428,10 +427,10 @@ class Osc {
         OscAttackButton("fire", "attack.png", OscVisibility.ESSENTIAL,
             R.drawable.attack, 800, 315, 1, 120),
         OscImageButton("use", "use.png", OscVisibility.NORMAL,
-            R.drawable.use, joystickLeft.defaultX + JOYSTICK_SIZE/2 + 105, 630,
+            R.drawable.use, VIRTUAL_SCREEN_WIDTH / 2 - 160 - 35, 630,
             KeyEvent.KEYCODE_SPACE),
         OscImageButton("jump", "jump.png", OscVisibility.NORMAL, R.drawable.jump,
-            joystickRight.defaultX + JOYSTICK_SIZE/2 - 105 - CONTROL_DEFAULT_SIZE,
+            VIRTUAL_SCREEN_WIDTH / 2 + 160 - 35,
             630, KeyEvent.KEYCODE_E)
     )
 
@@ -441,13 +440,9 @@ class Osc {
 
     init {
         // create controls.cfg
-        if (!File(Constants.USER_FILE_STORAGE + "/launcher/controls.cfg").exists()) {
+        if (!File(Constants.USER_FILE_STORAGE + "/launcher/controls.cfg").exists()) 
             File(Constants.USER_FILE_STORAGE + "/launcher/controls.cfg").writeText(
-"//syntax: Key or keycode; button text or image to load; default x; default y; visibility; default size; default alpha; togglable; rounding\n\nKey can be single string as w s a d etc or android keycode\nList of android keycodes www.temblast.com/ref/akeyscode.htm\nIcons are loaded from icons folder, icon names cant contain spaces, if not found it use simple button with specified text\nDefault x and default y specify default position of added button in 1024x728 grid, can be changed in app later\nVisibility 0 mean button is not visible in menus, 1 means always visible\nDefault button size original is 70\nDefault button alpha original is 0.4\nTogglable specify if button is togglable, press once to activate, deactivate on second press\n Rounding specify rounding of corners for simple buttons 0.0 = square 100.0 = circle\n")
-
-            File(Constants.USER_FILE_STORAGE + "/launcher/controls-example.cfg").writeText(
-"p; phys ;682; 100; 0; 70; 0.4; 1; 25.0\nb; block; 382; 100; 0; 70; 0.4; 1; 50.0\nr; run; 382; 300; 0; 70; 0.4; 0; 100.0")
-        }
+"//syntax: Key or keycode; button text or image to load; default x; default y; visibility; default size; default alpha; togglable; rounding\n\nKey can be single string as w s a d etc or android keycode\nList of android keycodes www.temblast.com/ref/akeyscode.htm\nIcons are loaded from icons folder, icon names cant contain spaces, if not found it use simple button with specified text\nDefault x and default y specify default position of added button in 1024x728 grid, can be changed in app later\nVisibility 0 mean button is not visible in menus, 1 means always visible\nDefault button size original is 70\nDefault button alpha original is 0.4\nTogglable specify if button is togglable, press once to activate, deactivate on second press\nRounding specify rounding of corners for simple buttons 0.0 = square 100.0 = circle\n\n\n")
 
         val mKeyCharacterMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD)
         File(Constants.USER_FILE_STORAGE + "/launcher/controls.cfg").readLines().forEach {
@@ -568,6 +563,9 @@ class Osc {
             else
                 setVisibility(OscVisibility.ESSENTIAL.v)
         }
+
+        menuJoystickRight.view?.visibility = if (SDLActivity.isMouseShown() == 1) View.VISIBLE else View.GONE
+        if (GameActivity.mouseMode == MouseMode.Touch) menuJoystickRight.view?.visibility = View.GONE
     }
 
     fun toggleMouse() {
@@ -577,7 +575,7 @@ class Osc {
 
     fun placeConfigurableElements(target: RelativeLayout, listener: View.OnTouchListener) {
         for (element in elements) {
-            if (element == qp || quickButtons.contains(element))
+            if (element == qp || quickButtons.contains(element) || element == joystickLeft || element == joystickRight)
                 continue
 
             element.placeConfigurable(target, listener)

@@ -371,17 +371,17 @@ class MainActivity : AppCompatActivity() {
      * Determines required screen scaling based on resolution and physical size of the device
      */
     private fun determineScaling(): Float {
-        // The idea is to stretch an old-school 1024x768 monitor to the device screen
-        // Assume that 1x scaling corresponds to resolution of 1024x768
-        // Assume that the longest side of the device corresponds to the 1024 side
-        // Therefore scaling is calculated as longest size of the device divided by 1024
+        // The idea is to stretch an old-school 1280x960 monitor to the device screen
+        // Assume that 1x scaling corresponds to resolution of 1280x960
+        // Assume that the longest side of the device corresponds to the 1280 side
+        // Therefore scaling is calculated as longest size of the device divided by 1280
         // Note that it doesn't take into account DPI at all. Which is fine for now, but in future
         // we might want to add some bonus scaling to e.g. phone devices so that it's easier
         // to click things.
 
         val dm = DisplayMetrics()
         windowManager.defaultDisplay.getMetrics(dm)
-        return maxOf(dm.heightPixels, dm.widthPixels) / 1024.0f
+        return maxOf(dm.heightPixels, dm.widthPixels) / 1280.0f
     }
 
     /**

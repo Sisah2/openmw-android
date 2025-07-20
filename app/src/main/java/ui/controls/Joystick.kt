@@ -63,7 +63,7 @@ open class Joystick : View {
     }
 
     private fun init() {
-        strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2f, context.resources.displayMetrics).toInt()
+        strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5f, context.resources.displayMetrics).toInt()
     }
 
     fun setStick(id: Int) {
@@ -77,17 +77,8 @@ open class Joystick : View {
         paint.strokeWidth = strokeWidth.toFloat()
         paint.color = Color.GRAY
 
-        if (down) {
-            // Draw initial touch
-            canvas.drawCircle(initialX, initialY, width / 10f, paint)
-
-            // Draw current stick position
-            canvas.drawCircle(currentX, currentY, width / 5f, paint)
-        } else {
-            // Draw the outline
-            canvas.drawCircle(width / 2f, height / 2f,
-                width / 2f - strokeWidth, paint)
-        }
+        val scaled = strokeWidth.toFloat()
+        canvas.drawRoundRect(scaled, scaled, width.toFloat() - scaled, height.toFloat() - scaled, scaled * 3f, scaled * 3f, paint)
     }
 
     public override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

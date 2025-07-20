@@ -65,6 +65,7 @@
 
         <CheckBoxPreference
             android:key="pref_show_qp"
+            android:defaultValue="true"
             android:title="@string/pref_show_qp" />
 
         <CheckBoxPreference

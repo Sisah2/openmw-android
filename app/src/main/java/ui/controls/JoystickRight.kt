@@ -52,8 +52,8 @@ class JoystickRight : Joystick {
                 // this isn't configurable here but configurable in openmw built-in settings
                 val mouseScalingFactor = 900f
 
-                val movementX = (newX - curX) * mouseScalingFactor / width
-                val movementY = (newY - curY) * mouseScalingFactor / height
+                val movementX = (newX - curX) * 2f/*mouseScalingFactor / width*/
+                val movementY = (newY - curY) * 2f/*mouseScalingFactor / height*/
 
                 SDLActivity.sendRelativeMouseMotion(Math.round(movementX), Math.round(movementY))
 

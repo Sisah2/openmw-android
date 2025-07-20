@@ -33,7 +33,7 @@ class ModsCollection(private val type: ModType,
 
     val mods = arrayListOf<Mod>()
     private var extensions: Array<String> = if (type == ModType.Resource)
-        arrayOf("bsa")
+        arrayOf("bsa", "ba2")
     else if (type == ModType.Dir)
         arrayOf("")
     else
