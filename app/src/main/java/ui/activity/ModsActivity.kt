@@ -47,11 +47,25 @@ import android.util.Log
 import java.io.PrintWriter
 import java.io.StringWriter
 
+
+import android.widget.Toast
+
 class ModsActivity : AppCompatActivity() {
-    val mPluginAdapter = ModsAdapter()
-    val mResourceAdapter = ModsAdapter()
-    val mDirAdapter = ModsAdapter()
-    val mGroundcoverAdapter = ModsAdapter()
+    var mPluginAdapter = ModsAdapter(this)
+    var mResourceAdapter = ModsAdapter(this)
+    var mDirAdapter = ModsAdapter(this)
+    var mGroundcoverAdapter = ModsAdapter(this)
+
+    var fallbackList = mutableSetOf<String>()
+    var archiveList = mutableListOf<Pair<String, Boolean>>()
+    var dataDirsList = mutableListOf<Pair<String, Boolean>>()
+    var contentList = mutableListOf<Pair<String, Boolean>>()
+    var groundcoverList = mutableListOf<Pair<String, Boolean>>()
+    var fsPlugins = mutableSetOf<String>()
+    var fsArchives = mutableSetOf<String>()
+
+    val pluginExtensions: Array<String> = arrayOf("esm", "esp", "omwaddon", "omwgame", "omwscripts")
+    val archiveExtensions: Array<String> = arrayOf("bsa", "ba2")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,12 +82,10 @@ class ModsActivity : AppCompatActivity() {
 
                 // Reload mod list when moving from data dir tab
                 if(flipper.displayedChild == 2) {
+                    saveCFG()
                     updateModList()
-                    mPluginAdapter.notifyDataSetChanged()
-                    mResourceAdapter.notifyDataSetChanged()
-                    mGroundcoverAdapter.notifyDataSetChanged()
                 }
-		
+
                 flipper.displayedChild = tab.position
             }
 
@@ -84,48 +96,155 @@ class ModsActivity : AppCompatActivity() {
             }
         })
 
-        File(Constants.USER_FILE_STORAGE + "/launcher/ModsDatabases" + 
-            PreferenceManager.getDefaultSharedPreferences(this).getString("mods_dir", "")/*.hashCode()*/).mkdirs()
+        // Add Data Files and default plugins when missing
+        val base = File(Constants.USER_OPENMW_CFG).readText()
+        val gameDir = PreferenceManager.getDefaultSharedPreferences(this).getString("game_files", "")
+        if (!base.contains(gameDir + "/Data Files")) {
+            dataDirsList.add(Pair(gameDir + "/Data Files", true))
+            archiveList.add(Pair("Morrowind.bsa", true))
+            archiveList.add(Pair("Tribunal.bsa", true))
+            archiveList.add(Pair("Bloodmoon.bsa", true))
+            contentList.add(Pair("Morrowind.esm", true))
+            contentList.add(Pair("Tribunal.esm", true))
+            contentList.add(Pair("Bloodmoon.esm", true))
+            File(Constants.USER_OPENMW_CFG).writeText("data=" + gameDir + "/Data Files\ncontent=Morrowind.esm\ncontent=Tribunal.esm\ncontent=Bloodmoon.esm\nfallback-archive=Morrowind.bsa\nfallback-archive=Tribunal.bsa\nfallback-archive=Bloodmoon.bsa\n" + base)
+        }
+
+        parseCFG(Pair("", false))
 
         // Set up adapters for the lists
         setupModList(findViewById(R.id.list_mods), ModType.Plugin)
         setupModList(findViewById(R.id.list_resources), ModType.Resource)
         setupModList(findViewById(R.id.list_dirs), ModType.Dir)
         setupModList(findViewById(R.id.list_groundcovers), ModType.Groundcover)
-
-        updateModList()
     }
 
     override fun onDestroy() {
+        saveCFG()
         super.onDestroy()
-        updateModList()
+    }
+
+    private fun parseCFG(addedDir: Pair<String, Boolean>) {
+        fallbackList.clear()
+        archiveList.clear()
+        dataDirsList.clear()
+        contentList.clear()
+        groundcoverList.clear()
+        fsPlugins.clear()
+        fsArchives.clear()
+
+        File(Constants.USER_OPENMW_CFG).useLines {
+	    lines -> lines.forEach {
+                if (it.contains("fallback="))
+                    fallbackList.add(it)
+                if (it.contains("fallback-archive="))
+                    archiveList.add(Pair(it.substringAfter("="), if (it.contains(";fallback-archive=")) false else true))
+                if (it.contains("data=")) {
+                    val path = it.substringAfter("=").replace("\"", "").replace("\\", "/")
+                    if (File(path).exists())
+                        dataDirsList.add(Pair(path, if (it.contains(";data=")) false else true))
+                }
+                if (it.contains("content="))
+                    contentList.add(Pair(it.substringAfter("="), if (it.contains(";content=")) false else true))
+                if (it.contains("groundcover="))
+                    groundcoverList.add(Pair(it.substringAfter("="), if (it.contains(";groundcover=")) false else true))
+            }
+        }
+
+
+        val gameDir = PreferenceManager.getDefaultSharedPreferences(this).getString("game_files", "")
+        val dataDirsNames = mutableSetOf<String>()
+        dataDirsList.forEach { dataDirsNames.add(it.first) }
+
+        File(gameDir).listFiles()?.forEach {
+            if (!it.isFile() && !dataDirsNames.contains(gameDir + "/" + it.name) && it.name != "Data Files")
+                dataDirsList.add(Pair(gameDir + "/" + it.name, false))
+        }
+
+        if (addedDir.second == true)
+            dataDirsList.add(addedDir)
+
+        dataDirsList.forEach {
+            val enabled = it.second
+
+            if (enabled) {
+                File(it.first).listFiles()?.forEach {
+                    if (pluginExtensions.contains(it.extension.toLowerCase()))
+                        fsPlugins.add(it.name)
+                    else if (archiveExtensions.contains(it.extension.toLowerCase()))
+                        fsArchives.add(it.name)
+                }
+            }
+        }
+    }
+
+    private fun saveCFG() {
+        var output: String = ""
+
+        fallbackList.forEach {
+            output += it + "\n"
+        }
+
+        mDirAdapter.collection.mods.forEach {
+        if (it.enabled)
+            output += "data=" + it.filename + "\n"
+        else
+            output += ";data=" + it.filename + "\n"
+        }
+
+        mResourceAdapter.collection.mods.forEach {
+        if (it.enabled)
+            output += "fallback-archive=" + it.filename + "\n"
+        else
+            output += ";fallback-archive=" + it.filename + "\n"
+        }
+
+        mPluginAdapter.collection.mods.forEach {
+        if (it.enabled)
+            output += "content=" + it.filename + "\n"
+        else
+            output += ";content=" + it.filename + "\n"
+        }
+
+        mGroundcoverAdapter.collection.mods.forEach {
+        if (it.enabled)
+            output += "groundcover=" + it.filename + "\n"
+        else
+            output += ";groundcover=" + it.filename + "\n"
+        }
+
+        val delta_enabled = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("delta_enabled", false)
+        val groundcoverify_enabled = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("groundcoverify_enabled", false)
+
+        if (delta_enabled == true || groundcoverify_enabled == true)
+            output += "data=" + Constants.USER_FILE_STORAGE + "launcher/delta\n"
+
+        if (delta_enabled == true)
+            output += "content=delta-merged.omwaddon\n"
+
+        if (groundcoverify_enabled == true) {
+            output += "content=output_deleted.omwaddon\n"
+            output += "groundcover=output_groundcover.omwaddon\n"
+        }
+
+        File(Constants.USER_OPENMW_CFG).writeText(output)
+
+        val currentPreset = PreferenceManager.getDefaultSharedPreferences(this).getString("modCollection", "Default")!!
+        File(Constants.USER_FILE_STORAGE + "/launcher/ModCollections/" + currentPreset).writeText(output)
     }
 
     private fun updateModList() {
-	var dataFilesList = ArrayList<String>()
-	dataFilesList.add(GameInstaller.getDataFiles(this))
+        parseCFG(Pair("", false))
 
-        val modsDir = PreferenceManager.getDefaultSharedPreferences(this).getString("mods_dir", "")!!
-        val database = ModsDatabaseOpenHelper(this.applicationContext)
-	// Get list of enabled data directories
-	var dataDirs = ArrayList<String>()
-	var enabledDataDirs = ArrayList<String>()
-	enabledDataDirs.add(GameInstaller.getDataFiles(this))
-	dataDirs.add(modsDir)
-	val availableDirs = ModsCollection(ModType.Dir, dataDirs, database)
+        mPluginAdapter.collection = ModsCollection(ModType.Plugin, dataDirsList, contentList, groundcoverList, fsPlugins, fsArchives)
+        mResourceAdapter.collection = ModsCollection(ModType.Resource, dataDirsList, archiveList, groundcoverList, fsPlugins, fsArchives)
+        mDirAdapter.collection = ModsCollection(ModType.Dir, dataDirsList, dataDirsList, groundcoverList, fsPlugins, fsArchives)
+        mGroundcoverAdapter.collection = ModsCollection(ModType.Groundcover, dataDirsList, groundcoverList, groundcoverList, fsPlugins, fsArchives)
 
-	availableDirs.mods
-	    .filter { it.enabled }
-            .forEach { enabledDataDirs.add(it.filename) }
-
-	File(modsDir).listFiles().forEach {
-	    if (!it.isFile() && enabledDataDirs.contains(it.getName()) )
-	        dataFilesList.add(modsDir + it.getName())
-	}
-
-        mPluginAdapter.collection = ModsCollection(ModType.Plugin, dataFilesList, database)
-        mResourceAdapter.collection = ModsCollection(ModType.Resource, dataFilesList, database)
-        mGroundcoverAdapter.collection = ModsCollection(ModType.Groundcover, dataFilesList, database)
+        mPluginAdapter.notifyDataSetChanged()
+        mResourceAdapter.notifyDataSetChanged()
+        mDirAdapter.notifyDataSetChanged()
+        mGroundcoverAdapter.notifyDataSetChanged()
     }
 
     /**
@@ -135,74 +254,42 @@ class ModsActivity : AppCompatActivity() {
      */
     private fun setupModList(list: RecyclerView, type: ModType) {
 
-        // This is here just to auto-enable basic plugins (morrowind.esp...) it somehow dont work in updateModList :( 
-	var dataFilesList = ArrayList<String>()
-
-        val modsDir = PreferenceManager.getDefaultSharedPreferences(this)
-                .getString("mods_dir", "")!!
-
-	if (type == ModType.Dir) 
-            dataFilesList.add(modsDir)
-	else {
-	    dataFilesList.add(GameInstaller.getDataFiles(this))
-
-	    File(modsDir).listFiles().forEach {
-	        if (!it.isFile())
-	            dataFilesList.add(modsDir + it.getName())
-	    }
-        }
-
-        val database = ModsDatabaseOpenHelper(this.applicationContext)
         val linearLayoutManager = LinearLayoutManager(this)
         linearLayoutManager.orientation = RecyclerView.VERTICAL
         list.layoutManager = linearLayoutManager
 
 	if (type == ModType.Plugin) {
-	    mPluginAdapter.collection = ModsCollection(type, dataFilesList, database)
-            val callback = ModMoveCallback(mPluginAdapter)
+	    mPluginAdapter.collection = ModsCollection(type, dataDirsList, contentList, groundcoverList, fsPlugins, fsArchives)
+            val callback = ModMoveCallback(mPluginAdapter, mPluginAdapter, mGroundcoverAdapter)
             val touchHelper = ItemTouchHelper(callback)
             touchHelper.attachToRecyclerView(list)
             mPluginAdapter.touchHelper = touchHelper
             list.adapter = mPluginAdapter
 	}
 	else if (type == ModType.Resource) {
-	    mResourceAdapter.collection = ModsCollection(type, dataFilesList, database)
-            val callback = ModMoveCallback(mResourceAdapter)
+	    mResourceAdapter.collection = ModsCollection(type, dataDirsList, archiveList, groundcoverList, fsPlugins, fsArchives)
+            val callback = ModMoveCallback(mResourceAdapter, mPluginAdapter, mGroundcoverAdapter)
             val touchHelper = ItemTouchHelper(callback)
             touchHelper.attachToRecyclerView(list)
             mResourceAdapter.touchHelper = touchHelper
             list.adapter = mResourceAdapter
         }
         else if (type == ModType.Dir){
-	    mDirAdapter.collection = ModsCollection(type, dataFilesList, database)
-            val callback = ModMoveCallback(mDirAdapter)
+	    mDirAdapter.collection = ModsCollection(type, dataDirsList, dataDirsList, groundcoverList, fsPlugins, fsArchives)
+            val callback = ModMoveCallback(mDirAdapter, mPluginAdapter, mGroundcoverAdapter)
             val touchHelper = ItemTouchHelper(callback)
             touchHelper.attachToRecyclerView(list)
             mDirAdapter.touchHelper = touchHelper
             list.adapter = mDirAdapter
         }
 	else if (type == ModType.Groundcover){ 
-	    mGroundcoverAdapter.collection = ModsCollection(type, dataFilesList, database)
-            val callback = ModMoveCallback(mGroundcoverAdapter)
+	    mGroundcoverAdapter.collection = ModsCollection(type, dataDirsList, groundcoverList, groundcoverList, fsPlugins, fsArchives)
+            val callback = ModMoveCallback(mGroundcoverAdapter, mPluginAdapter, mGroundcoverAdapter)
             val touchHelper = ItemTouchHelper(callback)
             touchHelper.attachToRecyclerView(list)
             mGroundcoverAdapter.touchHelper = touchHelper
             list.adapter = mGroundcoverAdapter
         }
-    }
-
-    private fun reloadModLists() {
-        setupModList(findViewById(R.id.list_mods), ModType.Plugin)
-        setupModList(findViewById(R.id.list_resources), ModType.Resource)
-        setupModList(findViewById(R.id.list_dirs), ModType.Dir)
-        setupModList(findViewById(R.id.list_groundcovers), ModType.Groundcover)
-
-        updateModList()
-
-        mPluginAdapter.notifyDataSetChanged()
-        mResourceAdapter.notifyDataSetChanged()
-        mDirAdapter.notifyDataSetChanged()
-        mGroundcoverAdapter.notifyDataSetChanged()
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
@@ -211,81 +298,6 @@ class ModsActivity : AppCompatActivity() {
         inflater.inflate(R.menu.mod_manager_settings, menu)
 
         return super.onPrepareOptionsMenu(menu)
-    }
-
-
-    //duplicate of generateOpenmwCfg() from main activity
-    private fun generateDeltaCfg(): String {
-        val gamePath = PreferenceManager.getDefaultSharedPreferences(this)
-                .getString("game_files", "")!!
-
-        val modsDir = PreferenceManager.getDefaultSharedPreferences(this)
-            .getString("mods_dir", "")!!
-
-        val db = ModsDatabaseOpenHelper.getInstance(this)
-
-	var dataFilesList = ArrayList<String>()
-	var dataDirsPath = ArrayList<String>()
-	dataFilesList.add(GameInstaller.getDataFiles(this))
-        dataDirsPath.add(modsDir)
-
-	File(modsDir).listFiles().forEach {
-	    if (!it.isFile())
-	        dataFilesList.add(modsDir + it.getName())
-	}
-
-        val resources = ModsCollection(ModType.Resource, dataFilesList, db)
-        val dirs = ModsCollection(ModType.Dir, dataDirsPath, db)
-        val plugins = ModsCollection(ModType.Plugin, dataFilesList, db)
-        val groundcovers = ModsCollection(ModType.Groundcover, dataFilesList, db)
-
-        // generate final output.cfg
-        var output = "data=" + '"' + gamePath + "/Data Files" + '"' + "\n"
-
-        try {
-            // output resources
-            resources.mods
-                .filter { it.enabled }
-                .forEach { output += "fallback-archive=${it.filename}\n" }
-
-            // output data dirs
-            dirs.mods
-                .filter { it.enabled }
-                .forEach { output += "data=" + '"' + modsDir + it.filename + '"' + "\n" }
-
-            // output plugins
-            plugins.mods
-                .filter { it.enabled }
-                .forEach { output += "content=${it.filename}\n" }
-
-            // output groundcovers
-            groundcovers.mods
-                .filter { it.enabled }
-                .forEach { output += "groundcover=${it.filename}\n" }
-
-            // write everything to delta.cfg
-            output += "data=" + '"' + Constants.USER_FILE_STORAGE + "launcher/delta" + '"' + "\n" 
-
-            File(Constants.USER_FILE_STORAGE + "/launcher/delta").mkdirs()
-
-            output += "\n"
-
-            val lines = File(Constants.USER_CONFIG + "/openmw.cfg").readLines().toMutableList()
-            lines.removeAll { 
-                it.contains("content=delta-merged.omwaddon") ||
-                it.contains("groundcover=output_groundcover.omwaddon") ||
-                it.contains("content=output_deleted.omwaddon")
-            }
-
-            output += lines.joinToString("\n")
-
-            File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg").writeText(output)
-
-        } catch (e: IOException) {
-            Log.e("OpenMW-Launcher", "Failed to generate delta.cfg.", e)
-        }
-
-        return output
     }
 
     private fun shellExec(cmd: String? = null, WorkingDir: String? = null): String {
@@ -331,7 +343,7 @@ class ModsActivity : AppCompatActivity() {
         // Get the nativeLibraryDir (might not be suitable for this case)
         val applicationInfo = context.applicationInfo
         val WorkingDir = applicationInfo.nativeLibraryDir
-        val deltaConfigFile = File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg")
+        val deltaConfigFile = File(Constants.USER_OPENMW_CFG)
 
         val progressDialog = ProgressDialog(this)
         progressDialog.setMessage(message) // Set the message
@@ -355,12 +367,12 @@ class ModsActivity : AppCompatActivity() {
         val exteriorCellRegex = "^[0-9\\-]+x[0-9\\-]+$"
 
         val command = "./libdelta_plugin.so -v --verbose -c " +
-            Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg filter --all --output " +
+            Constants.USER_OPENMW_CFG + " filter --all --output " +
             Constants.USER_FILE_STORAGE + "/launcher/delta/output_groundcover.omwaddon --desc \"Generated groundcover plugin from your local cavebros\" match Cell --cellref-object-id \"$ids_expr\" --id \"$exteriorCellRegex\" match Static --id \"$ids_expr\" --modify model \"^\" \"grass\\\\\"" +
             " && " +
-            "./libdelta_plugin.so -v --verbose -c " + Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg filter --all --output " + Constants.USER_FILE_STORAGE + "/launcher/delta/output_deleted.omwaddon match Cell --cellref-object-id \"$ids_expr\" --id \"$exteriorCellRegex\" --delete" +
+            "./libdelta_plugin.so -v --verbose -c " + Constants.USER_OPENMW_CFG + " filter --all --output " + Constants.USER_FILE_STORAGE + "/launcher/delta/output_deleted.omwaddon match Cell --cellref-object-id \"$ids_expr\" --id \"$exteriorCellRegex\" --delete" +
             " && " +
-            "./libdelta_plugin.so -v --verbose -c " + Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg query --input " + Constants.USER_FILE_STORAGE + "/launcher/delta/output_groundcover.omwaddon --ignore " + Constants.USER_FILE_STORAGE + "/launcher/delta/deleted_groundcover.omwaddon match Static"
+            "./libdelta_plugin.so -v --verbose -c " + Constants.USER_OPENMW_CFG + " query --input " + Constants.USER_FILE_STORAGE + "/launcher/delta/output_groundcover.omwaddon --ignore " + Constants.USER_FILE_STORAGE + "/launcher/delta/deleted_groundcover.omwaddon match Static"
 
         // Get the Application Context
         val context = getApplicationContext()
@@ -389,7 +401,7 @@ class ModsActivity : AppCompatActivity() {
                 val command2 = "mkdir -p " + Constants.USER_FILE_STORAGE + "/launcher/delta/Meshes/grass/$correctedPath" +
                     " && " +
                     "./libdelta_plugin.so -v --verbose -c " +
-                    Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg vfs-extract \"Meshes$correctedPath/$filename\" " +
+                    Constants.USER_OPENMW_CFG + " vfs-extract \"Meshes$correctedPath/$filename\" " +
                     Constants.USER_FILE_STORAGE + "/launcher/delta/Meshes/grass/$correctedPath/$filename"
 
                 shellExec(command2.toString(), WorkingDir)
@@ -402,39 +414,22 @@ class ModsActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun enableDeltaPlugin() {
-        val lines = File(Constants.USER_CONFIG + "/openmw.cfg").readLines().toMutableList()
-        lines.removeAll { 
-            it.contains("delta-merged.omwaddon") 
+    private fun setSetting(setting: String, enabled: Boolean) {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        with(prefs.edit()) {
+            putBoolean(setting, enabled)
+            apply()
         }
-        lines.add("content=delta-merged.omwaddon")
-        File(Constants.USER_CONFIG + "/openmw.cfg").writeText(lines.joinToString("\n"))
     }
 
-    private fun disableDeltaPlugin() {
-        val lines = File(Constants.USER_CONFIG + "/openmw.cfg").readLines().toMutableList()
+    private fun generateDeltaCFG() {
+        val lines = File(Constants.USER_OPENMW_CFG).readLines().toMutableList()
         lines.removeAll { 
-            it.contains("content=delta-merged.omwaddon") 
+            it.contains("content=delta-merged.omwaddon") ||
+            it.contains("groundcover=output_groundcover.omwaddon") ||
+            it.contains("content=output_deleted.omwaddon") 
         }
-        File(Constants.USER_CONFIG + "/openmw.cfg").writeText(lines.joinToString("\n"))
-    }
-
-    private fun enableGroundcoverify() {
-        val lines = File(Constants.USER_CONFIG + "/openmw.cfg").readLines().toMutableList()
-        lines.removeAll { 
-            it.contains("groundcover=output_groundcover.omwaddon") || it.contains("content=output_deleted.omwaddon") 
-        }
-        lines.add("content=output_deleted.omwaddon")
-        lines.add("groundcover=output_groundcover.omwaddon")
-        File(Constants.USER_CONFIG + "/openmw.cfg").writeText(lines.joinToString("\n"))
-    }
-
-    private fun disableGroundcoverify() {
-        val lines = File(Constants.USER_CONFIG + "/openmw.cfg").readLines().toMutableList()
-        lines.removeAll { 
-            it.contains("groundcover=output_groundcover.omwaddon") || it.contains("content=output_deleted.omwaddon") 
-        }
-        File(Constants.USER_CONFIG + "/openmw.cfg").writeText(lines.joinToString("\n"))
+        File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg").writeText(lines.joinToString("\n"))
     }
 
     /**
@@ -447,7 +442,7 @@ class ModsActivity : AppCompatActivity() {
                 true
             }
 
-            R.id.action_set_mods_dir -> {
+            R.id.action_add_mod -> {
 
                 val chooser = StorageChooser.Builder()
                     .withActivity(this)
@@ -458,37 +453,38 @@ class ModsActivity : AppCompatActivity() {
                     .build()
 
                 chooser.show()
-                chooser.setOnSelectListener { path -> setupData(path) }
+                chooser.setOnSelectListener { path -> addMod(path) }
                 true
             }
 
             R.id.action_mods_preset -> {
                 var modPresets = arrayOf("Default")
-                val currentModsDir = Constants.USER_FILE_STORAGE + "/launcher/ModsDatabases/" + 
-                                PreferenceManager.getDefaultSharedPreferences(this).getString("mods_dir", "")!!
-                val currentPreset = PreferenceManager.getDefaultSharedPreferences(this).getString("mods_database", "Default")!!
+                val currentPreset = PreferenceManager.getDefaultSharedPreferences(this).getString("modCollection", "Default")!!
                 var currentPresetLocation = 0
                 var counter = 1
 
-                File(currentModsDir).listFiles().forEach {  
-                    if (it.isFile() && !it.getName().contains("-journal") && it.getName() != "Default") {
+                File(Constants.USER_FILE_STORAGE + "/launcher/ModCollections").listFiles().forEach {  
+                    if (it.isFile() && it.getName() != "Default") {
                         modPresets += it.getName()
                         if (it.getName() == currentPreset) currentPresetLocation = counter
                         counter += 1
                     }
-
                 }
 
                 AlertDialog.Builder(this)
                 .setTitle("Choose content list")
                 .setSingleChoiceItems(modPresets, currentPresetLocation) { dialog, which ->
-                    updateModList()
+                    saveCFG()
+
+                    val path = Constants.USER_FILE_STORAGE + "/launcher/ModCollections/" + modPresets[which]
+                    File(path).copyTo(File(Constants.USER_OPENMW_CFG), true)
+
                     val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
                     with(sharedPref.edit()) {
-                        putString("mods_database", modPresets[which])
+                        putString("modCollection", modPresets[which])
                        apply()
                     }
-                    reloadModLists()
+                    updateModList()
                     dialog.dismiss()
                 }
                 .setNegativeButton("New") { dialog, which -> 
@@ -503,13 +499,19 @@ class ModsActivity : AppCompatActivity() {
                         .setMessage("Select name.")
                         .setPositiveButton("Create") { dialog, _ ->
                             if (input.text.toString() != "") {
-                                updateModList()
+
+                                saveCFG()
+                                val path = Constants.USER_FILE_STORAGE + "/launcher/ModCollections/" + input.text.toString()
+                                val gameDir = PreferenceManager.getDefaultSharedPreferences(this).getString("game_files", "")
+                                File(path).writeText("data=" + gameDir + "/Data Files\ncontent=Morrowind.esm\ncontent=Tribunal.esm\ncontent=Bloodmoon.esm\nfallback-archive=Morrowind.bsa\nfallback-archive=Tribunal.bsa\nfallback-archive=Bloodmoon.bsa\n")
+                                File(path).copyTo(File(Constants.USER_OPENMW_CFG), true)
+
                                 val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
                                 with(sharedPref.edit()) {
-                                    putString("mods_database", input.text.toString())
+                                    putString("modCollection", input.text.toString())
                                     apply()
                                 }
-                                reloadModLists()
+                                updateModList()
                             }
                             dialog.cancel()
                         }
@@ -522,16 +524,17 @@ class ModsActivity : AppCompatActivity() {
                         .setTitle("Delete current content list")
                         .setMessage("Do you want to delete " + currentPreset + " content list?")
                         .setPositiveButton("Yes") { dialog, _ ->
-                            updateModList()
+                            val path = Constants.USER_FILE_STORAGE + "/launcher/ModCollections/Default"
+                            File(path).copyTo(File(Constants.USER_OPENMW_CFG), true)
+
                             val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
                             with(sharedPref.edit()) {
-                                putString("mods_database", "Default")
+                                putString("modCollection", "Default")
                                 apply()
                             }
+                            updateModList()
+                            File(Constants.USER_FILE_STORAGE + "/launcher/ModCollections/" + currentPreset).delete()
                             dialog.cancel()
-                            reloadModLists() 
-                            File(currentModsDir + currentPreset).delete()
-                            File(currentModsDir + currentPreset + "-journal").delete()
                         }
                         .setNegativeButton("No") { dialog, _ ->
                             dialog.cancel()
@@ -544,26 +547,21 @@ class ModsActivity : AppCompatActivity() {
             }
 
             R.id.action_tools_delta_merge -> {
+                saveCFG()
+                generateDeltaCFG() 
                 val command = "./libdelta_plugin.so -v --verbose -c " + 
-                    Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg merge --skip-cells " + 
+                    Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg" + " merge --skip-cells " + 
                     Constants.USER_FILE_STORAGE + "/launcher/delta/delta-merged.omwaddon"
 
                 var isGenerated = false
-                var isEnabled = false
+                var isEnabled = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("delta_enabled", false)
                 if (File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta-merged.omwaddon").exists())
                     isGenerated = true
-
-                val lines = File(Constants.USER_CONFIG + "/openmw.cfg").readLines().toMutableList()
-                lines.forEach { 
-                    if (it.contains("content=delta-merged.omwaddon"))
-                        isEnabled = true
-                }
-
 
                 var oldHash = ""
                 if (File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta.hash").exists())
                     oldHash = File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta.hash").readText()
-                val newHash = generateDeltaCfg().hashCode().toString()
+                val newHash = File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg").readText().hashCode().toString()
 
                 var message = "Delta plugin is "
                 if (!isGenerated) message += "not generated."
@@ -580,20 +578,16 @@ class ModsActivity : AppCompatActivity() {
                     .setMessage(message)
                     .setNeutralButton(if (isGenerated) "Re-Generate" else "Generate") { _, _ ->
                         File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta.hash").writeText(newHash)
-                        disableDeltaPlugin()
+                        setSetting("delta_enabled", false)
                         runDeltaCommand(command, "Running Delta Plugin...", Constants.USER_FILE_STORAGE + "/launcher/delta/delta.log")
-                        enableDeltaPlugin()
+                        setSetting("delta_enabled", true)
 
                     }
                     .setPositiveButton("Cancel") { _, _ ->
                     }
                     .setNegativeButton(if (!isGenerated) "" else if (isEnabled) "Disable" else "Enable") { _, _ ->
-                        if (isGenerated) {
-                            if (!isEnabled)
-                                enableDeltaPlugin()
-                            else
-                                disableDeltaPlugin()
-                        }
+                        if (isGenerated)
+                            setSetting("delta_enabled", if (isEnabled == true) false else true)
                     }
                     .show()
 
@@ -601,23 +595,18 @@ class ModsActivity : AppCompatActivity() {
             }
 
             R.id.action_tools_groundcoverify -> {
-
+                saveCFG()
+                generateDeltaCFG() 
                 var isGenerated = false
-                var isEnabled = false
+                var isEnabled = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("groundcoverify_enabled", false)
                 if (File(Constants.USER_FILE_STORAGE + "/launcher/delta/output_deleted.omwaddon").exists() &&
                     File(Constants.USER_FILE_STORAGE + "/launcher/delta/output_groundcover.omwaddon").exists())
                     isGenerated = true
 
-                val lines = File(Constants.USER_CONFIG + "/openmw.cfg").readLines().toMutableList()
-                lines.forEach { 
-                    if (it.contains("groundcover=output_groundcover.omwaddon"))
-                        isEnabled = true
-                }
-
                 var oldHash = ""
                 if (File(Constants.USER_FILE_STORAGE + "/launcher/delta/groundcoverify.hash").exists())
                     oldHash = File(Constants.USER_FILE_STORAGE + "/launcher/delta/groundcoverify.hash").readText()
-                val newHash = generateDeltaCfg().hashCode().toString()
+                val newHash = File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg").readText().hashCode().toString()
 
                 var message = "Groundcoverify is "
                 if (!isGenerated) message += "not generated!"
@@ -635,20 +624,16 @@ class ModsActivity : AppCompatActivity() {
                     .setMessage(message)
                     .setNeutralButton(if (isGenerated) "Re-Generate" else "Generate") { _, _ ->
                         File(Constants.USER_FILE_STORAGE + "/launcher/delta/groundcoverify.hash").writeText(newHash)
-                        disableGroundcoverify()
+                        setSetting("groundcoverify", false)
                         runGroundcoverify()
-                        enableGroundcoverify()
+                        setSetting("groundcoverify", true)
 
                     }
                     .setPositiveButton("Cancel") { _, _ ->
                     }
                     .setNegativeButton(if (!isGenerated) "" else if (isEnabled) "Disable" else "Enable") { _, _ ->
-                        if (isGenerated) {
-                            if (!isEnabled)
-                                enableGroundcoverify()
-                            else
-                                disableGroundcoverify()
-                        }
+                        if (isGenerated)
+                            setSetting("groundcoverify_enabled", if (isEnabled == true) false else true)
                     }
                     .show()
 
@@ -658,15 +643,18 @@ class ModsActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupData(path: String) {
-        val sharedPref = PreferenceManager.getDefaultSharedPreferences(this)
-        updateModList()
-        with(sharedPref.edit()) {
-            putString("mods_dir", path + "/")
-            putString("mods_database", "Default")
-            apply()
-        }
+    private fun addMod(path: String) {
+        saveCFG()
+        parseCFG(Pair(path, true))
 
-        reloadModLists()
+        mPluginAdapter.collection = ModsCollection(ModType.Plugin, dataDirsList, contentList, groundcoverList, fsPlugins, fsArchives)
+        mResourceAdapter.collection = ModsCollection(ModType.Resource, dataDirsList, archiveList, groundcoverList, fsPlugins, fsArchives)
+        mDirAdapter.collection = ModsCollection(ModType.Dir, dataDirsList, dataDirsList, groundcoverList, fsPlugins, fsArchives)
+        mGroundcoverAdapter.collection = ModsCollection(ModType.Groundcover, dataDirsList, groundcoverList, groundcoverList, fsPlugins, fsArchives)
+
+        mPluginAdapter.notifyDataSetChanged()
+        mResourceAdapter.notifyDataSetChanged()
+        mDirAdapter.notifyDataSetChanged()
+        mGroundcoverAdapter.notifyDataSetChanged()
     }
 }

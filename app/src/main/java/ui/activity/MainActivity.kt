@@ -56,7 +56,6 @@ import java.io.InputStreamReader
 import file.utils.CopyFilesFromAssets
 import mods.ModType
 import mods.ModsCollection
-import mods.ModsDatabaseOpenHelper
 import ui.fragments.FragmentSettings
 import permission.PermissionHelper
 import utils.MyApp
@@ -110,18 +109,23 @@ class MainActivity : AppCompatActivity() {
         File(Constants.USER_CONFIG).mkdirs()
         File(Constants.USER_FILE_STORAGE + "/launcher/icons").mkdirs()
         File(Constants.USER_FILE_STORAGE + "/launcher/delta").mkdirs()
+        File(Constants.USER_FILE_STORAGE + "/launcher/ModCollections").mkdirs()
 
         if (!File(Constants.USER_OPENMW_CFG).exists())
             File(Constants.USER_OPENMW_CFG).writeText("# This is the user openmw.cfg. Feel free to modify it as you wish.\n")
+
+        val currentPreset = PreferenceManager.getDefaultSharedPreferences(this).getString("modCollection", "Default")!!
+        if (!File(Constants.USER_FILE_STORAGE + "/launcher/ModCollections/" + currentPreset).exists())
+            File(Constants.USER_FILE_STORAGE + "/launcher/ModCollections/" + currentPreset).writeText("# This is the user openmw.cfg. Feel free to modify it as you wish.\n")
+
+        if (!File(Constants.USER_FILE_STORAGE + "/launcher/ModCollections/Default").exists())
+            File(Constants.USER_FILE_STORAGE + "/launcher/ModCollections/Default").writeText("")
 
         // create icons files hint
         if (!File(Constants.USER_FILE_STORAGE + "/launcher/icons/paste custom icons here.txt").exists())
             File(Constants.USER_FILE_STORAGE + "/launcher/icons/paste custom icons here.txt").writeText(
 "attack.png \ninventory.png \njournal.png \njump.png \nkeyboard.png \nmouse.png \npause.png \npointer_arrow.png \nrun.png \nsave.png \nsneak.png \nthird_person.png \ntoggle_magic.png \ntoggle_weapon.png \ntoggle.png \nuse.png \nwait.png \nscroll_wheel.png \npostprocessing.png \nstats.png")
 
-        // create current mods dir in case someone deleted it
-        val modsDir = PreferenceManager.getDefaultSharedPreferences(this).getString("mods_dir", "")!!
-        if (modsDir != "" ) File(modsDir).mkdirs()
     }
 
     /**
@@ -214,39 +218,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Second, check if user has at least one mod enabled
-	var dataFilesList = ArrayList<String>()
-	dataFilesList.add(inst.findDataFiles())
-
-        val modsDir = PreferenceManager.getDefaultSharedPreferences(this)
-            .getString("mods_dir", "")!!
-
-        File(Constants.USER_FILE_STORAGE + "/launcher/ModsDatabases" + modsDir).mkdirs()
-
-	File(modsDir).listFiles().forEach {
-	    if (!it.isFile())
-	        dataFilesList.add(modsDir + it.getName())
-	}
-
-        val plugins = ModsCollection(ModType.Plugin, dataFilesList,
-            ModsDatabaseOpenHelper.getInstance(this))
-        if (plugins.mods.count { it.enabled } == 0) {
-            // No mods enabled, show a warning
-            AlertDialog.Builder(this)
-                .setTitle(R.string.no_content_files_title)
-                .setMessage(R.string.no_content_files_message)
-                .setNeutralButton(R.string.dialog_howto) { _, _ ->
-                    openUrl("https://omw.xyz.is/mods.html")
-                }
-                .setNegativeButton(R.string.no_content_files_dismiss) { _, _ -> startGame() }
-                .setPositiveButton(R.string.configure_mods) { _, _ ->
-                    this.startActivity(Intent(this, ModsActivity::class.java))
-                }
-                .show()
-
-            return
-        }
-
         // If everything's alright, start the game
         startGame()
     }
@@ -313,52 +284,15 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val modsDir = PreferenceManager.getDefaultSharedPreferences(this)
-            .getString("mods_dir", "")!!
-
-        val db = ModsDatabaseOpenHelper.getInstance(this)
-
-	var dataFilesList = ArrayList<String>()
-	var dataDirsPath = ArrayList<String>()
-	dataFilesList.add(GameInstaller.getDataFiles(this))
-        dataDirsPath.add(modsDir)
-
-	File(modsDir).listFiles().forEach {
-	    if (!it.isFile())
-	        dataFilesList.add(modsDir + it.getName())
-	}
-
-        val resources = ModsCollection(ModType.Resource, dataFilesList, db)
-        val dirs = ModsCollection(ModType.Dir, dataDirsPath, db)
-        val plugins = ModsCollection(ModType.Plugin, dataFilesList, db)
-        val groundcovers = ModsCollection(ModType.Groundcover, dataFilesList, db)
-
         try {
             // generate final output.cfg
             var output = base + "\n" + fallback + "\n"
 
-            // output resources
-            resources.mods
-                .filter { it.enabled }
-                .forEach { output += "fallback-archive=${it.filename}\n" }
-
-            // output data dirs
-            dirs.mods
-                .filter { it.enabled }
-                .forEach { output += "data=" + '"' + modsDir + it.filename + '"' + "\n" }
-
-            // output plugins
-            plugins.mods
-                .filter { it.enabled }
-                .forEach { output += "content=${it.filename}\n" }
-
-            // output groundcovers
-            groundcovers.mods
-                .filter { it.enabled }
-                .forEach { output += "groundcover=${it.filename}\n" }
-
-            // force add delta data dir
-            output += "data=" + '"' + Constants.USER_FILE_STORAGE + "launcher/delta" + '"' + "\n" 
+            // Add Data Files and default plugins when missing
+            val gameDir = PreferenceManager.getDefaultSharedPreferences(this).getString("game_files", "")
+            if (!File(Constants.USER_OPENMW_CFG).readText().contains(gameDir + "/Data Files")) {
+                File(Constants.USER_OPENMW_CFG).writeText("data=" + gameDir + "/Data Files\ncontent=Morrowind.esm\ncontent=Tribunal.esm\ncontent=Bloodmoon.esm\nfallback-archive=Morrowind.bsa\nfallback-archive=Tribunal.bsa\nfallback-archive=Bloodmoon.bsa\n")
+            }
 
             // write everything to openmw.cfg
             File(Constants.OPENMW_CFG).writeText(output)
@@ -695,7 +629,7 @@ class MainActivity : AppCompatActivity() {
                 // openmw.cfg: data, resources
                 val gameVFS = "\"" + Constants.USER_FILE_STORAGE + "resources/vfs-mw\"\n"
                 file.Writer.write(Constants.OPENMW_CFG, "resources", Constants.RESOURCES)
-                file.Writer.write(Constants.OPENMW_CFG, "data", gameVFS + "data=\"" + inst.findDataFiles() + "\"")
+                file.Writer.write(Constants.OPENMW_CFG, "data", gameVFS/* + "data=\"" + inst.findDataFiles() + "\""*/)
 
                 file.Writer.write(Constants.OPENMW_CFG, "encoding", prefs!!.getString("pref_encoding", GameInstaller.DEFAULT_CHARSET_PREF)!!)
 

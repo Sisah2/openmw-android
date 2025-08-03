@@ -191,7 +191,7 @@
 
     <string name="action_generate_navmesh">Generate NavMesh cache</string>
 
-    <string name="action_set_mods_dir">Set Custom Mods Dir</string>
+    <string name="action_add_mod">Add Mod Folder</string>
     <string name="action_mods_preset">Content Lists</string>
     <string name="action_tools">External Tools</string>
     <string name="action_tools_delta_merge">Delta Merge</string>

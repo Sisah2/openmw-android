@@ -5,8 +5,8 @@
     <group android:id="@+id/mod_menu_group">
 
         <item
-            android:id="@+id/action_set_mods_dir"
-            android:title="@string/action_set_mods_dir"
+            android:id="@+id/action_add_mod"
+            android:title="@string/action_add_mod"
             app:showAsAction="never"
             />
 

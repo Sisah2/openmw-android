@@ -18,8 +18,7 @@
 */
 
 package mods
-
-import org.jetbrains.anko.db.*
+import constants.Constants
 import java.io.File
 
 /**
@@ -28,70 +27,16 @@ import java.io.File
  * @param dataFiles Path to the directory of the mods (the Data Files directory)
  */
 class ModsCollection(private val type: ModType,
-                     private val dataFiles: ArrayList<String>,
-                     private val db: ModsDatabaseOpenHelper) {
+                     private var dirList: MutableList<Pair<String, Boolean>>,
+                     private var modList: MutableList<Pair<String, Boolean>>,
+                     private var groundcoverList: MutableList<Pair<String, Boolean>>,
+                     private var fsPlugins: MutableSet<String>,
+                     private var fsArchives: MutableSet<String>) {
 
     val mods = arrayListOf<Mod>()
-    private var extensions: Array<String> = if (type == ModType.Resource)
-        arrayOf("bsa", "ba2")
-    else if (type == ModType.Dir)
-        arrayOf("")
-    else
-        arrayOf("esm", "esp", "omwaddon", "omwgame", "omwscripts")
 
     init {
-        if (isEmpty())
-            initDb()
         syncWithFs(type)
-        // The database might have become empty (e.g. if user deletes all mods) after the FS sync
-        if (isEmpty())
-            initDb()
-    }
-
-    /**
-     * Checks if the mod DB is empty, i.e. no mods defined yet. This can happen for example
-     * on first startup
-     * @return True if the DB doesn't have any mods
-     */
-    private fun isEmpty(): Boolean {
-        var count = 0
-        db.use {
-            count = select("mod", "count(1)").exec {
-                parseSingle(IntParser)
-            }
-        }
-        return count == 0
-    }
-
-    /**
-     * Inserts built-in mods into the database, in proper order.
-     * Also checks to make sure only installed mods are inserted.
-     */
-    private fun initDb() {
-        val builtIn = arrayOf("Morrowind", "Tribunal", "Bloodmoon")
-        initDbMods(builtIn.map { "$it.esm" }, ModType.Plugin)
-        initDbMods(builtIn.map { "$it.bsa" }, ModType.Resource)
-    }
-
-    /**
-     * Inserts built-in mods of a specific mod type. All of the built-in mods will be enabled
-     * by default.
-     * @param files Filenames of the mods, including extensions
-     * @param type Type of the mods (plugins/resources)
-     */
-    private fun initDbMods(files: List<String>, type: ModType) {
-        var order = 0
-	var counter = 0
-	repeat(dataFiles.size) {
-            db.use {
-                files
-                    .map { File(dataFiles.elementAt(counter), it) }
-                    .filter { it.exists() }
-                    .map { order += 1; Mod(type, it.name, order, true) }
-                    .forEach { it.insert(this) }
-            }
-	    counter = counter +1
-	}
     }
 
     /**
@@ -99,105 +44,54 @@ class ModsCollection(private val type: ModType,
      * This could result in it deleting or adding mods to the database.
      */
     private fun syncWithFs(type: ModType) {
-        var dbMods = listOf<Mod>()
+        val blacklist = mutableSetOf<String>()
 
-        // Get mods from the database
-        db.use {
-            select("mod", "type", "filename", "load_order", "enabled")
-                .whereArgs("type = {type}", "type" to type.v).exec {
-                    dbMods = parseList(ModRowParser())
-                }
-        }
-
-        val fsNames = mutableSetOf<String>()
-	var counter = 0
-
-	repeat(dataFiles.size) {
-
-     	   // Get file names matching the extensions
-     	   var modFiles = File(dataFiles.elementAt(counter)).listFiles()?.filter {
-     	       extensions.contains(it.extension.toLowerCase())
-     	   }
-
-           // Blacklist "Data Files" in Directories tab and default plugins in Groundcovers tab
-           val blacklist = mutableSetOf<String>()
-           if(type == ModType.Dir) {
-               blacklist.add("Data Files")
-           }
-
-           if(type == ModType.Groundcover) {
-               blacklist.add("Morrowind.esm")
-               blacklist.add("Tribunal.esm")
-               blacklist.add("Bloodmoon.esm")
-               blacklist.add("adamantiumarmor.esp")
-               blacklist.add("AreaEffectArrows.esp")
-               blacklist.add("bcsounds.esp")
-               blacklist.add("EBQ_Artifact.esp")
-               blacklist.add("entertainers.esp")
-               blacklist.add("LeFemmArmor.esp")
-               blacklist.add("master_index.esp")
-               blacklist.add("Siege at Firemoth.esp")
-           }
-
-     	   // Collect filenames of mods on the FS
-      	   modFiles?.forEach {
-     	       if(!blacklist.contains(it.name)) fsNames.add(it.name)
-     	   }
-     	   counter = counter + 1
-	}
-
-        // Collect filenames of mods in the DB
-        val dbNames = mutableSetOf<String>()
-        dbMods.forEach {
-            dbNames.add(it.filename)
-        }
-
-        // Get mods which are both in DB and on FS
-        dbMods.filter { fsNames.contains(it.filename) }.forEach {
-            mods.add(it)
-        }
+        blacklist.add(Constants.USER_FILE_STORAGE + "launcher/delta")
+        blacklist.add("delta-merged.omwaddon")
+        blacklist.add("output_deleted.omwaddon")
+        blacklist.add("output_groundcover.omwaddon")
 
         // Figure current maximum order, new mods will be pushed below it
         var maxOrder = mods.maxBy { it.order }?.order ?: 0
 
-        // Create an entry for each mod that's on FS but not in DB and assign proper order
-        val newMods = arrayListOf<Mod>()
-        (fsNames - dbNames).forEach {
-            maxOrder += 1
-            val mod = Mod(type, it, maxOrder, false)
-            newMods.add(mod)
-            mods.add(mod)
+        // Add all mods from openmw.cfg that exists on filesystem in its order
+        modList.forEach {
+            if ((type == ModType.Dir || fsPlugins.contains(it.first) || fsArchives.contains(it.first)) && !blacklist.contains(it.first)) {
+                maxOrder += 1
+                val mod = Mod(type, it.first, maxOrder, it.second)
+                mods.add(mod)
+            }
         }
 
-        // Commit changes to the database
-        db.use {
-            transaction {
-                // Delete all mods which are in db but not on fs
-                (dbNames - fsNames).forEach {
-                    delete("mod",
-                        "type = {type} AND filename = {filename}",
-                        "type" to type.v,
-                        "filename" to it)
-                }
+        // Add mods not specified in openmw.cfg but existing on filesystem at end of modlist
+        if (type != ModType.Dir && type != ModType.Groundcover) {
+            val cfgNames = mutableSetOf<String>()
 
-                // Create all mods which are on fs but not in db
-                newMods.forEach { it.insert(this) }
+            modList.forEach { cfgNames.add(it.first) }
+            if (type == ModType.Plugin) {
+                var groundcovers = mutableSetOf<String>()
+                groundcoverList.forEach { groundcovers.add(it.first) }
+                fsPlugins.forEach {
+                    if (!cfgNames.contains(it) && !groundcovers.contains(it) && !blacklist.contains(it)) {
+                        maxOrder += 1
+                        val mod = Mod(type, it, maxOrder, false)
+                        mods.add(mod)
+                    }
+                }
+            }
+
+            if (type == ModType.Resource) {
+                fsArchives.forEach {
+                    if (!cfgNames.contains(it)) {
+                        maxOrder += 1
+                        val mod = Mod(type, it, maxOrder, false)
+                        mods.add(mod)
+                    }
+                }
             }
         }
 
         // Sort the mods in order
         mods.sortBy { it.order }
-    }
-
-    /**
-     * Performs DB updates for all mods marked as dirty
-     */
-    fun update() {
-        db.use {
-            mods.filter { it.dirty }.forEach {
-                it.update(this)
-                it.dirty = false
-            }
-        }
     }
 }
