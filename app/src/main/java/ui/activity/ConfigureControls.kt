@@ -341,7 +341,7 @@ return
             if (key.toIntOrNull() == null && key.length > 1)
                 key = key[0].toString()
 
-            val name = nameBox.text.toString()
+            val name = if (nameBox.text.toString().length > 0) nameBox.text.toString() else key
             val visibility = if (showInMenusCheckBox.isChecked() == true) OscVisibility.ESSENTIAL else OscVisibility.NORMAL
             val togglable = togglableCheckBox.isChecked()
             var duplicate: Boolean = false

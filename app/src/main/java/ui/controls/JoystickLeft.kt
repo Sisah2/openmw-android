@@ -33,7 +33,7 @@ class JoystickLeft : Joystick {
     override fun updateStick() {
         if (down) {
             // GamepadEmulator takes values on a scale [-1; 1] so convert our values
-            val w = (width / 3).toFloat()
+            val w = (width / 5).toFloat()
             var diffX = currentX - initialX
             var diffY = currentY - initialY
 
