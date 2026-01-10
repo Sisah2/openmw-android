@@ -8,7 +8,7 @@ jobs:
       matrix:
         arch: [arm64]
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     env:
       CMAKE_VERSION: 3.19.7
@@ -40,27 +40,14 @@ jobs:
         export ANDROID_NDK_HOME=$(pwd)/buildscripts/toolchain/ndk/
         ./gradlew assembleNightlyDebug
 
-    - name: Compress symbols
-      run: |
-        cd buildscripts
-        ./package-symbols.sh
-        mv symbols.7z ../symbols-$(git rev-parse --short "$GITHUB_SHA")-${{ matrix.arch }}.7z
-
     - name: Collect outputs
       id: getfilename
       run: |
         mv app/build/outputs/apk/nightly/debug/omw_debug_*.apk omw-debug-$(git rev-parse --short "$GITHUB_SHA")-${{ matrix.arch }}.apk
         echo "apk_file=$(ls omw-debug-*.apk | sed 's/\(.*\)\..*/\1/')" >> $GITHUB_ENV
-        echo "symbols_file=$(ls symbols-*.7z | sed 's/\(.*\)\..*/\1/')" >> $GITHUB_ENV
-
+        
     - name: Upload the APK
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.apk_file }}
         path: ${{ env.apk_file }}.apk
-
-    - name: Upload debug symbols
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.symbols_file }}
-        path: ${{ env.symbols_file }}.7z
