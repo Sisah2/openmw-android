@@ -153,8 +153,8 @@ ln -sf lib prefix/$ARCH/osg/lib64
 cat include/command_wrapper_head.sh.in | \
 	DIR=$DIR \
 	ARCH=$ARCH \
-	ENV_CFLAGS=$CFLAGS \
-	ENV_CXXFLAGS=$CXXFLAGS \
+	ENV_CFLAGS=$CFLAGS -w \
+	ENV_CXXFLAGS=$CXXFLAGS -w \
 	NDK_TRIPLET=$NDK_TRIPLET \
 	ENV_LDFLAGS=$LDFLAGS \
 		envsubst > build/$ARCH/command_wrapper.sh
