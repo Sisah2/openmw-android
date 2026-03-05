@@ -1,0 +1,15 @@
+diff --git a/components/terrain/chunkmanager.cpp b/components/terrain/chunkmanager.cpp
+index 242f3e5700..aa45a0f3e9 100644
+--- a/components/terrain/chunkmanager.cpp
++++ b/components/terrain/chunkmanager.cpp
+@@ -111,7 +111,9 @@ namespace Terrain
+         texture->setInternalFormat(GL_RGB);
+         texture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+         texture->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+-        mSceneManager->applyFilterSettings(texture);
++        texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
++        texture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
++ //       mSceneManager->applyFilterSettings(texture);
+ 
+         return texture;
+     }

@@ -1,0 +1,28 @@
+diff --git a/src/osg/State.cpp b/src/osg/State.cpp
+index 152decdcc..2b17c544c 100644
+--- a/src/osg/State.cpp
++++ b/src/osg/State.cpp
+@@ -459,9 +459,9 @@ void State::glDrawBuffer(GLenum buffer)
+ {
+     if (_drawBuffer!=buffer)
+     {
+-        #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
++        /*#if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
+         ::glDrawBuffer(buffer);
+-        #endif
++        #endif*/
+         _drawBuffer=buffer;
+     }
+ }
+@@ -470,9 +470,9 @@ void State::glReadBuffer(GLenum buffer)
+ {
+     if (_readBuffer!=buffer)
+     {
+-        #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
++       /* #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
+         ::glReadBuffer(buffer);
+-        #endif
++        #endif*/
+         _readBuffer=buffer;
+     }
+ }

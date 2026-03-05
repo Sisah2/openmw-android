@@ -1,0 +1,14 @@
+diff --git a/apps/bsatool/bsatool.cpp b/apps/bsatool/bsatool.cpp
+index b62a438294..611c3583ca 100644
+--- a/apps/bsatool/bsatool.cpp
++++ b/apps/bsatool/bsatool.cpp
+@@ -245,6 +245,9 @@ int extractAll(std::unique_ptr<File>& bsa, Arguments& info)
+ {
+     for (const auto& file : bsa->getList())
+     {
++        if (!Misc::StringUtils::ciEndsWith(file.name(), ".dds"))
++            continue;
++
+         std::string extractPath(file.name());
+         Misc::StringUtils::replaceAll(extractPath, "\\", "/");
+ 

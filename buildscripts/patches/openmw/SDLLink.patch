@@ -1,0 +1,223 @@
+From 848aec437d12b50fac8f27d234171152a8692f5a Mon Sep 17 00:00:00 2001
+From: sisah <jirielbunda@seznam.cz>
+Date: Sat, 28 Feb 2026 04:08:39 -0500
+Subject: [PATCH] revert
+
+---
+ CMakeLists.txt                               |   3 +-
+ apps/openmw/CMakeLists.txt                   |   2 +-
+ cmake/FindSDL2.cmake                         | 129 +++++++++++++++++++
+ components/CMakeLists.txt                    |   2 +-
+ extern/oics/CMakeLists.txt                   |   2 -
+ extern/osg-ffmpeg-videoplayer/CMakeLists.txt |   1 -
+ 6 files changed, 133 insertions(+), 6 deletions(-)
+ create mode 100644 cmake/FindSDL2.cmake
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 58786ed9b68..e9d7c0d6bb5 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -517,6 +517,7 @@ set(SOL_CONFIG_DIR ${OpenMW_SOURCE_DIR}/extern/sol_config)
+ 
+ include_directories(
+     BEFORE SYSTEM
++    ${SDL2_INCLUDE_DIR}
+     ${MyGUI_INCLUDE_DIRS}
+     ${OPENAL_INCLUDE_DIR}
+     ${OPENGL_INCLUDE_DIR}
+@@ -528,7 +529,7 @@ include_directories(
+ )
+ include_directories(".")
+ 
+-link_directories(${COLLADA_DOM_LIBRARY_DIRS})
++link_directories(${SDL2_LIBRARY_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
+ 
+ if(MYGUI_STATIC)
+     add_compile_definitions(MYGUI_STATIC)
+diff --git a/apps/openmw/CMakeLists.txt b/apps/openmw/CMakeLists.txt
+index 4121a33da2c..a3d397a5673 100644
+--- a/apps/openmw/CMakeLists.txt
++++ b/apps/openmw/CMakeLists.txt
+@@ -184,7 +184,7 @@ target_link_libraries(openmw-lib
+     ${OPENAL_LIBRARY}
+     ${FFmpeg_LIBRARIES}
+     ${MyGUI_LIBRARIES}
+-    SDL2::SDL2
++    ${SDL2_LIBRARY}
+     ${RecastNavigation_LIBRARIES}
+     osg-ffmpeg-videoplayer
+     oics
+diff --git a/cmake/FindSDL2.cmake b/cmake/FindSDL2.cmake
+new file mode 100644
+index 00000000000..4f2be8c421a
+--- /dev/null
++++ b/cmake/FindSDL2.cmake
+@@ -0,0 +1,129 @@
++# Locate SDL2 library
++# This module defines
++# SDL2_LIBRARY, the SDL2 library, with no other libraries
++# SDL2_LIBRARIES, the SDL library and required components with compiler flags
++# SDL2_FOUND, if false, do not try to link to SDL2
++# SDL2_INCLUDE_DIR, where to find SDL.h
++# SDL2_VERSION, the version of the found library
++#
++# This module accepts the following env variables
++#  SDL2DIR - Can be set to ./configure --prefix=$SDL2DIR used in building SDL2. l.e.galup 9-20-02
++# This module responds to the the flag:
++# SDL2_BUILDING_LIBRARY
++# If this is defined, then no SDL2_main will be linked in because
++# only applications need main().
++# Otherwise, it is assumed you are building an application and this
++# module will attempt to locate and set the the proper link flags
++# as part of the returned SDL2_LIBRARIES variable.
++#
++# Don't forget to include SDL2main.h and SDL2main.m your project for the
++# OS X framework based version. (Other versions link to -lSDL2main which
++# this module will try to find on your behalf.) Also for OS X, this
++# module will automatically add the -framework Cocoa on your behalf.
++#
++#
++# Modified by Eric Wing.
++# Added code to assist with automated building by using environmental variables
++# and providing a more controlled/consistent search behavior.
++# Added new modifications to recognize OS X frameworks and
++# additional Unix paths (FreeBSD, etc).
++# Also corrected the header search path to follow "proper" SDL2 guidelines.
++# Added a search for SDL2main which is needed by some platforms.
++# Added a search for threads which is needed by some platforms.
++# Added needed compile switches for MinGW.
++#
++# On OSX, this will prefer the Framework version (if found) over others.
++# People will have to manually change the cache values of
++# SDL2_LIBRARY to override this selection or set the CMake environment
++# CMAKE_INCLUDE_PATH to modify the search paths.
++#
++# Note that the header path has changed from SDL2/SDL.h to just SDL.h
++# This needed to change because "proper" SDL2 convention
++# is #include "SDL.h", not <SDL2/SDL.h>. This is done for portability
++# reasons because not all systems place things in SDL2/ (see FreeBSD).
++#
++# Ported by Johnny Patterson. This is a literal port for SDL2 of the FindSDL.cmake
++# module with the minor edit of changing "SDL" to "SDL2" where necessary. This
++# was not created for redistribution, and exists temporarily pending official
++# SDL2 CMake modules.
++
++#=============================================================================
++# Copyright 2003-2009 Kitware, Inc.
++#
++# Distributed under the OSI-approved BSD License (the "License");
++# see accompanying file Copyright.txt for details.
++#
++# This software is distributed WITHOUT ANY WARRANTY; without even the
++# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++# See the License for more information.
++#=============================================================================
++# (To distribute this file outside of CMake, substitute the full
++#  License text for the above reference.)
++
++
++if (CMAKE_SIZEOF_VOID_P EQUAL 8)
++    set(_sdl_lib_suffix lib/x64)
++else()
++    set(_sdl_lib_suffix lib/x86)
++endif()
++
++libfind_pkg_detect(SDL2 sdl2
++    FIND_PATH SDL.h
++        HINTS $ENV{SDL2DIR}
++        PATH_SUFFIXES include SDL2 include/SDL2
++    FIND_LIBRARY SDL2
++        HINTS $ENV{SDL2DIR}
++        PATH_SUFFIXES lib ${_sdl_lib_suffix}
++)
++libfind_version_n_header(SDL2 NAMES SDL_version.h DEFINES SDL_MAJOR_VERSION SDL_MINOR_VERSION SDL_PATCHLEVEL)
++
++IF(NOT SDL2_BUILDING_LIBRARY AND NOT APPLE)
++    # Non-OS X framework versions expect you to also dynamically link to
++    # SDL2main. This is mainly for Windows and OS X. Other (Unix) platforms
++    # seem to provide SDL2main for compatibility even though they don't
++    # necessarily need it.
++    libfind_pkg_detect(SDL2MAIN sdl2
++        FIND_LIBRARY SDL2main
++            HINTS $ENV{SDL2DIR}
++            PATH_SUFFIXES lib ${_sdl_lib_suffix}
++    )
++    set(SDL2MAIN_FIND_QUIETLY TRUE)
++    libfind_process(SDL2MAIN)
++    list(APPEND SDL2_PROCESS_LIBS SDL2MAIN_LIBRARY)
++ENDIF()
++
++
++set(SDL2_TARGET_SPECIFIC)
++
++if (APPLE)
++    # For OS X, SDL2 uses Cocoa as a backend so it must link to Cocoa.
++    list(APPEND SDL2_TARGET_SPECIFIC "-framework Cocoa")
++else()
++    # SDL2 may require threads on your system.
++    # The Apple build may not need an explicit flag because one of the
++    # frameworks may already provide it.
++    # But for non-OSX systems, I will use the CMake Threads package.
++    libfind_package(SDL2 Threads)
++    list(APPEND SDL2_TARGET_SPECIFIC ${CMAKE_THREAD_LIBS_INIT})
++endif()
++
++# MinGW needs an additional library, mwindows
++# It's total link flags should look like -lmingw32 -lSDL2main -lSDL2 -lmwindows
++# (Actually on second look, I think it only needs one of the m* libraries.)
++if(MINGW)
++    list(APPEND SDL2_TARGET_SPECIFIC mingw32)
++endif()
++
++if(WIN32)
++    list(APPEND SDL2_TARGET_SPECIFIC winmm imm32 version msimg32)
++endif()
++
++set(SDL2_PROCESS_LIBS SDL2_TARGET_SPECIFIC)
++
++libfind_process(SDL2)
++
++if (SDL2_STATIC AND UNIX AND NOT APPLE)
++    execute_process(COMMAND sdl2-config --static-libs OUTPUT_VARIABLE SDL2_STATIC_FLAGS)
++    string(REGEX REPLACE "(\r?\n)+$" "" SDL2_STATIC_FLAGS "${SDL2_STATIC_FLAGS}")
++    set(SDL2_LIBRARIES ${SDL2_STATIC_FLAGS})
++endif()
+diff --git a/components/CMakeLists.txt b/components/CMakeLists.txt
+index 2bf9d4b0646..a1afdc7f8f7 100644
+--- a/components/CMakeLists.txt
++++ b/components/CMakeLists.txt
+@@ -611,7 +611,7 @@ target_link_libraries(components
+     Boost::program_options
+     Boost::iostreams
+ 
+-    SDL2::SDL2
++    ${SDL2_LIBRARIES}
+     ${OPENGL_gl_LIBRARY}
+     ${MyGUI_LIBRARIES}
+     ${LUA_LIBRARIES}
+diff --git a/extern/oics/CMakeLists.txt b/extern/oics/CMakeLists.txt
+index e9e08993ddc..10b7848bc80 100644
+--- a/extern/oics/CMakeLists.txt
++++ b/extern/oics/CMakeLists.txt
+@@ -29,8 +29,6 @@ else()
+     target_link_libraries(oics local_tinyxml)
+ endif()
+ 
+-target_link_libraries(oics SDL2::SDL2)
+-
+ if (MSVC AND PRECOMPILE_HEADERS_WITH_MSVC)
+     target_precompile_headers(oics PUBLIC <algorithm> <string>)
+ endif()
+diff --git a/extern/osg-ffmpeg-videoplayer/CMakeLists.txt b/extern/osg-ffmpeg-videoplayer/CMakeLists.txt
+index ce20e95af21..5c9639434dc 100644
+--- a/extern/osg-ffmpeg-videoplayer/CMakeLists.txt
++++ b/extern/osg-ffmpeg-videoplayer/CMakeLists.txt
+@@ -18,7 +18,6 @@ set(OSG_FFMPEG_VIDEOPLAYER_SOURCE_FILES
+ add_library(${OSG_FFMPEG_VIDEOPLAYER_LIBRARY} STATIC ${OSG_FFMPEG_VIDEOPLAYER_SOURCE_FILES})
+ target_link_libraries(${OSG_FFMPEG_VIDEOPLAYER_LIBRARY} ${FFmpeg_LIBRARIES})
+ target_link_libraries(${OSG_FFMPEG_VIDEOPLAYER_LIBRARY} ${OSG_LIBRARIES})
+-target_link_libraries(${OSG_FFMPEG_VIDEOPLAYER_LIBRARY} SDL2::SDL2)
+ 
+ target_include_directories(${OSG_FFMPEG_VIDEOPLAYER_LIBRARY} SYSTEM PUBLIC include ${FFmpeg_INCLUDE_DIRS})
+ target_include_directories(${OSG_FFMPEG_VIDEOPLAYER_LIBRARY} PRIVATE include/osg-ffmpeg-videoplayer)
+

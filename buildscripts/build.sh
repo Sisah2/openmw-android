@@ -185,12 +185,14 @@ mkdir -p ../app/src/main/jniLibs/$ABI/
 
 # libopenmw.so is a special case
 find build/$ARCH/openmw-prefix/ -iname "libopenmw.so" -exec cp "{}" ../app/src/main/jniLibs/$ABI/libopenmw.so \;
+find build/$ARCH/openmw-prefix/ -iname "bsatool" -exec cp "{}" ../app/src/main/jniLibs/$ABI/libbsatool.so \;
+#find build/$ARCH/openmw-prefix/ -iname "navmeshtool" -exec cp "{}" ../app/src/main/jniLibs/$ABI/libnavmeshtool.so \;
 
 # copy delta_plugin to lib location
 cp tool/libdelta_plugin.so ../app/src/main/jniLibs/$ABI/
 
 # copy over libs we compiled
-cp prefix/$ARCH/lib/{libopenal,libSDL2,libng_gl4es,libspirv-cross-c-shared,libcollada-dom2.5-dp}.so ../app/src/main/jniLibs/$ABI/
+cp prefix/$ARCH/lib/{libopenal,libSDL2,libng_gl4es,libcollada-dom2.5-dp,libkram}.so ../app/src/main/jniLibs/$ABI/
 
 # copy over libc++_shared
 find ./toolchain/$ARCH/sysroot/usr/lib/$NDK_TRIPLET -iname "libc++_shared.so" -exec cp "{}" ../app/src/main/jniLibs/$ABI/ \;
@@ -217,15 +219,15 @@ if [[ $DEPLOY_RESOURCES = "true" ]]; then
 	cp "$DIR/../3rdparty-licenses.txt" "$DST"
 fi
 
-echo "==> Making your debugging life easier"
+#echo "==> Making your debugging life easier"
 
 # copy unstripped libs to aid debugging
-rm -rf "./symbols/$ABI/" && mkdir -p "./symbols/$ABI/"
-cp "./build/$ARCH/openal-prefix/src/openal-build/libopenal.so" "./symbols/$ABI/"
+#rm -rf "./symbols/$ABI/" && mkdir -p "./symbols/$ABI/"
+#cp "./build/$ARCH/openal-prefix/src/openal-build/libopenal.so" "./symbols/$ABI/"
 #cp "./build/$ARCH/sdl2-prefix/src/sdl2-build/libSDL2.so" "./symbols/$ABI/"
-cp "./build/$ARCH/openmw-prefix/src/openmw-build/libopenmw.so" "./symbols/$ABI/libopenmw.so"
+#cp "./build/$ARCH/openmw-prefix/src/openmw-build/libopenmw.so" "./symbols/$ABI/libopenmw.so"
 #cp "./build/$ARCH/gl4es-prefix/src/gl4es-build/obj/local/$ABI/libGL.so" "./symbols/$ABI/"
-cp "../app/src/main/jniLibs/$ABI/libc++_shared.so" "./symbols/$ABI/"
+#cp "../app/src/main/jniLibs/$ABI/libc++_shared.so" "./symbols/$ABI/"
 
 if [ $ASAN = true ]; then
 	cp ./toolchain/$ARCH/lib64/clang/*/lib/linux/libclang_rt.asan-$ASAN_ARCH-android.so "./symbols/$ABI/"
@@ -241,9 +243,9 @@ fi
 llvm-strip ../app/src/main/jniLibs/$ABI/*.so
 
 if [ $GH_ACTIONS_BUILD = true ]; then
-    rm -r ./build
-    rm -r ./downloads
-    rm -r ./toolchain
+    rm -rf ./build
+    rm -rf ./downloads
+    rm -rf ./toolchain
 fi
 
 echo "==> Success"

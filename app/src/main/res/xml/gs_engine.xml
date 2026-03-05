@@ -2,14 +2,11 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
     <PreferenceCategory android:title="Engine">
-        <ListPreference
+        <CheckBoxPreference
             android:key="gs_groundcover_handling"
-            android:summary="%s \nEnable some special settings for groundcover mods (rendering distance, density). Also enable animation and disable colision for groundcover meshes. Require to load groundcover mods via Groundcovers tab in mod manager"
-            android:title="Groundcover Handling"
-            android:dialogTitle="Groundcover Handling"
-            android:entries="@array/gs_groundcover_handling_entries"
-            android:entryValues="@array/gs_groundcover_handling_values"
-            android:defaultValue="0" />
+            android:title="Enable Groundcover Instancing"
+            android:defaultValue="true"
+            android:summary="Enable separate groundcover handling"/>
 
         <CheckBoxPreference
             android:key="gs_build_navmesh"

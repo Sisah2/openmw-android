@@ -2,6 +2,16 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
     <PreferenceCategory android:title="UI">
+        <CheckBoxPreference
+            android:key="gs_controller_menus"
+            android:title="Enable Controller UI"
+            android:summary="Make menus easier to navigate with controller."/>
+
+        <CheckBoxPreference
+            android:key="gs_controller_tooltips"
+            android:title="Enable Controller Tooltips"
+            android:summary="When true, you do not need to press R3 to show tooltips."/>
+
         <ListPreference
             android:key="gs_show_owned"
             android:summary="%s"
@@ -14,7 +24,7 @@
         <CheckBoxPreference
             android:key="gs_show_effect_duration"
             android:title="Show Effects Duration"
-            android:summary="how the remaining duration of magic effects and lights if this setting is true. The remaining duration is displayed in the tooltip by hovering over the magical effect."/>
+            android:summary="How the remaining duration of magic effects and lights if this setting is true. The remaining duration is displayed in the tooltip by hovering over the magical effect."/>
 
         <CheckBoxPreference
             android:key="gs_show_enchant_chance"

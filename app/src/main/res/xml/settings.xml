@@ -84,6 +84,12 @@
             android:summary="%s"
             />
 
+        <CheckBoxPreference
+            android:key="pref_loadKTX"
+            android:title="Load KTX Textures"
+            android:summary="Load ASTC converted textures, need to convert them first in mod manager."
+            android:defaultValue="true"/>
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/pref_graphics">
@@ -99,21 +105,6 @@
             android:title="@string/pref_display_cutout_area"
             android:defaultValue="true"/>
 
-        <CheckBoxPreference
-            android:key="pref_avoid16bits"
-            android:title="@string/pref_avoid16bits" 
-            android:summary="Disabling should help with memory usage if software decompression is used, may increase loading times? decrease visual quality? need testing"
-            android:defaultValue="true"/>
-
-        <ListPreference
-            android:key="pref_textureShrinking_v2"
-            android:title="@string/pref_textureShrinking"
-            android:dialogTitle="@string/pref_textureShrinking"
-            android:entries="@array/pref_textureShrinking_entries"
-            android:entryValues="@array/pref_textureShrinking_values"
-            android:defaultValue="@string/pref_textureShrinking_default"
-            android:summary="%s"
-        />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/pref_advanced">

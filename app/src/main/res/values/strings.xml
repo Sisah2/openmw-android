@@ -196,6 +196,7 @@
     <string name="action_tools">External Tools</string>
     <string name="action_tools_delta_merge">Delta Merge</string>
     <string name="action_tools_groundcoverify">Groundcoverify</string>
+    <string name="action_tools_tex_convert">Convert Textures</string>
 
     <string name="activity_settings">Settings</string>
     <string name="game_mechanics_activity_settings">Game Mechanics</string>

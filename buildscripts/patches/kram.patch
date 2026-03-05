@@ -1,0 +1,160 @@
+diff --git a/kramc/CMakeLists.txt b/kramc/CMakeLists.txt
+index 0f6acf6..77442ba 100644
+--- a/kramc/CMakeLists.txt
++++ b/kramc/CMakeLists.txt
+@@ -32,9 +32,7 @@ if (BUILD_LINUX)
+ 
+     # librt is for clock_gettime, pthread for threading
+     target_link_libraries(${myTargetApp} PUBLIC 
+-        libkram 
+-        rt
+-        pthread)
++        libkram)
+ 
+ endif()
+ 
+diff --git a/libkram/kram/KramLog.cpp b/libkram/kram/KramLog.cpp
+index 353bea2..4c3a3bb 100644
+--- a/libkram/kram/KramLog.cpp
++++ b/libkram/kram/KramLog.cpp
+@@ -35,7 +35,7 @@
+ #endif
+ 
+ #elif KRAM_ANDROID
+-#include <log.h>
++#include <android/log.h>
+ 
+ #elif KRAM_APPLE
+ #include <cxxabi.h> // demangle
+@@ -59,7 +59,7 @@ using mylock = std::unique_lock<mymutex>;
+ 
+ using namespace STL_NAMESPACE;
+ 
+-#if KRAM_WIN || KRAM_LINUX
++#if KRAM_WIN || KRAM_LINUX || KRAM_ANDROID
+ // https://stackoverflow.com/questions/18547251/when-i-use-strlcpy-function-in-c-the-compilor-give-me-an-error
+ 
+ // '_cups_strlcat()' - Safely concatenate two strings.
+@@ -899,6 +899,7 @@ static int32_t logMessageImpl(const LogMessage& msg)
+         fflush(fp);
+     }
+ #elif KRAM_ANDROID
++/*
+     // TODO: move higher up
+     // API 30
+     AndroidLogLevel osLogLevel = ANDROID_LOG_ERROR;
+@@ -931,6 +932,7 @@ static int32_t logMessageImpl(const LogMessage& msg)
+     __android_log_message msg = {
+         LOG_ID_MAIN, msg.file, msg.line, buffer.c_str(), osLogLevel, sizeof(__android_log_message), msg.group};
+     __android_log_write_log_message(msg);
++*/
+ #else
+ 
+ #if KRAM_APPLE
+diff --git a/libkram/kram/KramMmapHelper.cpp b/libkram/kram/KramMmapHelper.cpp
+index e53d0b8..d21112f 100644
+--- a/libkram/kram/KramMmapHelper.cpp
++++ b/libkram/kram/KramMmapHelper.cpp
+@@ -10,7 +10,7 @@
+ #include <stdio.h>
+ #include <sys/stat.h>
+ 
+-#if KRAM_APPLE || KRAM_LINUX
++#if KRAM_APPLE || KRAM_LINUX || KRAM_ANDROID
+ #include <sys/mman.h>
+ #include <unistd.h>
+ #elif KRAM_WIN
+diff --git a/libkram/kram/KramTimer.cpp b/libkram/kram/KramTimer.cpp
+index 01b9d56..73155d5 100644
+--- a/libkram/kram/KramTimer.cpp
++++ b/libkram/kram/KramTimer.cpp
+@@ -14,7 +14,7 @@
+ #elif KRAM_APPLE
+ #include <mach/mach_time.h>
+ #elif KRAM_ANDROID
+-#include <trace.h>
++#include <android/trace.h>
+ #elif KRAM_LINUX
+ #include <time.h> // needs librt.a
+ #endif
+@@ -105,7 +105,7 @@ static uint64_t queryCounter()
+     return time;
+ }
+ 
+-#elif KRAM_LINUX
++#elif KRAM_LINUX || KRAM_ANDROID
+ 
+ static double queryPeriod()
+ {
+@@ -150,33 +150,34 @@ PerfScope::PerfScope(const char* name_)
+     : name(name_), time(currentTimestamp())
+ {
+     gPerfStackDepth++;
+-
++/*
+ #if KRAM_ANDROID
+     // TODO: also ATrace_isEnabled()
+     ATrace_beginSection(name, value);
+-#endif
++#endif*/
+ }
+ 
+ void PerfScope::close()
+ {
+     if (time != 0.0) {
+         --gPerfStackDepth;
+-
++/*
+ #if KRAM_ANDROID
+         ATrace_endSection();
+ #endif
++*/
+         Perf::instance()->addTimer(name, time, currentTimestamp() - time);
+         time = 0.0;
+     }
+ }
+ 
+ void addPerfCounter(const char* name, int64_t value)
+-{
++{/*
+ #if KRAM_ANDROID
+     // only int64_t support
+     ATrace_setCounter(name, value);
+ #endif
+-
++*/
+     Perf::instance()->addCounter(name, currentTimestamp(), value);
+ }
+ 
+diff --git a/libkram/kram/TaskSystem.cpp b/libkram/kram/TaskSystem.cpp
+index 5e3f48f..af93848 100644
+--- a/libkram/kram/TaskSystem.cpp
++++ b/libkram/kram/TaskSystem.cpp
+@@ -350,12 +350,12 @@ void setCurrentThreadName(const char* threadName)
+     if (val != 0)
+         KLOGW("Thread", "Could not set thread name");
+ }
+-
++/*
+ void getThreadName(std::thread::native_handle_type threadHandle, char name[kMaxThreadName])
+ {
+     pthread_getname_np(threadHandle, name, kMaxThreadName);
+ }
+-
++*/
+ #endif
+ 
+ void getThreadName(std::thread& thread, char name[kMaxThreadName])
+diff --git a/libkram/kram/TaskSystem.h b/libkram/kram/TaskSystem.h
+index 6aa6b3a..8c7d2df 100644
+--- a/libkram/kram/TaskSystem.h
++++ b/libkram/kram/TaskSystem.h
+@@ -132,7 +132,7 @@ public:
+ // Note: if running multiple processes on the same cpu, then affinity
+ // isn't ideal.  It will force work onto the same cores.  Especially if
+ // limiting cores to say 4/16, then can run 4 processes faster w/o affinity.
+-#define SUPPORT_AFFINITY (KRAM_ANDROID || KRAM_WIN || KRAM_LINUX)
++//#define SUPPORT_AFFINITY (KRAM_ANDROID || KRAM_WIN || KRAM_LINUX)
+ 
+ // only for ioS/macOS
+ enum class ThreadPriority {

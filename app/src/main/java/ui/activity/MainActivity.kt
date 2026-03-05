@@ -551,6 +551,8 @@ class MainActivity : AppCompatActivity() {
 	writeSetting("Game", "smooth animation transitions", if(prefs.getBoolean("gs_smooth_animation_transitions", false)) "true" else "false")
 
 	// Interface
+	writeSetting("GUI", "controller menus", if(prefs.getBoolean("gs_controller_menus", false)) "true" else "false")
+	writeSetting("GUI", "controller tooltips", if(prefs.getBoolean("gs_controller_tooltips", false)) "true" else "false")
 	writeSetting("Game", "show owned", prefs.getString("gs_show_owned", "0").toString())
 	writeSetting("Game", "show effect duration", if(prefs.getBoolean("gs_show_effect_duration", false)) "true" else "false")
 	writeSetting("Game", "show enchant chance", if(prefs.getBoolean("gs_show_enchant_chance", false)) "true" else "false")
@@ -569,8 +571,7 @@ class MainActivity : AppCompatActivity() {
 	writeSetting("Saves", "max quicksaves", prefs.getString("gs_maximum_quicksaves", "1").toString())
 
 	// Engine Settings
-	writeSetting("Groundcover", "enabled", if(prefs.getString("gs_groundcover_handling", "0") == "2") "true" else "false")
-	writeSetting("Groundcover", "paging", if(prefs.getString("gs_groundcover_handling", "0") == "1") "true" else "false")
+	writeSetting("Groundcover", "enabled", if(prefs.getBoolean("gs_groundcover_handling", true)) "true" else "false")
 	writeSetting("Navigator", "enable", if(prefs.getBoolean("gs_build_navmesh", true)) "true" else "false")
 	writeSetting("Navigator", "write to navmeshdb", if(prefs.getBoolean("gs_write_navmesh", false)) "true" else "false")
 	writeSetting("Navigator", "async nav mesh updater threads", prefs.getString("gs_navmesh_threads", "1").toString())
@@ -628,8 +629,10 @@ class MainActivity : AppCompatActivity() {
 
                 // openmw.cfg: data, resources
                 val gameVFS = "\"" + Constants.USER_FILE_STORAGE + "resources/vfs-mw\"\n"
+                val ktxFolder = if (prefs.getBoolean("pref_loadKTX", false) == true) "data=\"" + Constants.USER_FILE_STORAGE + "launcher/ktx\"\n" else ""
+
                 file.Writer.write(Constants.OPENMW_CFG, "resources", Constants.RESOURCES)
-                file.Writer.write(Constants.OPENMW_CFG, "data", gameVFS/* + "data=\"" + inst.findDataFiles() + "\""*/)
+                file.Writer.write(Constants.OPENMW_CFG, "data", gameVFS+ktxFolder/* + "data=\"" + inst.findDataFiles() + "\""*/)
 
                 file.Writer.write(Constants.OPENMW_CFG, "encoding", prefs!!.getString("pref_encoding", GameInstaller.DEFAULT_CHARSET_PREF)!!)
 

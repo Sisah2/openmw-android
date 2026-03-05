@@ -1,26 +1,16 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Ilya Zhuravlev <whatever@xyz.is>
-Date: Thu, 25 Apr 2019 06:35:09 -0400
-Subject: [PATCH] windowmanagerimp: always show mouse when possible (patch by
- @terabyte25)
-
----
- apps/openmw/mwgui/windowmanagerimp.cpp | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
 diff --git a/apps/openmw/mwgui/windowmanagerimp.cpp b/apps/openmw/mwgui/windowmanagerimp.cpp
-index 1b271dfd5..8aaac51fa 100644
+index 261a5e6e16..6c78eb8a9f 100644
 --- a/apps/openmw/mwgui/windowmanagerimp.cpp
 +++ b/apps/openmw/mwgui/windowmanagerimp.cpp
-@@ -1708,7 +1708,7 @@ namespace MWGui
+@@ -1882,7 +1882,10 @@ namespace MWGui
  
      bool WindowManager::getCursorVisible()
      {
 -        return mCursorVisible && mCursorActive;
-+        return mCursorVisible;
++        if (Settings::gui().mControllerMenus)
++            return mCursorVisible && mCursorActive;
++        else
++            return mCursorVisible;
      }
  
-     void WindowManager::trackWindow(Layout *layout, const std::string &name)
--- 
-2.19.2
-
+     void WindowManager::trackWindow(Layout* layout, const WindowSettingValues& settings)

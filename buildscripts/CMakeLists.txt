@@ -37,11 +37,11 @@ set(MYGUI_VERSION 3.4.3)
 set(MYGUI_HASH SHA256=d1d5f294670ae71f7200ed4b30859018281d8cfd45d6a38d18b97a4aba604c42)
 
 # https://github.com/sisah2/ng_gl4es/releases
-set(GL4ES_VERSION 04d3acdd2f7b06085d23ae225ae977b2b7429b98)
+set(GL4ES_VERSION f7a8370852579d6a11154178929a02e0cf60d574)
 set(GL4ES_HASH SHA256=b565e717c7d192e936bda25f3cb90ad8db398af56414ec08294b6716574c1a6d)
 
 # https://github.com/openscenegraph/OpenSceneGraph/releases
-set(OSG_VERSION 673f30ad3820faf2a5e901ffe403b5246b8918fe)
+set(OSG_VERSION 8aa8d91747ff414ab0de19aae1e0dbd739acea2c)
 set(OSG_HASH SHA256=aea196550f02974d6d09291c5d83b51ca6a03b3767e234a8c0e21322927d1e12)
 
 # https://github.com/lz4/lz4/releases
@@ -56,7 +56,8 @@ set(LIBICU_VERSION 70-1)
 set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
 
 # https://github.com/sisah2/openmw/commits/clean
-set(OPENMW_VERSION 8391ae41abdac667ff49704f2da936c8c09a079f)
+#set(OPENMW_VERSION 62d2dd35024a168482425a6f27f3f5dc1c71864f)
+set(OPENMW_VERSION 2c4f5fb56f0b1a5466f6d88e08cfbb1cfe193c2a)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
@@ -235,7 +236,7 @@ ExternalProject_Add(boost
 
 	BUILD_COMMAND ${wrapper_command} $(MAKE)
 
-	INSTALL_COMMAND ${wrapper_command} $(MAKE) install
+	INSTALL_COMMAND ${wrapper_command} $(MAKE) install >> /dev/null
 
 	COMMAND llvm-ranlib ${prefix}/lib/libboost_filesystem.a
 	COMMAND llvm-ranlib ${prefix}/lib/libboost_program_options.a
@@ -293,30 +294,27 @@ ExternalProject_Add(sdl2
 #	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-android-120hz-gyroscope.patch
 #	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-disable-declaration-after-statement-warning.patch
 
-#	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
-#	${COMMON_CMAKE_ARGS}
-#        -DSDL_STATIC=OFF
-#        -DHAVE_GCC_FVISIBILITY=OFF
 
-#	BUILD_COMMAND ${wrapper_command} $(MAKE)
-
-#	INSTALL_COMMAND ${wrapper_command} $(MAKE) install
-
-#	COMMAND cp libSDL2.so ${prefix}/lib/
-#	COMMAND cp libhidapi.so ${prefix}/lib/
-#	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
-
-#	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-android-120hz-gyroscope.patch
-#	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-disable-gamma-warning.patch
 	CONFIGURE_COMMAND ""
-
 	BUILD_COMMAND ${wrapper_command} ndk-build
 	${COMMON_NDK_BUILD_FLAGS}
 
-	INSTALL_COMMAND mkdir -p ${prefix}/lib/
+        INSTALL_COMMAND mkdir -p ${prefix}/lib/
 	COMMAND cp libs/${app_abi}/libSDL2.so ${prefix}/lib/
-#	COMMAND cp libs/${app_abi}/libhidapi.so ${prefix}/lib/
 	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
+
+	#CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
+	#${COMMON_CMAKE_ARGS}
+       # -DSDL_STATIC=OFF
+       # -DHAVE_GCC_FVISIBILITY=OFF
+
+	#BUILD_COMMAND ${wrapper_command} $(MAKE)
+
+	#INSTALL_COMMAND ${wrapper_command} $(MAKE) install
+
+	#COMMAND cp libSDL2.so ${prefix}/lib/
+#	COMMAND cp libhidapi.so ${prefix}/lib/
+	#COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
 )
 
 ExternalProject_Add(bullet
@@ -338,16 +336,18 @@ ExternalProject_Add(bullet
 
 	BUILD_COMMAND ${wrapper_command} $(MAKE)
 
-	INSTALL_COMMAND $(MAKE) install
+	INSTALL_COMMAND $(MAKE) install >> /dev/null
 )
 
 ExternalProject_Add(NG-GL4ES
-	URL https://github.com/sisah2/NG-GL4ES/archive/${GL4ES_VERSION}.tar.gz
-	#URL_HASH ${GL4ES_HASH}
-	DOWNLOAD_DIR ${download_dir}
+	DOWNLOAD_COMMAND git clone --recurse-submodules https://github.com/sisah2/Ng-gl4es -b Openmw3 <SOURCE_DIR>
+#	DOWNLOAD_DIR ${download_dir}
 
-        BUILD_IN_SOURCE 1
+    #    BUILD_IN_SOURCE 0
 	
+        PATCH_COMMAND sed -i -e "s/3.22.1/3.19.6/g" <SOURCE_DIR>/3rdparty/glslang/CMakeLists.txt &&
+        sed -i -e "s/CMAKE_CXX_STANDARD 23/CMAKE_CXX_STANDARD 17/g" <SOURCE_DIR>/CMakeLists.txt
+
 	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
 	${COMMON_CMAKE_ARGS}
 
@@ -355,7 +355,8 @@ ExternalProject_Add(NG-GL4ES
 
 	INSTALL_COMMAND mkdir -p ${prefix}/lib/
 	COMMAND cp libng_gl4es.so ${prefix}/lib/
-	COMMAND cp <SOURCE_DIR>/libraries/arm64-v8a/libspirv-cross-c-shared.so ${prefix}/lib/
+	#COMMAND cp <SOURCE_DIR>/library/android/arm64-v8a/libspirv-cross-c-shared.so ${prefix}/lib/
+        #COMMAND cp <SOURCE_DIR>/libraries/arm64-v8a/libspirv-cross-c-shared.so ${prefix}/lib/
 	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/include/gl4es/
 	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
 )
@@ -498,6 +499,7 @@ set(OSG_COMMON
 	-DBUILD_OSG_PLUGIN_OSG=ON
 	-DBUILD_OSG_PLUGIN_DAE=ON
 	-DBUILD_OSG_PLUGIN_DDS=ON
+	-DBUILD_OSG_PLUGIN_KTX=ON
 	-DBUILD_OSG_PLUGIN_TGA=ON
 	-DBUILD_OSG_PLUGIN_BMP=ON
 	-DBUILD_OSG_PLUGIN_JPEG=ON
@@ -515,7 +517,7 @@ set(OSG_COMMON
 	-DOSG_GLES1_AVAILABLE=OFF
 	-DOSG_GLES3_AVAILABLE=OFF
 	-DOSG_GL_LIBRARY_STATIC=OFF
-	-DOSG_GL_DISPLAYLISTS_AVAILABLE=ON
+	-DOSG_GL_DISPLAYLISTS_AVAILABLE=OFF
 	-DOSG_GL_MATRICES_AVAILABLE=ON
 	-DOSG_GL_VERTEX_FUNCS_AVAILABLE=ON
 	-DOSG_GL_VERTEX_ARRAY_FUNCS_AVAILABLE=ON
@@ -535,6 +537,7 @@ set(OSG_PATCH
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/force-add-plugins.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/dae_collada.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/ng-gl4es.patch &&
+	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/wtf.patch &&
 #	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/cubic-filtering.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0005-CullSettings-make-inheritanceMask-atomic-to-silence-.patch
 )
@@ -558,8 +561,28 @@ ExternalProject_Add(osg
 	COMMAND $(MAKE) install
 )
 
+set(KRAM_PATCH
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/kram.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/kram-bgra.patch
+)
+
+ExternalProject_Add(kram
+	URL https://github.com/bmdhacks/kram/archive/6e69e55adcccca565ea04f4e53e50dceff928836.tar.gz
+	DOWNLOAD_DIR ${download_dir}
+
+	PATCH_COMMAND ${KRAM_PATCH}
+
+	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
+	${COMMON_CMAKE_ARGS}
+
+	BUILD_COMMAND $(MAKE)
+
+	INSTALL_COMMAND mkdir -p ${prefix}/lib/
+	COMMAND cp kramc/kram ${prefix}/lib/libkram.so
+)
+
 set(OPENMW_COMMON
-	-DBUILD_BSATOOL=0
+	-DBUILD_BSATOOL=1
 	-DBUILD_NIFTEST=0
 	-DBUILD_ESMTOOL=0
 	-DBUILD_LAUNCHER=0
@@ -591,7 +614,13 @@ set(OPENMW_PATCH
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0001-loadingscreen-disable-for-now.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0009-windowmanagerimp-always-show-mouse-when-possible-pat.patch &&
         #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0010-android-fix-context-being-lost-on-app-minimize.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/terrain.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/FIXME-composie-maps-mipmaps.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/FIXME-setGlobalDefines-crash.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/navmeshtool.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/SDLLink.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/ktx.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/bsatool-extract-dds-only.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/base-changes.patch &&
 	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/androidmain.cpp
 )
 

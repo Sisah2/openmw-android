@@ -1,0 +1,226 @@
+From d371a6f5dd7bf8dc93f30a57240d03eae757bc47 Mon Sep 17 00:00:00 2001
+From: bmdhacks <bmd@bmdhacks.com>
+Date: Mon, 25 Aug 2025 19:08:07 -0700
+Subject: [PATCH] astc ktx support
+
+---
+ components/misc/resourcehelpers.cpp  | 63 ++++++++++++++++++++++++++--
+ components/misc/resourcehelpers.hpp  |  4 ++
+ components/resource/imagemanager.cpp | 32 +++++++-------
+ components/shader/shadermanager.cpp  |  2 +-
+ 4 files changed, 83 insertions(+), 18 deletions(-)
+
+diff --git a/components/misc/resourcehelpers.cpp b/components/misc/resourcehelpers.cpp
+index d370fe5cf25..a760498a146 100644
+--- a/components/misc/resourcehelpers.cpp
++++ b/components/misc/resourcehelpers.cpp
+@@ -2,6 +2,7 @@
+ 
+ #include <sstream>
+ #include <string_view>
++#include <array>
+ 
+ #include <components/esm/common.hpp>
+ #include <components/esm/refid.hpp>
+@@ -60,6 +61,30 @@ namespace
+ 
+         return std::string_view::npos;
+     }
++
++    // Texture format priority table - higher index = higher priority
++    constexpr VFS::Path::ExtensionView ktx("ktx");
++    constexpr std::array<VFS::Path::ExtensionView, 2> sTextureExtensionPriority = {
++        dds,  // DDS compressed (medium priority)
++        ktx   // KTX modern formats (highest priority)
++    };
++
++    VFS::Path::Normalized findBestTextureVariantWithDirs(std::span<const VFS::Path::NormalizedView> topLevelDirectories,
++        VFS::Path::NormalizedView resPath, const VFS::Manager& vfs)
++    {
++        // Try extensions in reverse order (highest priority first)
++        for (auto it = sTextureExtensionPriority.rbegin(); it != sTextureExtensionPriority.rend(); ++it)
++        {
++            VFS::Path::Normalized candidate = Misc::ResourceHelpers::correctResourcePath(topLevelDirectories, resPath, vfs, *it);
++            if (vfs.exists(candidate))
++            {
++                return candidate;
++            }
++        }
++
++        // Fall back to original extension if no priority variants found
++        return Misc::ResourceHelpers::correctResourcePath(topLevelDirectories, resPath, vfs);
++    }
+ }
+ 
+ bool Misc::ResourceHelpers::changeExtensionToDds(std::string& path)
+@@ -124,21 +149,53 @@ VFS::Path::Normalized Misc::ResourceHelpers::correctResourcePath(
+ // but all texture file name references were kept as .tga. So we pass ext=".dds" to all helpers
+ // looking for textures.
+ 
++VFS::Path::Normalized Misc::ResourceHelpers::findBestTextureVariant(
++    VFS::Path::NormalizedView path, const VFS::Manager& vfs)
++{
++    // Get the current extension
++    std::string_view pathValue = path.value();
++    std::string ext(Misc::getFileExtension(pathValue));
++
++    // Only process texture formats
++    if (!Misc::StringUtils::ciEqual(ext, "dds") && !Misc::StringUtils::ciEqual(ext, "tga") &&
++        !Misc::StringUtils::ciEqual(ext, "bmp") && !Misc::StringUtils::ciEqual(ext, "ktx"))
++        return VFS::Path::Normalized(path);
++
++    // Get path without extension
++    size_t dotPos = pathValue.rfind('.');
++    if (dotPos == std::string_view::npos)
++        return VFS::Path::Normalized(path);
++    std::string_view pathWithoutExt = pathValue.substr(0, dotPos);
++
++    // Try each extension in priority order (highest to lowest)
++    for (auto it = sTextureExtensionPriority.rbegin(); it != sTextureExtensionPriority.rend(); ++it)
++    {
++        VFS::Path::Normalized candidate(std::string(pathWithoutExt) + "." + std::string(it->value()));
++        if (vfs.exists(candidate))
++        {
++            return candidate;
++        }
++    }
++
++    // No priority format found, return original
++    return VFS::Path::Normalized(path);
++}
++
+ VFS::Path::Normalized Misc::ResourceHelpers::correctTexturePath(
+     VFS::Path::NormalizedView resPath, const VFS::Manager& vfs)
+ {
+-    return correctResourcePath({ { textures, bookart } }, resPath, vfs, dds);
++    return findBestTextureVariantWithDirs({ { textures, bookart } }, resPath, vfs);
+ }
+ 
+ VFS::Path::Normalized Misc::ResourceHelpers::correctIconPath(VFS::Path::NormalizedView resPath, const VFS::Manager& vfs)
+ {
+-    return correctResourcePath({ { icons } }, resPath, vfs, dds);
++    return findBestTextureVariantWithDirs({ { icons } }, resPath, vfs);
+ }
+ 
+ VFS::Path::Normalized Misc::ResourceHelpers::correctBookartPath(
+     VFS::Path::NormalizedView resPath, const VFS::Manager& vfs)
+ {
+-    return correctResourcePath({ { bookart, textures } }, resPath, vfs, dds);
++    return findBestTextureVariantWithDirs({ { bookart, textures } }, resPath, vfs);
+ }
+ 
+ VFS::Path::Normalized Misc::ResourceHelpers::correctBookartPath(
+diff --git a/components/misc/resourcehelpers.hpp b/components/misc/resourcehelpers.hpp
+index d0b429cb99a..16828671d6e 100644
+--- a/components/misc/resourcehelpers.hpp
++++ b/components/misc/resourcehelpers.hpp
+@@ -24,6 +24,10 @@ namespace Misc
+     // so we have the opportunity to use proper resource handling for content created in OpenMW-CS.
+     namespace ResourceHelpers
+     {
++        // Find the best available texture variant (KTX > DDS > original)
++        // Returns the path with the best available extension
++        VFS::Path::Normalized findBestTextureVariant(VFS::Path::NormalizedView path, const VFS::Manager& vfs);
++
+         bool changeExtensionToDds(std::string& path);
+         VFS::Path::Normalized correctResourcePath(std::span<const VFS::Path::NormalizedView> topLevelDirectories,
+             VFS::Path::NormalizedView resPath, const VFS::Manager& vfs, VFS::Path::ExtensionView ext = {});
+diff --git a/components/resource/imagemanager.cpp b/components/resource/imagemanager.cpp
+index b7a19b4d521..873b4992b82 100644
+--- a/components/resource/imagemanager.cpp
++++ b/components/resource/imagemanager.cpp
+@@ -5,6 +5,7 @@
+ 
+ #include <components/debug/debuglog.hpp>
+ #include <components/misc/pathhelpers.hpp>
++#include <components/misc/resourcehelpers.hpp>
+ #include <components/sceneutil/glextensions.hpp>
+ #include <components/vfs/manager.hpp>
+ #include <components/vfs/pathutil.hpp>
+@@ -87,7 +88,10 @@ namespace Resource
+ 
+     osg::ref_ptr<osg::Image> ImageManager::getImage(VFS::Path::NormalizedView path, bool disableFlip)
+     {
+-        osg::ref_ptr<osg::Object> obj = mCache->getRefFromObjectCache(path);
++        // Find the best available texture variant (KTX > DDS > original)
++        VFS::Path::Normalized resolvedPath = Misc::ResourceHelpers::findBestTextureVariant(path, *mVFS);
++
++        osg::ref_ptr<osg::Object> obj = mCache->getRefFromObjectCache(resolvedPath);
+         if (obj)
+             return osg::ref_ptr<osg::Image>(static_cast<osg::Image*>(obj.get()));
+         else
+@@ -95,21 +99,21 @@ namespace Resource
+             Files::IStreamPtr stream;
+             try
+             {
+-                stream = mVFS->get(path);
++                stream = mVFS->get(resolvedPath);
+             }
+             catch (std::exception& e)
+             {
+                 Log(Debug::Error) << "Failed to open image: " << e.what();
+-                mCache->addEntryToObjectCache(path.value(), mWarningImage);
++                mCache->addEntryToObjectCache(resolvedPath.value(), mWarningImage);
+                 return mWarningImage;
+             }
+ 
+-            const std::string ext(Misc::getFileExtension(path.value()));
++            const std::string ext(Misc::getFileExtension(resolvedPath.value()));
+             osgDB::ReaderWriter* reader = osgDB::Registry::instance()->getReaderWriterForExtension(ext);
+             if (!reader)
+             {
+-                Log(Debug::Error) << "Error loading " << path << ": no readerwriter for '" << ext << "' found";
+-                mCache->addEntryToObjectCache(path.value(), mWarningImage);
++                Log(Debug::Error) << "Error loading " << resolvedPath << ": no readerwriter for '" << ext << "' found";
++                mCache->addEntryToObjectCache(resolvedPath.value(), mWarningImage);
+                 return mWarningImage;
+             }
+ 
+@@ -121,8 +125,8 @@ namespace Resource
+                 stream->read((char*)header, 18);
+                 if (stream->gcount() != 18)
+                 {
+-                    Log(Debug::Error) << "Error loading " << path << ": couldn't read TGA header";
+-                    mCache->addEntryToObjectCache(path.value(), mWarningImage);
++                    Log(Debug::Error) << "Error loading " << resolvedPath << ": couldn't read TGA header";
++                    mCache->addEntryToObjectCache(resolvedPath.value(), mWarningImage);
+                     return mWarningImage;
+                 }
+                 int type = header[2];
+@@ -140,22 +144,22 @@ namespace Resource
+                 = reader->readImage(*stream, disableFlip ? mOptionsNoFlip : mOptions);
+             if (!result.success())
+             {
+-                Log(Debug::Error) << "Error loading " << path << ": " << result.message() << " code "
++                Log(Debug::Error) << "Error loading " << resolvedPath << ": " << result.message() << " code "
+                                   << result.status();
+-                mCache->addEntryToObjectCache(path.value(), mWarningImage);
++                mCache->addEntryToObjectCache(resolvedPath.value(), mWarningImage);
+                 return mWarningImage;
+             }
+ 
+             osg::ref_ptr<osg::Image> image = result.getImage();
+ 
+-            image->setFileName(std::string(path.value()));
++            image->setFileName(std::string(resolvedPath.value()));
+             if (!checkSupported(image))
+             {
+                 static bool uncompress = (getenv("OPENMW_DECOMPRESS_TEXTURES") != nullptr);
+                 if (!uncompress)
+                 {
+-                    Log(Debug::Error) << "Error loading " << path << ": no S3TC texture compression support installed";
+-                    mCache->addEntryToObjectCache(path.value(), mWarningImage);
++                    Log(Debug::Error) << "Error loading " << resolvedPath << ": no S3TC texture compression support installed";
++                    mCache->addEntryToObjectCache(resolvedPath.value(), mWarningImage);
+                     return mWarningImage;
+                 }
+                 else
+@@ -186,7 +190,7 @@ namespace Resource
+                 image = newImage;
+             }
+ 
+-            mCache->addEntryToObjectCache(path.value(), image);
++            mCache->addEntryToObjectCache(resolvedPath.value(), image);
+             return image;
+         }
+     }

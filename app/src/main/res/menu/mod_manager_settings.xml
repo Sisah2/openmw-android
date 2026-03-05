@@ -28,6 +28,9 @@
                    <item android:id="@+id/action_tools_groundcoverify"
                      android:title="@string/action_tools_groundcoverify" />
 
+                   <item android:id="@+id/action_tools_tex_convert"
+                     android:title="@string/action_tools_tex_convert"/>
+
                  </menu>
             </item>
 

@@ -47,8 +47,18 @@ import android.util.Log
 import java.io.PrintWriter
 import java.io.StringWriter
 
-
+import android.widget.LinearLayout
+import android.widget.LinearLayout.LayoutParams
+import android.widget.ScrollView
 import android.widget.Toast
+import android.widget.CheckBox
+import android.widget.TextView
+import android.widget.SeekBar
+import android.widget.ListView
+import android.widget.ArrayAdapter
+import android.view.WindowManager
+
+import kotlinx.coroutines.*
 
 class ModsActivity : AppCompatActivity() {
     var mPluginAdapter = ModsAdapter(this)
@@ -66,6 +76,9 @@ class ModsActivity : AppCompatActivity() {
 
     val pluginExtensions: Array<String> = arrayOf("esm", "esp", "omwaddon", "omwgame", "omwscripts")
     val archiveExtensions: Array<String> = arrayOf("bsa", "ba2")
+
+var skippedTextures = mutableSetOf<String>()
+var WorkingDir = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,6 +130,10 @@ class ModsActivity : AppCompatActivity() {
         setupModList(findViewById(R.id.list_resources), ModType.Resource)
         setupModList(findViewById(R.id.list_dirs), ModType.Dir)
         setupModList(findViewById(R.id.list_groundcovers), ModType.Groundcover)
+
+        val context = getApplicationContext()
+        val applicationInfo = context.applicationInfo
+        WorkingDir = applicationInfo.nativeLibraryDir
     }
 
     override fun onDestroy() {
@@ -135,18 +152,18 @@ class ModsActivity : AppCompatActivity() {
 
         File(Constants.USER_OPENMW_CFG).useLines {
 	    lines -> lines.forEach {
-                if (it.contains("fallback="))
+                if (it.contains("fallback=") && !it.contains("#"))
                     fallbackList.add(it)
-                if (it.contains("fallback-archive="))
+                if (it.contains("fallback-archive=") && !it.contains("#"))
                     archiveList.add(Pair(it.substringAfter("="), if (it.contains(";fallback-archive=")) false else true))
-                if (it.contains("data=")) {
+                if (it.contains("data=") && !it.contains("#")) {
                     val path = it.substringAfter("=").replace("\"", "").replace("\\", "/")
                     if (File(path).exists())
                         dataDirsList.add(Pair(path, if (it.contains(";data=")) false else true))
                 }
-                if (it.contains("content="))
+                if (it.contains("content=") && !it.contains("#"))
                     contentList.add(Pair(it.substringAfter("="), if (it.contains(";content=")) false else true))
-                if (it.contains("groundcover="))
+                if (it.contains("groundcover=") && !it.contains("#"))
                     groundcoverList.add(Pair(it.substringAfter("="), if (it.contains(";groundcover=")) false else true))
             }
         }
@@ -309,7 +326,7 @@ class ModsActivity : AppCompatActivity() {
                 processBuilder.directory(File(WorkingDir))
             }
             System.setProperty("HOME", "/data/data/$packageName/files/")
-            val commandToExecute = arrayOf("/system/bin/sh", "-c", "export HOME=/data/data/$packageName/files/; $cmd")
+            val commandToExecute = arrayOf("/system/bin/sh", "-c", "export HOME=/data/data/$packageName/files/; LD_LIBRARY_PATH=. $cmd")
             processBuilder.command(*commandToExecute)
             processBuilder.redirectErrorStream(true)
             val process = processBuilder.start()
@@ -340,9 +357,6 @@ class ModsActivity : AppCompatActivity() {
         // Get the Application Context
         val context = getApplicationContext()
 
-        // Get the nativeLibraryDir (might not be suitable for this case)
-        val applicationInfo = context.applicationInfo
-        val WorkingDir = applicationInfo.nativeLibraryDir
         val deltaConfigFile = File(Constants.USER_OPENMW_CFG)
 
         val progressDialog = ProgressDialog(this)
@@ -374,12 +388,6 @@ class ModsActivity : AppCompatActivity() {
             " && " +
             "./libdelta_plugin.so -v --verbose -c " + Constants.USER_OPENMW_CFG + " query --input " + Constants.USER_FILE_STORAGE + "/launcher/delta/output_groundcover.omwaddon --ignore " + Constants.USER_FILE_STORAGE + "/launcher/delta/deleted_groundcover.omwaddon match Static"
 
-        // Get the Application Context
-        val context = getApplicationContext()
-
-        // Get the nativeLibraryDir (might not be suitable for this case)
-        val applicationInfo = context.applicationInfo
-        val WorkingDir = applicationInfo.nativeLibraryDir
 
         val progressDialog = ProgressDialog(this)
         progressDialog.setMessage("Running Groundcoverify...") // Set the message
@@ -430,6 +438,73 @@ class ModsActivity : AppCompatActivity() {
             it.contains("content=output_deleted.omwaddon") 
         }
         File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg").writeText(lines.joinToString("\n"))
+    }
+
+    suspend fun executeCoroutine(texList: MutableSet<String>, hashMap: HashMap<String, String>, progressDialog: ProgressDialog, quality: String, blockSize: String) {
+
+        var counter = 0
+        var hashList = mutableSetOf<String>()
+        for((key, value) in hashMap) {
+            hashList.add(key + "@" + value)
+        }
+
+        texList.forEach {
+            val dir = it.substringAfter("@")
+            val file = it.substringBefore("@")
+
+            coroutineScope {
+                runOnUiThread {
+                   progressDialog.setMessage("${counter.toString()}/${texList.size.toString()}\n$dir$file")
+                }
+
+                launch { convertTexture(dir, file, hashList, WorkingDir, quality, blockSize, progressDialog, if (counter == texList.size) true else false) }
+
+                counter++
+            }
+        }
+    }
+
+    suspend fun convertTexture(dir: String, file: String, hashList: MutableSet<String>, WorkingDir: String, quality: String, blockSize: String, progressDialog: ProgressDialog, last: Boolean) {
+
+        val outputExtension = ".ktx"
+        val ktxTexturesDir = Constants.USER_FILE_STORAGE + "launcher/ktx"
+        val ktxTempTexture = ('"' + Constants.USER_FILE_STORAGE + "launcher/ktx/tmp_" + file.substringAfterLast("/").replace(".dds", ".ktx") + '"').toLowerCase()
+
+        val inputFile = '"' + dir + file + '"'
+        val outputFile = '"' + ktxTexturesDir + file.replace(".dds", outputExtension) + '"'
+        var encodeCmd = "./libkram.so encode -f $blockSize -encoder astcenc -quality $quality -i $inputFile -o $outputFile"
+
+        val info = shellExec("./libkram.so info -i $inputFile -v", WorkingDir)
+        val dims = info.substringAfter("dims: ").substringBefore("\n")
+        val width = dims.substringBefore("x").toIntOrNull()
+        val height = dims.substringAfter("x").substringBefore("\n").toIntOrNull()
+        val format = info.substringAfter("fmtk: ").substringBefore("\n")
+
+        if (width != null && height != null && width > 64 && height > 64) {
+            if (format != "EXPrgb8" && format != "EXPrgba8") {
+                encodeCmd = "./libkram.so encode -f $blockSize -encoder astcenc -quality $quality -i $ktxTempTexture -o $outputFile"
+                shellExec("./libkram.so decode -i $inputFile -o $ktxTempTexture", WorkingDir)
+            }
+
+            shellExec(encodeCmd, WorkingDir)
+        }
+
+        if (File(ktxTexturesDir + file.replace(".dds", outputExtension).replace(".DDS", outputExtension)).exists()) {
+            hashList.add(file.toLowerCase() + "@" + dir + "#" + File(dir + file).hashCode().toString())
+            File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/textureHashes.log").writeText(hashList.joinToString("\n")) 
+        }
+        else {
+            if (width > 64 && height > 64 )
+                File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log").writeText(File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log").readText() + "\n" + info)
+        }
+
+        File(ktxTempTexture.replace("\"", "")).delete()
+
+        if (last) {
+            runOnUiThread {
+                progressDialog.dismiss()
+            }
+        }
     }
 
     /**
@@ -637,6 +712,242 @@ class ModsActivity : AppCompatActivity() {
                     }
                     .show()
 
+                true
+            }
+            R.id.action_tools_tex_convert-> {
+
+                saveCFG()
+
+                File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs").mkdirs()
+                File(Constants.USER_FILE_STORAGE + "/launcher/ktx/bsatool").mkdirs()
+
+                val progressDialog = ProgressDialog(this)
+                progressDialog.setMessage("Getting Info...")
+                progressDialog.setCancelable(false)
+                progressDialog.getWindow()?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+                var pathsList = mutableSetOf<String>()
+                var texturesList = mutableSetOf<String>()
+                var requiredList = mutableSetOf<String>()
+                var bsaList = mutableSetOf<String>()
+                var skipList = mutableSetOf<String>()
+
+                val hashMap = HashMap<String, String>()
+
+                val dialog = AlertDialog.Builder(this)
+                dialog.setCancelable(false)
+                dialog.setTitle("ASTC Compressor")
+
+                val scrollView = ScrollView(this)
+                var scrollParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+                scrollView.layoutParams = scrollParams
+
+                val layout = LinearLayout(this)
+                layout.orientation = LinearLayout.VERTICAL
+
+                val requiredText = TextView(this)
+                requiredText.setText("Need Filecheck First.")
+                layout.addView(requiredText)
+
+                val convertAll = CheckBox(this)
+                convertAll.setText("Convert All Textures")
+                convertAll.setChecked(false)
+                layout.addView(convertAll)
+
+                val blockSizeText = TextView(this)
+                blockSizeText.setText("Block Size")
+                layout.addView(blockSizeText)
+
+                val blockSizeList = ListView(this)
+                val blockSizes: Array<String> = arrayOf("astc12x12", "astc10x10", "astc8x8", "astc6x6", "astc5x5", "astc4x4")
+                val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_single_choice, blockSizes)
+                blockSizeList.setChoiceMode(ListView.CHOICE_MODE_SINGLE)
+                blockSizeList.setAdapter(adapter)
+                blockSizeList.setItemChecked(0, true)
+                var blockSize = "astc12x12"
+                blockSizeList.setOnItemClickListener { parent, view, position, id ->
+                    blockSizeList.setItemChecked(position, true)
+                    blockSize = blockSizes.elementAt(position)
+                }
+                layout.addView(blockSizeList)
+
+                val qualityText = TextView(this)
+                qualityText.setText("Quality")
+                layout.addView(qualityText)
+
+                val qualitySeekBar = SeekBar(this)
+                qualitySeekBar.setProgress(50)
+                qualitySeekBar.setMin(0)
+                qualitySeekBar.setMax(100)
+                layout.addView(qualitySeekBar)
+                layout.setPadding(50, 40, 50, 10)
+
+                scrollView.addView(layout)
+                dialog.setView(scrollView)
+
+
+                fun collectInfo() {
+                    pathsList.clear()
+                    texturesList.clear()
+                    requiredList.clear()
+                    skipList.clear()
+
+                    if (File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/textureHashes.log").exists()) {
+                        File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/textureHashes.log").useLines {
+	                    lines -> lines.forEach {
+                                hashMap[it.substringBefore("@").toLowerCase()] = it.substringAfter("@")
+                            }
+                        }
+                    }
+
+                    val mMods = arrayListOf<Mod>()
+                    mMods.add(Mod(ModType.Dir, Constants.USER_FILE_STORAGE + "launcher/ktx/bsatool", 0, true))
+                    mDirAdapter.collection.mods.forEach { mMods.add(it) }
+
+                    mMods.reversed().forEach {
+                        if (it.enabled) {
+                            val dir = it.filename
+                            File(dir).walk()?.forEach {
+                                if (it.isFile() && (it.extension.toLowerCase().contains("dds"))) {
+                                    val fileName = it.getAbsolutePath().toString().replace(dir, "")
+                                    val hash = it.hashCode().toString()
+                                    if (!texturesList.contains(fileName.toLowerCase())) {
+                                        texturesList.add(fileName.toLowerCase())
+
+                                        if (hashMap[fileName.toLowerCase()] != "$dir#$hash") {
+                                            if (!fileName.toLowerCase().contains("menu") && !it.getAbsolutePath().toLowerCase().contains("shaders/"))
+                                                requiredList.add("$fileName@$dir")
+                                            else
+                                                skipList.add(fileName)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    //File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/textures.log").writeText(texturesList.joinToString("\n")) 
+                    File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/requiredPaths.log").writeText(requiredList.joinToString("\n"))
+                    //File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/bsaList.log").writeText(bsaList.joinToString("\n")) 
+                    //File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/skipList.log").writeText(skipList.joinToString("\n")) 
+
+                    runOnUiThread {
+                        requiredText.setText("Want to convert ${requiredList.size} textures.\n")
+                        progressDialog.dismiss()
+                    }
+                }
+
+                dialog.setPositiveButton("Convert") { dialog, _ ->
+                    runOnUiThread { progressDialog.show() }
+                    Thread {
+                        File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log").writeText("")
+
+                        skipList.forEach {
+                            if (File((Constants.USER_FILE_STORAGE + "/launcher/ktx$it").replace(".dds", ".ktx")).exists())
+                                File((Constants.USER_FILE_STORAGE + "/launcher/ktx$it").replace(".dds", ".ktx")).delete()
+                        }
+
+                        if (convertAll.isChecked()) {
+                            if (File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/textureHashes.log").exists())
+                                File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/textureHashes.log").delete()
+
+                            hashMap.clear()
+                            collectInfo()
+                            runOnUiThread { progressDialog.show() }
+                        }
+
+                        val quality = qualitySeekBar.getProgress().toString()
+                        GlobalScope.launch(Dispatchers.Default) { executeCoroutine(requiredList, hashMap, progressDialog, quality, blockSize) }
+
+                        if (requiredList.size == 0) {
+                            runOnUiThread {
+                                progressDialog.dismiss()
+                            }
+                        }
+                    }.start()
+                }
+
+                dialog.setNeutralButton("Cancel") { dialog, _ ->
+                    dialog.dismiss()
+                }
+
+                val BSAdialog = AlertDialog.Builder(this)
+                BSAdialog.setCancelable(false)
+                BSAdialog.setTitle("Extract Archives.")
+
+                val BSAlayout = LinearLayout(this)
+                BSAlayout.orientation = LinearLayout.VERTICAL
+                BSAlayout.setPadding(50, 40, 50, 10)
+
+                val archiveText = TextView(this)
+                BSAlayout.addView(archiveText)
+                BSAdialog.setView(BSAlayout)
+
+                BSAdialog.setPositiveButton("Extract") { dialog, _ ->
+                    var counter = 0
+                    Thread {
+                        bsaList.forEach {
+                            runOnUiThread {
+                                progressDialog.setMessage("Extracting Archive:\n" + it)
+                            }
+
+                            val bsaPath = '"' + it + '"' + " " + '"' + Constants.USER_FILE_STORAGE + "/launcher/ktx/bsatool" + '"'
+                            shellExec("./libbsatool.so extractall $bsaPath", WorkingDir)
+
+                            File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/extractedArchives.log").writeText(File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/extractedArchives.log").readText() + it + "\n")
+
+                            if (++counter == bsaList.size) {
+                                runOnUiThread {
+                                    progressDialog.setMessage("Getting info....")
+                                }
+
+                                collectInfo()
+                            }
+
+                        }
+                    }.start()
+                }
+
+                BSAdialog.setNeutralButton("Cancel") { dialog, _ ->
+                    dialog.dismiss()
+                    collectInfo()
+                }
+
+                var needExtract = false
+                if (!File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/extractedArchives.log").exists())
+                    File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/extractedArchives.log").writeText("")
+
+                val bsas = File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/extractedArchives.log").readText()
+                mResourceAdapter.collection.mods.forEach {
+                    if (it.enabled) {
+                        val resourceName = it.filename
+                        mDirAdapter.collection.mods.reversed().forEach {
+                            if (it.enabled && File(it.filename + "/" + resourceName).exists()) {
+                                val directoryName = it.filename
+                                val fullPath = directoryName + "/" + resourceName
+                                bsaList.add(fullPath)
+                                if (!bsas.contains(fullPath))
+                                    needExtract = true
+                            }
+                        }
+                    }
+                }
+
+                archiveText.setText(bsaList.joinToString("\n").replace("/storage/emulated/0/", ""))
+
+                runOnUiThread {
+                    dialog.show()
+                    progressDialog.show()
+
+                    if (needExtract == true)
+                        BSAdialog.show()
+                    else {
+                        Thread {
+                            progressDialog.setMessage("Getting info....")
+                            collectInfo() 
+                        }.start()
+                    }
+                }
                 true
             }
             else -> super.onOptionsItemSelected(item)

@@ -11,10 +11,12 @@ if [ -r release-70-1.zip ]; then
     ICU_SOURCE_DIR=./icu-release-70-1/icu4c/source
 else
     wget https://github.com/unicode-org/icu/archive/refs/tags/release-70-1.zip
-    unzip release-70-1.zip
+    unzip -q release-70-1.zip
     ICU_SOURCE_DIR=./icu-release-70-1/icu4c/source
-    ${ICU_SOURCE_DIR}/configure --disable-tests --disable-samples --disable-icuio --disable-extras CC="gcc" CXX="g++"
-    make -j $(nproc)
+    echo Configuring ICU
+    ${ICU_SOURCE_DIR}/configure --disable-tests --disable-samples --disable-icuio --disable-extras CC="gcc" CXX="g++" > /dev/null
+    echo Compiling ICU
+    make -j $(nproc) > /dev/null
 fi
 
 cd ../..

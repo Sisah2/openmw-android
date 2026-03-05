@@ -1,0 +1,260 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 58786ed9b6..b7036453c0 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -298,6 +298,7 @@ set(USED_OSG_PLUGINS
+     osgdb_bmp
+     osgdb_dae
+     osgdb_dds
++    osgdb_ktx
+     osgdb_freetype
+     osgdb_jpeg
+     osgdb_osg
+diff --git a/apps/openmw/engine.cpp b/apps/openmw/engine.cpp
+index 8d8a0bc7b9..abe143fa03 100644
+--- a/apps/openmw/engine.cpp
++++ b/apps/openmw/engine.cpp
+@@ -487,6 +487,9 @@ void OMW::Engine::setSkipMenu(bool skipMenu, bool newGame)
+     mNewGame = newGame;
+ }
+ 
++// To share the viewer with Android interfaces
++osg::ref_ptr<osgViewer::Viewer> g_viewer;
++
+ void OMW::Engine::createWindow()
+ {
+     const int screen = Settings::video().mScreen;
+@@ -693,6 +696,9 @@ void OMW::Engine::createWindow()
+ 
+     mViewer->getEventQueue()->getCurrentEventState()->setWindowRectangle(
+         0, 0, graphicsWindow->getTraits()->width, graphicsWindow->getTraits()->height);
++
++    // To share the viewer with Android interfaces
++    g_viewer = mViewer;
+ }
+ 
+ void OMW::Engine::setWindowIcon()
+@@ -1070,6 +1076,8 @@ void OMW::Engine::go()
+ 
+     mLuaWorker->join();
+ 
++    g_viewer.release();
++
+     // Save user settings
+     Settings::Manager::saveUser(mCfgMgr.getUserConfigPath() / "settings.cfg");
+     Settings::ShaderManager::get().save();
+diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postprocessor.cpp
+index a9a2416e7b..07120540a7 100644
+--- a/apps/openmw/mwrender/postprocessor.cpp
++++ b/apps/openmw/mwrender/postprocessor.cpp
+@@ -196,17 +196,14 @@ namespace MWRender
+         if (!ext->glDisablei && ext->glDisableIndexedEXT)
+             ext->glDisablei = ext->glDisableIndexedEXT;
+ 
+-#ifdef ANDROID
+-        ext->glDisablei = nullptr;
+-#endif
+-
+         if (ext->glDisablei)
+             mNormalsSupported = true;
+         else
+             Log(Debug::Error) << "'glDisablei' unsupported, pass normals will not be available to shaders.";
+ 
+-        mGLSLVersion = static_cast<int>(ext->glslLanguageVersion * 100);
+-        mUBO = ext->isUniformBufferObjectSupported && mGLSLVersion >= 330;
++        mGLSLVersion = 120;//static_cast<int>(ext->glslLanguageVersion * 100);
++        //mUBO = ext->isUniformBufferObjectSupported && mGLSLVersion >= 330;
++        mUBO = (getenv("OPENMW_UBO") == nullptr) ? false : true;
+         mStateUpdater = new Fx::StateUpdater(mUBO);
+ 
+         addChild(mHUDCamera);
+diff --git a/components/fx/pass.cpp b/components/fx/pass.cpp
+index eceffa188f..d176a14926 100644
+--- a/components/fx/pass.cpp
++++ b/components/fx/pass.cpp
+@@ -63,6 +63,7 @@ namespace Fx
+     std::string Pass::getPassHeader(Technique& technique, std::string_view preamble, bool fragOut)
+     {
+         std::string header = R"GLSL(
++// OMW Post-Process shader
+ #version @version @profile
+ @extensions
+ 
+diff --git a/components/fx/technique.cpp b/components/fx/technique.cpp
+index 945a3cf1b1..1abde84f70 100644
+--- a/components/fx/technique.cpp
++++ b/components/fx/technique.cpp
+@@ -84,7 +84,7 @@ namespace Fx
+         mDescription = {};
+         mVersion = {};
+         mGLSLExtensions.clear();
+-        mGLSLVersion = (mUBO || Stereo::getMultiview()) ? 330 : 120;
++        mGLSLVersion = 120;//(mUBO || Stereo::getMultiview()) ? 330 : 120;
+         mGLSLProfile.clear();
+         mDynamic = false;
+     }
+@@ -241,7 +241,7 @@ namespace Fx
+             else if (key == "author")
+                 mAuthor = parseString();
+             else if (key == "glsl_version")
+-                mGLSLVersion = std::max(mGLSLVersion, parseInteger());
++                mGLSLVersion = std::min(mGLSLVersion, parseInteger());
+             else if (key == "flags")
+                 mFlags = parseFlags();
+             else if (key == "hdr")
+@@ -364,7 +364,7 @@ namespace Fx
+         if (!pass)
+             pass = std::make_shared<Fx::Pass>();
+ 
+-        pass->mUBO = mUBO;
++        pass->mUBO = (getenv("OPENMW_UBO") == nullptr) ? false : true;//mUBO;
+         pass->mName = mBlockName;
+ 
+         if (pass->mCompute)
+diff --git a/components/resource/imagemanager.cpp b/components/resource/imagemanager.cpp
+index 082b3a2536..a9883e562b 100644
+--- a/components/resource/imagemanager.cpp
++++ b/components/resource/imagemanager.cpp
+@@ -16,6 +16,7 @@
+ USE_OSGPLUGIN(png)
+ USE_OSGPLUGIN(tga)
+ USE_OSGPLUGIN(dds)
++USE_OSGPLUGIN(ktx)
+ USE_OSGPLUGIN(jpeg)
+ USE_OSGPLUGIN(bmp)
+ USE_OSGPLUGIN(osg)
+diff --git a/components/sceneutil/lightmanager.cpp b/components/sceneutil/lightmanager.cpp
+index 86482350e9..2baf27003e 100644
+--- a/components/sceneutil/lightmanager.cpp
++++ b/components/sceneutil/lightmanager.cpp
+@@ -718,6 +718,7 @@ namespace SceneUtil
+ 
+         if (!mInitLayout)
+         {
++/*
+             mDummyProgram->apply(state);
+             auto handle = mDummyProgram->getPCP(state)->getHandle();
+             auto* ext = state.get<osg::GLExtensions>();
+@@ -727,8 +728,10 @@ namespace SceneUtil
+ 
+             // wait until the UBO binding is created
+             if (activeUniformBlocks > 0)
++*/
+             {
+-                initSharedLayout(ext, handle, frame);
++                //initSharedLayout(ext, handle, frame);
++                mTemplate->configureLayout(0, 16, 32, 16384, 0);
+                 mInitLayout = true;
+             }
+         }
+diff --git a/files/data/mygui/openmw_postprocessor_hud.layout b/files/data/mygui/openmw_postprocessor_hud.layout
+index 4ed8ecdb36..758b1b2e99 100644
+--- a/files/data/mygui/openmw_postprocessor_hud.layout
++++ b/files/data/mygui/openmw_postprocessor_hud.layout
+@@ -3,7 +3,7 @@
+   <Widget type="Window" skin="MW_Window" position="0 0 500 500" layer="Debug" name="_Main" align="Stretch">
+     <Property key="Visible" value="false"/>
+     <Property key="Caption" value="#{OMWShaders:PostProcessHUD}"/>
+-    <Property key="MinSize" value="600 600"/>
++    <Property key="MinSize" value="600 430"/>
+ 
+     <Widget type="TabControl" skin="TabControl_NoBorder" position="8 8 468 450" align="Stretch" name="TabControl">
+         <Property key="ButtonAutoWidth" value="true"/>
+@@ -20,7 +20,7 @@
+             <Property key="Padding" value="0"/>
+             <Property key="Spacing" value="8"/>
+ 
+-            <Widget type="Widget" position ="0 0 0 300">
++            <Widget type="Widget" position ="0 0 0 250">
+                 <UserString key="HStretch" value="true"/>
+                 <UserString key="VStretch" value="false"/>
+ 
+diff --git a/files/shaders/lib/core/fragment.h.glsl b/files/shaders/lib/core/fragment.h.glsl
+index 9b7ef768e6..fc9cf8f7a7 100644
+--- a/files/shaders/lib/core/fragment.h.glsl
++++ b/files/shaders/lib/core/fragment.h.glsl
+@@ -1,22 +1,50 @@
+ #ifndef OPENMW_FRAGMENT_H_GLSL
+ #define OPENMW_FRAGMENT_H_GLSL
+ 
+-@link "lib/core/fragment.glsl" if !@useOVR_multiview
+-@link "lib/core/fragment_multiview.glsl" if @useOVR_multiview
++uniform sampler2D reflectionMap;
+ 
+-vec4 sampleReflectionMap(vec2 uv);
++vec4 sampleReflectionMap(vec2 uv)
++{
++    return texture2D(reflectionMap, uv);
++}
+ 
+ #if @waterRefraction
+-vec4 sampleRefractionMap(vec2 uv);
+-float sampleRefractionDepthMap(vec2 uv);
++uniform sampler2D refractionMap;
++uniform highp sampler2D refractionDepthMap;
++
++vec4 sampleRefractionMap(vec2 uv)
++{
++    return texture2D(refractionMap, uv);
++}
++
++float sampleRefractionDepthMap(vec2 uv)
++{
++    return texture2D(refractionDepthMap, uv).x;
++}
++
+ #endif
+ 
+-vec4 samplerLastShader(vec2 uv);
++uniform sampler2D lastShader;
++
++vec4 samplerLastShader(vec2 uv)
++{
++    return texture2D(lastShader, uv);
++}
+ 
+ #if @skyBlending
+-vec3 sampleSkyColor(vec2 uv);
++uniform sampler2D sky;
++
++vec3 sampleSkyColor(vec2 uv)
++{
++    return texture2D(sky, uv).xyz;
++}
+ #endif
+ 
+-vec4 sampleOpaqueDepthTex(vec2 uv);
++uniform sampler2D opaqueDepthTex;
++
++vec4 sampleOpaqueDepthTex(vec2 uv)
++{
++    return texture2D(opaqueDepthTex, uv);
++}
+ 
+ #endif  // OPENMW_FRAGMENT_H_GLSL
+diff --git a/files/shaders/lib/core/vertex.h.glsl b/files/shaders/lib/core/vertex.h.glsl
+index 6e22f6deb1..c8a1080574 100644
+--- a/files/shaders/lib/core/vertex.h.glsl
++++ b/files/shaders/lib/core/vertex.h.glsl
+@@ -1,6 +1,16 @@
+-@link "lib/core/vertex.glsl" if !@useOVR_multiview
+-@link "lib/core/vertex_multiview.glsl" if @useOVR_multiview
++uniform mat4 projectionMatrix;
+ 
+-vec4 modelToClip(vec4 pos);
+-vec4 modelToView(vec4 pos);
+-vec4 viewToClip(vec4 pos);
++vec4 modelToView(vec4 pos)
++{
++    return gl_ModelViewMatrix * pos;
++}
++
++vec4 modelToClip(vec4 pos)
++{
++    return projectionMatrix * modelToView(pos);
++}
++
++vec4 viewToClip(vec4 pos)
++{
++    return projectionMatrix * pos;
++}

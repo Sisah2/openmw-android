@@ -1,0 +1,121 @@
+From efe0e966d49ac91736512a4b8bd4cece97ad8483 Mon Sep 17 00:00:00 2001
+From: sisah <jirielbunda@seznam.cz>
+Date: Sun, 6 Jul 2025 11:47:32 -0400
+Subject: [PATCH] Add navmeshtool patch
+
+---
+ apps/navmeshtool/main.cpp    |  9 +++++----
+ apps/navmeshtool/navmesh.cpp |  3 +++
+ apps/navmeshtool/navmesh.hpp |  1 +
+ apps/openmw/CMakeLists.txt   |  4 ++++
+ apps/openmw/main.cpp         | 14 ++++++++++++++
+ 5 files changed, 27 insertions(+), 4 deletions(-)
+
+diff --git a/apps/navmeshtool/main.cpp b/apps/navmeshtool/main.cpp
+index e148e60d541..57bd7d746a6 100644
+--- a/apps/navmeshtool/main.cpp
++++ b/apps/navmeshtool/main.cpp
+@@ -52,8 +52,8 @@
+ 
+ namespace NavMeshTool
+ {
+-    namespace
+-    {
++//    namespace
++//    {
+         namespace bpo = boost::program_options;
+ 
+         using StringsVector = std::vector<std::string>;
+@@ -254,9 +254,9 @@ namespace NavMeshTool
+ 
+             return 0;
+         }
+-    }
++//    }
+ }
+-
++/*
+ #ifdef ANDROID
+ extern "C" int SDL_main(int argc, char* argv[])
+ #else
+@@ -265,3 +265,4 @@ int main(int argc, char* argv[])
+ {
+     return Debug::wrapApplication(NavMeshTool::runNavMeshTool, argc, argv, NavMeshTool::applicationName);
+ }
++*/
+diff --git a/apps/navmeshtool/navmesh.cpp b/apps/navmeshtool/navmesh.cpp
+index 6a4a708ef97..06936ef902c 100644
+--- a/apps/navmeshtool/navmesh.cpp
++++ b/apps/navmeshtool/navmesh.cpp
+@@ -53,6 +53,9 @@ namespace NavMeshTool
+             Log(Debug::Info) << provided << "/" << expected << " ("
+                              << (static_cast<double>(provided) / static_cast<double>(expected) * 100)
+                              << "%) navmesh tiles are generated";
++
++            std::string message = std::to_string((static_cast<double>(provided) / static_cast<double>(expected) * 100));
++            setenv("NAVMESHTOOL_MESSAGE", message.c_str(), true);
+         }
+ 
+         template <class T>
+diff --git a/apps/navmeshtool/navmesh.hpp b/apps/navmeshtool/navmesh.hpp
+index 4e607f4f2b0..cda1841f64b 100644
+--- a/apps/navmeshtool/navmesh.hpp
++++ b/apps/navmeshtool/navmesh.hpp
+@@ -33,6 +33,8 @@ namespace NavMeshTool
+     Result generateAllNavMeshTiles(const DetourNavigator::AgentBounds& agentBounds,
+         const DetourNavigator::Settings& settings, bool removeUnusedTiles, bool writeBinaryLog,
+         const WorldspaceData& data, DetourNavigator::NavMeshDb& db, SceneUtil::WorkQueue& workQueue);
++
++        int runNavMeshTool(int argc, char *argv[]);
+ }
+ 
+ #endif
+
+diff --git a/apps/openmw/CMakeLists.txt b/apps/openmw/CMakeLists.txt
+index 235a44627ae..58c86804838 100644
+--- a/apps/openmw/CMakeLists.txt
++++ b/apps/openmw/CMakeLists.txt
+@@ -116,6 +116,10 @@ add_openmw_dir (mwbase
+     inputmanager windowmanager statemanager luamanager
+     )
+ 
++add_openmw_dir (.
++    ../navmeshtool/main ../navmeshtool/navmesh ../navmeshtool/worldspacedata
++    )
++
+ # Main executable
+ 
+ add_library(openmw-lib STATIC
+diff --git a/apps/openmw/main.cpp b/apps/openmw/main.cpp
+index 3ef5f43566f..4d82a1746c0 100644
+--- a/apps/openmw/main.cpp
++++ b/apps/openmw/main.cpp
+@@ -28,6 +28,9 @@ extern "C" __declspec(dllexport) DWORD AmdPowerXpressRequestHighPerformance = 0x
+ #include <unistd.h>
+ #endif
+ 
++// Android navmeshtool hack
++#include "../navmeshtool/navmesh.hpp"
++
+ /**
+  * \brief Parses application command line and calls \ref Cfg::ConfigurationManager
+  * to parse configuration files.
+@@ -224,6 +227,17 @@ int runApplication(int argc, char* argv[])
+ 
+     engine->setRecastMaxLogLevel(Debug::getRecastMaxLogLevel());
+ 
++    // Android navmeshtool hack
++    if ( getenv("OPENMW_GENERATE_NAVMESH_CACHE") )
++    {
++        if(NavMeshTool::runNavMeshTool(argc, argv))
++           Log(Debug::Error) << "runNavMeshTool failed";
++        else
++           Log(Debug::Error) << "runNavMeshTool sucess";
++
++        return 0;
++    }
++
+     if (parseOptions(argc, argv, *engine, cfgMgr))
+     {
+         if (!Misc::checkRequiredOSGPluginsArePresent())
+
