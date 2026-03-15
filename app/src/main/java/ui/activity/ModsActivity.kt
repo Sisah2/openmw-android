@@ -480,7 +480,11 @@ var WorkingDir = ""
         val height = dims.substringAfter("x").substringBefore("\n").toIntOrNull()
         val format = info.substringAfter("fmtk: ").substringBefore("\n")
 
-        if (width != null && height != null && width > 64 && height > 64) {
+        val fmtd = info.substringAfter("fmtd: ").substringBefore("\n")
+        var isSmall = false
+
+        if (!fmtd.contains("UNKNOWN"))
+        if (width != null && height != null && width > 16 && height > 16) {
             if (format != "EXPrgb8" && format != "EXPrgba8") {
                 encodeCmd = "./libkram.so encode -f $blockSize -encoder astcenc -quality $quality -i $ktxTempTexture -o $outputFile"
                 shellExec("./libkram.so decode -i $inputFile -o $ktxTempTexture", WorkingDir)
@@ -488,14 +492,20 @@ var WorkingDir = ""
 
             shellExec(encodeCmd, WorkingDir)
         }
+        else
+        {
+            if (File(ktxTexturesDir + file.replace(".dds", outputExtension).replace(".DDS", outputExtension)).exists())
+                File(ktxTexturesDir + file.replace(".dds", outputExtension).replace(".DDS", outputExtension)).delete()
+            isSmall = true
+        }
 
         if (File(ktxTexturesDir + file.replace(".dds", outputExtension).replace(".DDS", outputExtension)).exists()) {
             hashList.add(file.toLowerCase() + "@" + dir + "#" + File(dir + file).hashCode().toString())
             File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/textureHashes.log").writeText(hashList.joinToString("\n")) 
         }
         else {
-            if (width > 64 && height > 64 )
-                File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log").writeText(File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log").readText() + "\n" + info)
+                if (!isSmall)
+                    File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log").writeText(File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log").readText() + "\n" + info)
         }
 
         File(ktxTempTexture.replace("\"", "")).delete()
@@ -755,7 +765,7 @@ var WorkingDir = ""
                 layout.addView(convertAll)
 
                 val blockSizeText = TextView(this)
-                blockSizeText.setText("Block Size")
+                blockSizeText.setText("Block Size (12x12 = Highest Compression, 4x4 = Best Quality.")
                 layout.addView(blockSizeText)
 
                 val blockSizeList = ListView(this)
@@ -763,8 +773,8 @@ var WorkingDir = ""
                 val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_single_choice, blockSizes)
                 blockSizeList.setChoiceMode(ListView.CHOICE_MODE_SINGLE)
                 blockSizeList.setAdapter(adapter)
-                blockSizeList.setItemChecked(0, true)
-                var blockSize = "astc12x12"
+                blockSizeList.setItemChecked(2, true)
+                var blockSize = "astc8x8"
                 blockSizeList.setOnItemClickListener { parent, view, position, id ->
                     blockSizeList.setItemChecked(position, true)
                     blockSize = blockSizes.elementAt(position)
@@ -776,7 +786,7 @@ var WorkingDir = ""
                 layout.addView(qualityText)
 
                 val qualitySeekBar = SeekBar(this)
-                qualitySeekBar.setProgress(50)
+                qualitySeekBar.setProgress(75)
                 qualitySeekBar.setMin(0)
                 qualitySeekBar.setMax(100)
                 layout.addView(qualitySeekBar)

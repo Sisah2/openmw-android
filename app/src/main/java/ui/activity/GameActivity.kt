@@ -175,14 +175,8 @@ class GameActivity : SDLActivity() {
             e.printStackTrace()
         }
 
-        val textureShrinkingOption = prefs!!.getString("pref_textureShrinking_v2", "")
-        if (textureShrinkingOption == "low") Os.setenv("LIBGL_SHRINK", "2", true)
-        if (textureShrinkingOption == "medium") Os.setenv("LIBGL_SHRINK", "7", true)
-        if (textureShrinkingOption == "high") Os.setenv("LIBGL_SHRINK", "6", true)
-
-        val avoid16bits = prefs!!.getBoolean("pref_avoid16bits", true)
-        if (avoid16bits == true) Os.setenv("LIBGL_AVOID16BITS", "1", true)
-        else Os.setenv("LIBGL_AVOID16BITS", "0", true)
+        val forceGLSL330 = prefs!!.getBoolean("pref_use_spirv_shader_conv", false)
+        if (forceGLSL330 == true) Os.setenv("OPENMW_FORCEGLSL330", "1", true)
 
         Os.setenv("OSG_VERTEX_BUFFER_HINT", "VBO", true)
         Os.setenv("OSG_GL_TEXTURE_STORAGE", "OFF", true)

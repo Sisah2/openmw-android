@@ -159,27 +159,12 @@
         <item>60</item>
     </string-array>
 
-    <string-array name="pref_textureShrinking_entries">
-        <item>None</item>
-        <item>Low</item>
-        <item>Medium</item>
-        <item>High</item>
-    </string-array>
-
-    <string-array name="pref_textureShrinking_values">
-        <item>none</item>
-        <item>low</item>
-        <item>medium</item>
-        <item>high</item>
-    </string-array>
-
     <string name="pref_physicsFPS2_default">30</string>
-
 
     <string name="btn_back">Back</string>
     <string name="pref_customResolution">Custom resolution</string>
     <string name="pref_display_cutout_area">Display in cutout area</string>
-    <string name="pref_avoid16bits">Avoid 16 bits colors</string>
+    <string name="pref_use_spirv_shader_conv">Use Spirv Shader Convertor</string>
     <string name="mods">Mods…</string>
     <string name="action_about">About</string>
     <string name="about_title">About OMW</string>

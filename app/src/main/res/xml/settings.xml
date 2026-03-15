@@ -105,6 +105,12 @@
             android:title="@string/pref_display_cutout_area"
             android:defaultValue="true"/>
 
+        <CheckBoxPreference
+            android:key="pref_use_spirv_shader_conv"
+            android:title="@string/pref_use_spirv_shader_conv"
+            android:summary="May be usefull for pre 8 Gen 3 devices for more postprocess shaders compatibility."
+            android:defaultValue="false"/>
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/pref_advanced">
