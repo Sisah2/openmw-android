@@ -168,7 +168,7 @@ class GameActivity : SDLActivity() {
         System.loadLibrary("SDL2")
 
         try {
-            Os.setenv("OPENMW_GLES_VERSION", "3", true)
+            Os.setenv("OPENMW_GLES_VERSION", "32", true)
             Os.setenv("LIBGL_ES", "3", true)
         } catch (e: ErrnoException) {
             Log.e("OpenMW", "Failed setting environment variables.")
@@ -180,6 +180,7 @@ class GameActivity : SDLActivity() {
 
         val enableANGLE = prefs!!.getBoolean("pref_use_angle", false)
         if (enableANGLE == true) {
+            Os.setenv("OPENMW_GLES_VERSION", "31", true)
             Os.setenv("LIBGL_GLES", "libGLESv2_angle.so", true)
             Os.setenv("LIBGL_EGL", "libEGL_angle.so", true)
             Os.setenv("SDL_VIDEO_GL_DRIVER", "libGLESv2_angle.so", true)
