@@ -191,6 +191,12 @@ find build/$ARCH/openmw-prefix/ -iname "bsatool" -exec cp "{}" ../app/src/main/j
 # copy delta_plugin to lib location
 cp tool/libdelta_plugin.so ../app/src/main/jniLibs/$ABI/
 
+# copy ANGLE libs to lib location
+cp tool/libGLESv2_angle.so ../app/src/main/jniLibs/$ABI/
+cp tool/libEGL_angle.so ../app/src/main/jniLibs/$ABI/
+cp tool/libGLESv1_CM_angle.so ../app/src/main/jniLibs/$ABI/
+cp tool/libfeature_support_angle.so ../app/src/main/jniLibs/$ABI/
+
 # copy over libs we compiled
 cp prefix/$ARCH/lib/{libopenal,libSDL2,libng_gl4es,libcollada-dom2.5-dp,libkram}.so ../app/src/main/jniLibs/$ABI/
 
