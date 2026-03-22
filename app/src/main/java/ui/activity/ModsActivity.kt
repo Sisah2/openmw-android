@@ -59,6 +59,7 @@ import android.widget.ArrayAdapter
 import android.view.WindowManager
 
 import kotlinx.coroutines.*
+import java.util.concurrent.ConcurrentHashMap
 
 class ModsActivity : AppCompatActivity() {
     var mPluginAdapter = ModsAdapter(this)
@@ -77,8 +78,8 @@ class ModsActivity : AppCompatActivity() {
     val pluginExtensions: Array<String> = arrayOf("esm", "esp", "omwaddon", "omwgame", "omwscripts")
     val archiveExtensions: Array<String> = arrayOf("bsa", "ba2")
 
-var skippedTextures = mutableSetOf<String>()
-var WorkingDir = ""
+    var skippedTextures = mutableSetOf<String>()
+    var WorkingDir = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -440,31 +441,11 @@ var WorkingDir = ""
         File(Constants.USER_FILE_STORAGE + "/launcher/delta/delta.cfg").writeText(lines.joinToString("\n"))
     }
 
-    suspend fun executeCoroutine(texList: MutableSet<String>, hashMap: HashMap<String, String>, progressDialog: ProgressDialog, quality: String, blockSize: String) {
+    fun convertTexture(dir: String, file: String, WorkingDir: String, quality: String, blockSize: String, message: String, progressDialog: ProgressDialog, hashFile: File, failFile: File) {
 
-        var counter = 0
-        var hashList = mutableSetOf<String>()
-        for((key, value) in hashMap) {
-            hashList.add(key + "@" + value)
+        runOnUiThread {
+            progressDialog.setMessage(message)
         }
-
-        texList.forEach {
-            val dir = it.substringAfter("@")
-            val file = it.substringBefore("@")
-
-            coroutineScope {
-                runOnUiThread {
-                   progressDialog.setMessage("${counter.toString()}/${texList.size.toString()}\n$dir$file")
-                }
-
-                launch { convertTexture(dir, file, hashList, WorkingDir, quality, blockSize, progressDialog, if (counter == texList.size) true else false) }
-
-                counter++
-            }
-        }
-    }
-
-    suspend fun convertTexture(dir: String, file: String, hashList: MutableSet<String>, WorkingDir: String, quality: String, blockSize: String, progressDialog: ProgressDialog, last: Boolean) {
 
         val outputExtension = ".ktx"
         val ktxTexturesDir = Constants.USER_FILE_STORAGE + "launcher/ktx"
@@ -480,11 +461,11 @@ var WorkingDir = ""
         val height = dims.substringAfter("x").substringBefore("\n").toIntOrNull()
         val format = info.substringAfter("fmtk: ").substringBefore("\n")
 
-        val fmtd = info.substringAfter("fmtd: ").substringBefore("\n")
+        var minSize = 16
+        if (format == "EXPrgb8") minSize = 64
         var isSmall = false
 
-        if (!fmtd.contains("UNKNOWN"))
-        if (width != null && height != null && width > 16 && height > 16) {
+        if (width != null && height != null && width > minSize && height > minSize) {
             if (format != "EXPrgb8" && format != "EXPrgba8") {
                 encodeCmd = "./libkram.so encode -f $blockSize -encoder astcenc -quality $quality -i $ktxTempTexture -o $outputFile"
                 shellExec("./libkram.so decode -i $inputFile -o $ktxTempTexture", WorkingDir)
@@ -500,21 +481,14 @@ var WorkingDir = ""
         }
 
         if (File(ktxTexturesDir + file.replace(".dds", outputExtension).replace(".DDS", outputExtension)).exists()) {
-            hashList.add(file.toLowerCase() + "@" + dir + "#" + File(dir + file).hashCode().toString())
-            File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/textureHashes.log").writeText(hashList.joinToString("\n")) 
+            hashFile.appendText(file.toLowerCase() + "@" + dir + "#" + File(dir + file).hashCode().toString() + "\n") 
         }
         else {
                 if (!isSmall)
-                    File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log").writeText(File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log").readText() + "\n" + info)
+                    File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log").appendText("\n" + info)
         }
 
         File(ktxTempTexture.replace("\"", "")).delete()
-
-        if (last) {
-            runOnUiThread {
-                progressDialog.dismiss()
-            }
-        }
     }
 
     /**
@@ -742,7 +716,7 @@ var WorkingDir = ""
                 var bsaList = mutableSetOf<String>()
                 var skipList = mutableSetOf<String>()
 
-                val hashMap = HashMap<String, String>()
+                val hashMap = ConcurrentHashMap<String, String>()
 
                 val dialog = AlertDialog.Builder(this)
                 dialog.setCancelable(false)
@@ -867,12 +841,33 @@ var WorkingDir = ""
                         }
 
                         val quality = qualitySeekBar.getProgress().toString()
-                        GlobalScope.launch(Dispatchers.Default) { executeCoroutine(requiredList, hashMap, progressDialog, quality, blockSize) }
 
-                        if (requiredList.size == 0) {
-                            runOnUiThread {
-                                progressDialog.dismiss()
+                        runBlocking {
+                            var counter = 0
+                            var hashList = mutableSetOf<String>()
+                            for((key, value) in hashMap) {
+                                hashList.add(key + "@" + value)
                             }
+
+                            val hashFile = File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/textureHashes.log")
+                            hashFile.writeText(hashList.joinToString("\n"))
+                            val failFile = File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log")
+                            failFile.writeText("")
+
+                            requiredList.forEach {
+                                val dir = it.substringAfter("@")
+                                val file = it.substringBefore("@")
+
+                                val message = "${counter.toString()}/${requiredList.size.toString()}\n$dir$file"
+                                launch(Dispatchers.Default) {
+                                        convertTexture(dir, file, WorkingDir, quality, blockSize, message, progressDialog, hashFile, failFile)
+                                }
+                                counter++
+                            }
+                        }
+
+                        runOnUiThread {
+                            progressDialog.dismiss()
                         }
                     }.start()
                 }

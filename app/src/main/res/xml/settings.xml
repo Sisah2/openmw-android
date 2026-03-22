@@ -111,6 +111,12 @@
             android:summary="May be usefull for pre 8 Gen 3 devices for more postprocess shaders compatibility."
             android:defaultValue="false"/>
 
+        <CheckBoxPreference
+            android:key="pref_use_angle"
+            android:title="@string/pref_use_angle"
+            android:summary="Use ANGLE as OpenGL ES driver."
+            android:defaultValue="false"/>
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/pref_advanced">

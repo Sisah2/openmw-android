@@ -178,6 +178,14 @@ class GameActivity : SDLActivity() {
         val forceGLSL330 = prefs!!.getBoolean("pref_use_spirv_shader_conv", false)
         if (forceGLSL330 == true) Os.setenv("OPENMW_FORCEGLSL330", "1", true)
 
+        val enableANGLE = prefs!!.getBoolean("pref_use_angle", false)
+        if (enableANGLE == true) {
+            Os.setenv("LIBGL_GLES", "libGLESv2_angle.so", true)
+            Os.setenv("LIBGL_EGL", "libEGL_angle.so", true)
+            Os.setenv("SDL_VIDEO_GL_DRIVER", "libGLESv2_angle.so", true)
+            Os.setenv("SDL_VIDEO_EGL_DRIVER", "libEGL_angle.so", true)
+        }
+
         Os.setenv("OSG_VERTEX_BUFFER_HINT", "VBO", true)
         Os.setenv("OSG_GL_TEXTURE_STORAGE", "OFF", true)
         Os.setenv("OSG_TEXT_SHADER_TECHNIQUE", "ALL", true)

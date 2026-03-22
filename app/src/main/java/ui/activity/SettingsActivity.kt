@@ -38,6 +38,7 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.Intent
 import android.preference.EditTextPreference
 import android.preference.Preference
+import android.preference.PreferenceManager
 import android.preference.PreferenceFragment
 import android.preference.PreferenceGroup
 
@@ -205,7 +206,10 @@ class FragmentGameSettingsPage(val res: Int) : PreferenceFragment(), OnSharedPre
                 egl.eglDestroyContext(eglDisplay, eglContext)
                 //egl.eglDestroySurface(eglDisplay, eglSurface)
 
-                if (extensions.contains("GL_EXT_depth_clamp") == false) {
+                val prefs = PreferenceManager.getDefaultSharedPreferences(this.getActivity())
+                val enableANGLE = prefs!!.getBoolean("pref_use_angle", false)
+
+                if (extensions.contains("GL_EXT_depth_clamp") == false && !enableANGLE) {
                     findPreference("gs_object_shadows").isEnabled = false
                     findPreference("gs_terrain_shadows").isEnabled = false
                     findPreference("gs_actor_shadows").isEnabled = false
