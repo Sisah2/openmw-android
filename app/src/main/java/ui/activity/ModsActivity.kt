@@ -57,9 +57,9 @@ import android.widget.SeekBar
 import android.widget.ListView
 import android.widget.ArrayAdapter
 import android.view.WindowManager
+import android.widget.Spinner
 
 import kotlinx.coroutines.*
-import java.util.concurrent.ConcurrentHashMap
 
 class ModsActivity : AppCompatActivity() {
     var mPluginAdapter = ModsAdapter(this)
@@ -716,7 +716,7 @@ class ModsActivity : AppCompatActivity() {
                 var bsaList = mutableSetOf<String>()
                 var skipList = mutableSetOf<String>()
 
-                val hashMap = ConcurrentHashMap<String, String>()
+                val hashMap = HashMap<String, String>()
 
                 val dialog = AlertDialog.Builder(this)
                 dialog.setCancelable(false)
@@ -742,18 +742,19 @@ class ModsActivity : AppCompatActivity() {
                 blockSizeText.setText("Block Size (12x12 = Highest Compression, 4x4 = Best Quality.")
                 layout.addView(blockSizeText)
 
-                val blockSizeList = ListView(this)
-                val blockSizes: Array<String> = arrayOf("astc12x12", "astc10x10", "astc8x8", "astc6x6", "astc5x5", "astc4x4")
-                val adapter = ArrayAdapter<String>(this, android.R.layout.simple_list_item_single_choice, blockSizes)
-                blockSizeList.setChoiceMode(ListView.CHOICE_MODE_SINGLE)
-                blockSizeList.setAdapter(adapter)
-                blockSizeList.setItemChecked(2, true)
-                var blockSize = "astc8x8"
-                blockSizeList.setOnItemClickListener { parent, view, position, id ->
-                    blockSizeList.setItemChecked(position, true)
-                    blockSize = blockSizes.elementAt(position)
-                }
-                layout.addView(blockSizeList)
+                val spinnerArray = ArrayList<String>();
+                spinnerArray.add("astc12x12 - 0.89bpp");
+                spinnerArray.add("astc10x10 - 1.28bpp");
+                spinnerArray.add("astc8x8 - 2.0bpp");
+                spinnerArray.add("astc6x6 - 3.56bpp");
+                spinnerArray.add("astc5x5 - 5.12bpp");
+                spinnerArray.add("astc4x4 - 8.0bpp");
+
+                val spinner = Spinner(this);
+                val spinnerArrayAdapter = ArrayAdapter<String>(this, android.R.layout.simple_spinner_dropdown_item, spinnerArray);
+                spinner.setAdapter(spinnerArrayAdapter);
+                spinner.setSelection(2, true)
+                layout.addView(spinner);
 
                 val qualityText = TextView(this)
                 qualityText.setText("Quality")
@@ -841,6 +842,7 @@ class ModsActivity : AppCompatActivity() {
                         }
 
                         val quality = qualitySeekBar.getProgress().toString()
+                        val blockSize = spinner.getSelectedItem().toString().substringBefore(" -")
 
                         runBlocking {
                             var counter = 0
