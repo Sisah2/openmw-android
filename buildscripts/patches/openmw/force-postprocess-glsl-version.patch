@@ -1,8 +1,20 @@
 diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postprocessor.cpp
-index ff9ac2a42e..cf19b2c60d 100644
+index ff9ac2a42e..7ff839c358 100644
 --- a/apps/openmw/mwrender/postprocessor.cpp
 +++ b/apps/openmw/mwrender/postprocessor.cpp
-@@ -204,8 +204,10 @@ namespace MWRender
+@@ -194,18 +194,20 @@ namespace MWRender
+ 
+         if (!ext->glDisablei && ext->glDisableIndexedEXT)
+             ext->glDisablei = ext->glDisableIndexedEXT;
+-
++/*
+ #ifdef ANDROID
+         ext->glDisablei = nullptr;
+ #endif
+-
++*/
+         if (ext->glDisablei)
+             mNormalsSupported = true;
          else
              Log(Debug::Error) << "'glDisablei' unsupported, pass normals will not be available to shaders.";
  
