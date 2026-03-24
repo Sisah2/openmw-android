@@ -852,7 +852,7 @@ class ModsActivity : AppCompatActivity() {
                             }
 
                             val hashFile = File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/textureHashes.log")
-                            hashFile.writeText(hashList.joinToString("\n"))
+                            hashFile.writeText(hashList.joinToString("\n") + "\n")
                             val failFile = File(Constants.USER_FILE_STORAGE + "/launcher/ktx/logs/failedList.log")
                             failFile.writeText("")
 

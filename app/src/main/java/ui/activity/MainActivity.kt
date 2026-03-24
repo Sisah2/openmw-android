@@ -519,8 +519,8 @@ class MainActivity : AppCompatActivity() {
 	writeSetting("Post Processing", "transparent postpass", if(prefs.getBoolean("gs_transparent_postpass", false)) "true" else "false")
 
 	// Visuals Shadows
-        if(File(Constants.USER_FILE_STORAGE + "/launcher/extensions.log").exists() &&
-           File(Constants.USER_FILE_STORAGE + "/launcher/extensions.log").readText().contains("GL_EXT_depth_clamp")) {
+        if((File(Constants.USER_FILE_STORAGE + "/launcher/extensions.log").exists() &&
+           File(Constants.USER_FILE_STORAGE + "/launcher/extensions.log").readText().contains("GL_EXT_depth_clamp")) || prefs.getBoolean("pref_use_angle", false) == true) {
 
             writeSetting("Shadows", "enable shadows",
             if(prefs.getBoolean("gs_object_shadows", false) || prefs.getBoolean("gs_terrain_shadows", false) ||
@@ -537,6 +537,10 @@ class MainActivity : AppCompatActivity() {
 	    writeSetting("Shadows", "maximum shadow map distance", prefs.getString("gs_shadows_distance", "8192").toString())
 	    writeSetting("Shadows", "shadow fade start", prefs.getString("gs_shadows_fade_start", "0.9").toString())
 	    writeSetting("Shadows", "percentage closer filtering", prefs.getString("gs_shadows_pcf", "0").toString())
+        }
+        else
+        {
+            writeSetting("Shadows", "enable shadows", "false")
         }
 
 	// Animations

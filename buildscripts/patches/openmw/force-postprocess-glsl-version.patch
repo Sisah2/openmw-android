@@ -1,17 +1,8 @@
 diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postprocessor.cpp
-index a9a2416e7b..0ed497cc3d 100644
+index ff9ac2a42e..cf19b2c60d 100644
 --- a/apps/openmw/mwrender/postprocessor.cpp
 +++ b/apps/openmw/mwrender/postprocessor.cpp
-@@ -196,17 +196,15 @@ namespace MWRender
-         if (!ext->glDisablei && ext->glDisableIndexedEXT)
-             ext->glDisablei = ext->glDisableIndexedEXT;
- 
--#ifdef ANDROID
--        ext->glDisablei = nullptr;
--#endif
--
-         if (ext->glDisablei)
-             mNormalsSupported = true;
+@@ -204,8 +204,10 @@ namespace MWRender
          else
              Log(Debug::Error) << "'glDisablei' unsupported, pass normals will not be available to shaders.";
  
@@ -46,7 +37,7 @@ index eceffa188f..e4b3ae61fd 100644
  @fragBinding
  
 diff --git a/components/fx/technique.cpp b/components/fx/technique.cpp
-index 945a3cf1b1..ac4b02939d 100644
+index 945a3cf1b1..7f316d42b8 100644
 --- a/components/fx/technique.cpp
 +++ b/components/fx/technique.cpp
 @@ -84,7 +84,7 @@ namespace Fx
@@ -54,7 +45,7 @@ index 945a3cf1b1..ac4b02939d 100644
          mVersion = {};
          mGLSLExtensions.clear();
 -        mGLSLVersion = (mUBO || Stereo::getMultiview()) ? 330 : 120;
-+        mGLSLVersion = mGLSLVersion = (getenv("OPENMW_FORCEGLSL330") == nullptr) ? 120 : 330;//(mUBO || Stereo::getMultiview()) ? 330 : 120;
++        mGLSLVersion = (getenv("OPENMW_FORCEGLSL330") == nullptr) ? 120 : 330;//(mUBO || Stereo::getMultiview()) ? 330 : 120;
          mGLSLProfile.clear();
          mDynamic = false;
      }
