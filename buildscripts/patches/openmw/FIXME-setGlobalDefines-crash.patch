@@ -2,28 +2,6 @@ diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postp
 index ff9ac2a42e..dcdc1b59e4 100644
 --- a/apps/openmw/mwrender/postprocessor.cpp
 +++ b/apps/openmw/mwrender/postprocessor.cpp
-@@ -195,17 +195,15 @@ namespace MWRender
-         if (!ext->glDisablei && ext->glDisableIndexedEXT)
-             ext->glDisablei = ext->glDisableIndexedEXT;
- 
--#ifdef ANDROID
--        ext->glDisablei = nullptr;
--#endif
--
-         if (ext->glDisablei)
-             mNormalsSupported = true;
-         else
-             Log(Debug::Error) << "'glDisablei' unsupported, pass normals will not be available to shaders.";
- 
--        mGLSLVersion = static_cast<int>(ext->glslLanguageVersion * 100);
--        mUBO = ext->isUniformBufferObjectSupported && mGLSLVersion >= 330;
-+//        mGLSLVersion = static_cast<int>(ext->glslLanguageVersion * 100);
-+//        mUBO = ext->isUniformBufferObjectSupported && mGLSLVersion >= 330;
-+        mGLSLVersion = (getenv("OPENMW_FORCEGLSL330") == nullptr) ? 120 : 330;
-+        mUBO = (getenv("OPENMW_UBO") == nullptr) ? false : true;
-         mStateUpdater = new Fx::StateUpdater(mUBO);
- 
-         addChild(mHUDCamera);
 @@ -412,11 +410,14 @@ namespace MWRender
  
              if (mNormalsSupported)
@@ -40,19 +18,20 @@ index ff9ac2a42e..dcdc1b59e4 100644
  
              mRendering.getLightRoot()->setCollectPPLights(mPassLights);
 diff --git a/apps/openmw/mwrender/renderingmanager.cpp b/apps/openmw/mwrender/renderingmanager.cpp
-index 21c25cd7b1..4625aa51fd 100644
+index 74916dcb61..861af0a2fb 100644
 --- a/apps/openmw/mwrender/renderingmanager.cpp
 +++ b/apps/openmw/mwrender/renderingmanager.cpp
-@@ -1303,17 +1303,19 @@ namespace MWRender
-             else if (it->first == "Shaders"
-                 && (it->second == "force per pixel lighting" || it->second == "classic falloff"))
+@@ -1304,6 +1304,7 @@ namespace MWRender
+                 && (it->second == "force per pixel lighting" || it->second == "classic falloff"
+                     || it->second == "clamp lighting"))
              {
 +/*
                  mViewer->stopThreading();
  
                  auto defines = mResourceSystem->getSceneManager()->getShaderManager().getGlobalDefines();
-                 defines["forcePPL"] = Settings::shaders().mForcePerPixelLighting ? "1" : "0";
+@@ -1311,11 +1312,13 @@ namespace MWRender
                  defines["classicFalloff"] = Settings::shaders().mClassicFalloff ? "1" : "0";
+                 defines["clamp"] = Settings::shaders().mClampLighting ? "1" : "0";
                  mResourceSystem->getSceneManager()->getShaderManager().setGlobalDefines(defines);
 -
 +*/
@@ -61,20 +40,20 @@ index 21c25cd7b1..4625aa51fd 100644
  
 -                mViewer->startThreading();
 +//                mViewer->startThreading();
-+                mStateUpdater->reset();
++                  mStateUpdater->reset();
++
              }
              else if (it->first == "Shaders"
                  && (it->second == "light bounds multiplier" || it->second == "maximum light distance"
-@@ -1326,18 +1328,19 @@ namespace MWRender
+@@ -1328,18 +1331,18 @@ namespace MWRender
  
                  if (it->second == "max lights")
                  {
 -                    mViewer->stopThreading();
- 
--                    lightManager->updateMaxLights(Settings::shaders().mMaxLights);
 +//                    mViewer->stopThreading();
  
-+                    lightManager->updateMaxLights(Settings::shaders().mMaxLights);
+                     lightManager->updateMaxLights(Settings::shaders().mMaxLights);
+-
 +/*
                      auto defines = mResourceSystem->getSceneManager()->getShaderManager().getGlobalDefines();
                      for (const auto& [name, key] : lightManager->getLightDefines())
@@ -89,7 +68,7 @@ index 21c25cd7b1..4625aa51fd 100644
                  }
              }
              else if (it->first == "Post Processing" && it->second == "enabled")
-@@ -1586,4 +1589,9 @@ namespace MWRender
+@@ -1588,4 +1591,9 @@ namespace MWRender
      {
          mNavMesh->setMode(value);
      }
@@ -128,3 +107,70 @@ index a9ad457a67..2c70536861 100644
  
          bool particleOcclusion = false;
          node.getUserValue("particleOcclusion", particleOcclusion);
+diff --git a/components/sceneutil/stateupdater.cpp b/components/sceneutil/stateupdater.cpp
+index e30fbe7a47..35eed92ef9 100644
+--- a/components/sceneutil/stateupdater.cpp
++++ b/components/sceneutil/stateupdater.cpp
+@@ -11,6 +11,7 @@
+ #include <components/resource/scenemanager.hpp>
+ #include <components/stereo/multiview.hpp>
+ #include <components/stereo/stereomanager.hpp>
++#include <components/settings/values.hpp>
+ 
+ namespace SceneUtil
+ {
+@@ -140,6 +141,12 @@ namespace SceneUtil
+         }
+         else
+             stateset->removeAttribute(osg::StateAttribute::POLYGONMODE);
++
++            stateset->setDefine("WRITE_NORMALS", (mWriteNormals) ? "1" : "0", osg::StateAttribute::ON);
++            stateset->setDefine("FORCE_PPL", (Settings::shaders().mForcePerPixelLighting == true) ? "1" : "0", osg::StateAttribute::ON);
++            stateset->setDefine("CLASSIC_FALLOFF", (Settings::shaders().mClassicFalloff == true) ? "1" : "0", osg::StateAttribute::ON);
++            stateset->setDefine("CLAMP_LIGHTING", (Settings::shaders().mClampLighting == true) ? "1" : "0", osg::StateAttribute::ON);
++            stateset->setDefine("MAX_LIGHTS", std::to_string(Settings::shaders().mMaxLights), osg::StateAttribute::ON);
+     }
+ 
+     void StateUpdater::apply(osg::StateSet* stateset, osg::NodeVisitor*)
+@@ -151,6 +158,8 @@ namespace SceneUtil
+         fog->setColor(mFogColor);
+         fog->setStart(mFogStart);
+         fog->setEnd(mFogEnd);
++
++        stateset->setDefine("WRITE_NORMALS", (mWriteNormals) ? "1" : "0", osg::StateAttribute::ON);
+     }
+ 
+     void StateUpdater::setAmbientColor(const osg::Vec4f& col)
+@@ -187,4 +196,9 @@ namespace SceneUtil
+         return mWireframe;
+     }
+ 
++    void StateUpdater::setWriteNormals(bool enabled)
++    {
++        mWriteNormals = enabled;
++    }
++
+ }
+diff --git a/components/sceneutil/stateupdater.hpp b/components/sceneutil/stateupdater.hpp
+index ffdf04e140..da7235b350 100644
+--- a/components/sceneutil/stateupdater.hpp
++++ b/components/sceneutil/stateupdater.hpp
+@@ -96,13 +96,16 @@ namespace SceneUtil
+         void setWireframe(bool wireframe);
+         bool getWireframe() const;
+ 
++        void setWriteNormals(bool enabled);
++
+     private:
+         osg::Vec4f mAmbientColor;
+         osg::Vec4f mFogColor;
+         float mFogStart = 0.f;
+         float mFogEnd = 0.f;
+         bool mWireframe = false;
++        bool mWriteNormals = false;
+     };
+ }
+ 
+-#endif
+\ No newline at end of file
++#endif

@@ -137,6 +137,8 @@ private fun patchShaders() {
     val lightingUtil = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/lighting_util.glsl")
     content = lightingUtil.readText()
     if (!content.contains("#pragma CONVERTED")) {
+        content = content.replace("#define LIB_LIGHTING_UTIL", "#define LIB_LIGHTING_UTIL\n#pragma import_defines(CLAMP_LIGHTING)")
+        content = content.replace("#if @clamp", "#if defined(CLAMP_LIGHTING) && CLAMP_LIGHTING")
         content = content.replace("uniform int PointLightIndex[@maxLights];", "#if defined(MAX_LIGHTS)\nuniform int PointLightIndex[MAX_LIGHTS];\n#else\nuniform int PointLightIndex[@maxLights];\n#endif")
         content = content.replace("uniform mat4 LightBuffer[@maxLights];", "#if defined(MAX_LIGHTS)\nuniform mat4 LightBuffer[MAX_LIGHTS];\n#else\nuniform mat4 LightBuffer[@maxLights];\n#endif")
         content = content.replace("#if !@classicFalloff && !@lightingMethodFFP", "#if defined(CLASSIC_FALLOFF) && !CLASSIC_FALLOFF && !@lightingMethodFFP")
