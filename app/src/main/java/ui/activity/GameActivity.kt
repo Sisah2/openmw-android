@@ -144,6 +144,14 @@ private fun patchShaders() {
         content = content.replace("#if !@classicFalloff && !@lightingMethodFFP", "#if defined(CLASSIC_FALLOFF) && !CLASSIC_FALLOFF && !@lightingMethodFFP")
         lightingUtil.writeText(content + "\n#pragma CONVERTED\n")
     }
+
+    val alpha = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/material/alpha.glsl")
+    content = alpha.readText()
+    if (!content.contains("#pragma CONVERTED")) {
+        content = content.replace("textureSize2D(diffuseMap, 0);", "vec2(256.0)")
+        alpha.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
 }
 
 class GameActivity : SDLActivity() {
@@ -193,7 +201,7 @@ class GameActivity : SDLActivity() {
         Os.setenv("OSG_GL_TEXTURE_STORAGE", "OFF", true)
         Os.setenv("OSG_TEXT_SHADER_TECHNIQUE", "ALL", true)
 
-        Os.setenv("LIBGL_SIMPLE_SHADERCONV", "1", true)
+        Os.setenv("LIBGL_SIMPLE_SHADERCONV", "0", true)
         Os.setenv("LIBGL_INSTANCING", "1", true)
         Os.setenv("LIBGL_DXTMIPMAP", "1", true)
 
