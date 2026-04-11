@@ -345,10 +345,14 @@ ExternalProject_Add(NG-GL4ES
     #    BUILD_IN_SOURCE 0
 	
         PATCH_COMMAND sed -i -e "s/3.22.1/3.19.6/g" <SOURCE_DIR>/3rdparty/glslang/CMakeLists.txt &&
+        PATCH_COMMAND sed -i -e "s/3.22.1/3.19.6/g" <SOURCE_DIR>/3rdparty/SPIRV-Tools/CMakeLists.txt &&
+        PATCH_COMMAND sed -i -e "s/VERSION_GREATER_EQUAL/VERSION_LESS/g" <SOURCE_DIR>/3rdparty/SPIRV-Tools/CMakeLists.txt &&
         sed -i -e "s/CMAKE_CXX_STANDARD 23/CMAKE_CXX_STANDARD 17/g" <SOURCE_DIR>/CMakeLists.txt
 
 	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
 	${COMMON_CMAKE_ARGS}
+        -DSPIRV-Headers_SOURCE_DIR=<SOURCE_DIR>/3rdparty/SPIRV-headers
+        -DINCLUDE_SPIRV_TOOLS=ON
 
 	BUILD_COMMAND ${wrapper_command} $(MAKE)
 
@@ -514,7 +518,7 @@ set(OSG_COMMON
 	-DOSG_GL2_AVAILABLE=ON
 	-DOSG_GL3_AVAILABLE=OFF
 	-DOSG_GLES1_AVAILABLE=OFF
-	-DOSG_GLES3_AVAILABLE=OFF
+	-DOSG_GLES2_AVAILABLE=OFF
 	-DOSG_GL_LIBRARY_STATIC=OFF
 	-DOSG_GL_DISPLAYLISTS_AVAILABLE=OFF
 	-DOSG_GL_MATRICES_AVAILABLE=ON
@@ -615,7 +619,7 @@ set(OPENMW_PATCH
         #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0010-android-fix-context-being-lost-on-app-minimize.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/FIXME-composie-maps-mipmaps.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/FIXME-setGlobalDefines-crash.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/force-postprocess-glsl-version.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/disable-postprocessing-ubo.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/navmeshtool.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/SDLLink.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/ktx.patch &&

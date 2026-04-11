@@ -108,8 +108,8 @@
         <CheckBoxPreference
             android:key="pref_use_spirv_shader_conv"
             android:title="@string/pref_use_spirv_shader_conv"
-            android:summary="May be usefull for pre 8 Gen 3 devices for more postprocess shaders compatibility."
-            android:defaultValue="false"/>
+            android:summary="Force spirv-cross shader compiler for all glsl versions."
+            android:defaultValue="true"/>
 
         <CheckBoxPreference
             android:key="pref_use_angle"
