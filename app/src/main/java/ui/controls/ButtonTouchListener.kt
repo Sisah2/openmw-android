@@ -40,7 +40,7 @@ import android.view.KeyEvent
 
 import java.io.File
 
-class ButtonTouchListener(private val keyCode: Int, private val needEmulateMouse: Boolean, private val togglable: Boolean) : OnTouchListener {
+class ButtonTouchListener(private val keyCode: Int, private val needEmulateMouse: Boolean, private val togglable: Boolean, private val hasIcon: Boolean = false) : OnTouchListener {
 
     private var toggled: Boolean = false
     private var currentBackground: Drawable? = null
@@ -76,21 +76,23 @@ class ButtonTouchListener(private val keyCode: Int, private val needEmulateMouse
         if (!needEmulateMouse) {
             if (togglable) {
                 if (!toggled) {
-                    val gradientBackground = v.getBackground() as GradientDrawable
-                    currentBackground = v.getBackground()
-                    if(gradientBackground != null) {
-                        val backgroundRadius = gradientBackground.getCornerRadius()
-                        val shape = GradientDrawable()
-                        shape.setColor(Color.DKGRAY)
-                        shape.setCornerRadius(backgroundRadius)
-                        v.setBackground(shape)
+                    if (!hasIcon) {
+                        val gradientBackground = v.getBackground() as GradientDrawable
+                        currentBackground = v.getBackground()
+                        if(gradientBackground != null) {
+                            val backgroundRadius = gradientBackground.getCornerRadius()
+                            val shape = GradientDrawable()
+                            shape.setColor(Color.DKGRAY)
+                            shape.setCornerRadius(backgroundRadius)
+                            v.setBackground(shape)
+                        }
                     }
-
                     eventMovement(Movement.KEY_DOWN)
                     toggled = true
                 }
                 else {
-                    v.setBackground(currentBackground)
+                    if (!hasIcon)
+                        v.setBackground(currentBackground)
 
                     eventMovement(Movement.KEY_UP)
                     toggled = false

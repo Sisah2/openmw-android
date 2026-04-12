@@ -223,7 +223,7 @@ class OscImageButton(
 
         // fix blurry icons on old android
         v.scaleType = ImageView.ScaleType.FIT_XY
-        v.setOnTouchListener(ButtonTouchListener(keyCode, needMouse, togglable))
+        v.setOnTouchListener(ButtonTouchListener(keyCode, needMouse, togglable, true))
         v.tag = this
 
         view = v

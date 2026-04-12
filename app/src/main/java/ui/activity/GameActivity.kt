@@ -145,6 +145,13 @@ private fun patchShaders() {
         alpha.writeText(content + "\n#pragma CONVERTED\n")
     }
 
+    val shadows = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/shadows_fragment.glsl")
+    content = shadows.readText()
+    if (!content.contains("#pragma CONVERTED")) {
+        content = content.replace("#define SHADOWS @shadows_enabled", "#pragma import_defines(DISABLE_SHADOWS)\n#if defined(DISABLE_SHADOWS) && DISABLE_SHADOWS\n#define SHADOWS 0\n#else\n#define SHADOWS @shadows_enabled\n#endif")
+        shadows.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
 }
 
 class GameActivity : SDLActivity() {
