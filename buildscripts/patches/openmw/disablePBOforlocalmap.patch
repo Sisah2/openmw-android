@@ -1,0 +1,13 @@
+diff --git a/apps/openmw/mwrender/localmap.cpp b/apps/openmw/mwrender/localmap.cpp
+index 39d088084f..1e840bc80a 100644
+--- a/apps/openmw/mwrender/localmap.cpp
++++ b/apps/openmw/mwrender/localmap.cpp
+@@ -611,7 +611,7 @@ namespace MWRender
+     {
+         mFogOfWarImage = new osg::Image;
+         // Assign a PixelBufferObject for asynchronous transfer of data to the GPU
+-        mFogOfWarImage->setPixelBufferObject(new osg::PixelBufferObject);
++        //mFogOfWarImage->setPixelBufferObject(new osg::PixelBufferObject);
+         mFogOfWarImage->allocateImage(sFogOfWarResolution, sFogOfWarResolution, 1, GL_RGBA, GL_UNSIGNED_BYTE);
+         assert(mFogOfWarImage->isDataContiguous());
+         std::vector<uint32_t> data;
