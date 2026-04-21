@@ -82,8 +82,8 @@ class MouseCursor(activity: GameActivity, private val osc: Osc?) : Choreographer
 
         cursor = FixedSizeImageView(activity, width, height)
 
-        if (File(Constants.USER_FILE_STORAGE + "/icons/pointer_arrow.png").exists())
-            cursor.setImageBitmap(BitmapFactory.decodeFile(Constants.USER_FILE_STORAGE + "/icons/pointer_arrow.png"))
+        if (File(Constants.USER_FILE_STORAGE + "/launcher/icons/pointer_arrow.png").exists())
+            cursor.setImageBitmap(BitmapFactory.decodeFile(Constants.USER_FILE_STORAGE + "/launcher/icons/pointer_arrow.png"))
         else
             cursor.setImageResource(R.drawable.pointer_arrow)
 
