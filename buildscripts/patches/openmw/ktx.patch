@@ -53,7 +53,7 @@ index d370fe5cf25..a760498a146 100644
  }
  
  bool Misc::ResourceHelpers::changeExtensionToDds(std::string& path)
-@@ -124,21 +149,53 @@ VFS::Path::Normalized Misc::ResourceHelpers::correctResourcePath(
+@@ -134,15 +134,47 @@ VFS::Path::Normalized Misc::ResourceHelpers::correctResourcePath(
  // but all texture file name references were kept as .tga. So we pass ext=".dds" to all helpers
  // looking for textures.
  
@@ -102,6 +102,8 @@ index d370fe5cf25..a760498a146 100644
 +    return findBestTextureVariantWithDirs({ { icons } }, resPath, vfs);
  }
  
+ VFS::Path::Normalized Misc::ResourceHelpers::correctBigIconPath(
+@@ -156,7 +188,7 @@ VFS::Path::Normalized Misc::ResourceHelpers::correctBigIconPath(
  VFS::Path::Normalized Misc::ResourceHelpers::correctBookartPath(
      VFS::Path::NormalizedView resPath, const VFS::Manager& vfs)
  {
