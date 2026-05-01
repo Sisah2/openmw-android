@@ -56,7 +56,7 @@ set(LIBICU_VERSION 70-1)
 set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
 
 # https://github.com/sisah2/openmw/commits/clean
-set(OPENMW_VERSION eddba72f1b5d01164091158e64d77e812b802b7d)
+set(OPENMW_VERSION 673981c7f552089f1370d97fdac95e7221d4debc)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
