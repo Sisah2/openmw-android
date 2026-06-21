@@ -168,7 +168,6 @@ private fun patchShaders() {
     content = lighting_vert_impl.readText()
     if (!content.contains("#pragma CONVERTED")) {
         content = content.replace("#if @lightingMethodClustered", "#if defined(CLUSTERED_LIGHTING) && CLUSTERED_LIGHTING")
-        content = content.replace("#else\n    #include", "#elif @maxLights\n    #include")
         content = content.replace("!@particlePointLighting", "defined(PARTICLE_POINT_LIGHTING) && !PARTICLE_POINT_LIGHTING")
         lighting_vert_impl.writeText(content + "\n#pragma CONVERTED\n")
     }
@@ -186,7 +185,7 @@ private fun patchShaders() {
     val bindings_legacy = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/bindings-legacy.glsl")
     content = bindings_legacy.readText()
     if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("uniform mat4 LightBuffer[@maxLights];", "#if defined(MAX_LIGHTS)\nuniform mat4 LightBuffer[MAX_LIGHTS];\n#else\nuniform mat4 LightBuffer[@maxLights];\n#endif")
+        content = content.replace("uniform mat4 LightBuffer[@maxLights];", "#if defined(MAX_LIGHTS)\nuniform mat4 LightBuffer[MAX_LIGHTS];\n#else\nuniform mat4 LightBuffer[8];\n#endif")
         bindings_legacy.writeText(content + "\n#pragma CONVERTED\n")
     }
 
