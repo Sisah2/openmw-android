@@ -536,7 +536,6 @@ class MainActivity : AppCompatActivity() {
 	    writeSetting("Shadows", "compute scene bounds", prefs.getString("gs_shadow_computation_method", "bounds").toString())
 	    writeSetting("Shadows", "maximum shadow map distance", prefs.getString("gs_shadows_distance", "8192").toString())
 	    writeSetting("Shadows", "shadow fade start", prefs.getString("gs_shadows_fade_start", "0.9").toString())
-	    writeSetting("Shadows", "percentage closer filtering", prefs.getString("gs_shadows_pcf", "0").toString())
         }
         else
         {

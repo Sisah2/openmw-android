@@ -70,12 +70,24 @@ enum class MouseMode {
 }
 
 private fun patchShaders() {
-    val groundcoverFrag = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/groundcover.frag")
-    var content = groundcoverFrag.readText()
-    if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#version 120","#version 120\n#pragma import_defines(WRITE_NORMALS)\n")
-        content = content.replace("#if !@disableNormals", "#if defined(WRITE_NORMALS) && WRITE_NORMALS")
-        groundcoverFrag.writeText(content + "\n#pragma CONVERTED\n")
+
+    val vertex = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/vertex.h.glsl")
+    var content = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/vertex.glsl").readText()
+    if (!vertex.readText().contains("#pragma CONVERTED")) {
+        content = content.replace("#version 120", "vec4 modelToView(vec4 pos);\n#pragma import_defines(CLAMP_LIGHTING, CLASSIC_FALLOFF, MAX_LIGHTS, CLUSTERED_LIGHTING, PARTICLE_POINT_LIGHTING)")
+        content = content.replace("#extension", "//")
+        content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
+        content = content.replace("lib/core/vertex.h.glsl", "lib/core/lighting_vertex_impl.glsl")
+        vertex.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
+    val fragment = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/fragment.h.glsl")
+    if (!fragment.readText().contains("#pragma CONVERTED")) {
+        content = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/fragment.glsl").readText()
+        content = content.replace("#version 120", "#pragma import_defines(CLAMP_LIGHTING, CLASSIC_FALLOFF, MAX_LIGHTS, CLUSTERED_LIGHTING)")
+        content = content.replace("#extension", "//")
+        content = content.replace("lib/core/fragment.h.glsl", "lib/core/lighting_fragment_impl.glsl")
+        fragment.writeText(content + "\n#pragma CONVERTED\n")
     }
 
     val objectsFrag = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/objects.frag")
@@ -84,6 +96,8 @@ private fun patchShaders() {
         content = content.replace("#version 120", "#version 120\n#pragma import_defines(FORCE_PPL, WRITE_NORMALS)")
         content = content.replace("#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)", "#if defined(FORCE_PPL)\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || FORCE_PPL)\n#else\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)\n#endif")
         content = content.replace("#if !defined(FORCE_OPAQUE) && !@disableNormals", "#if !defined(FORCE_OPAQUE) && defined(WRITE_NORMALS) && WRITE_NORMALS")
+        content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
+        content = content.replace("uniform float near;" ,"//uniform float near;")
         objectsFrag.writeText(content + "\n#pragma CONVERTED\n")
     }
 
@@ -92,6 +106,7 @@ private fun patchShaders() {
     if (!content.contains("#pragma CONVERTED")) {
         content = content.replace("#version 120","#version 120\n#pragma import_defines(FORCE_PPL)\n")
         content = content.replace("#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)", "#if defined(FORCE_PPL)\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || FORCE_PPL)\n#else\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)\n#endif")
+        content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
         objectsVert.writeText(content + "\n#pragma CONVERTED\n")
     }
 
@@ -101,6 +116,8 @@ private fun patchShaders() {
         content = content.replace("#version 120","#version 120\n#pragma import_defines(WRITE_NORMALS, FORCE_PPL)\n")
         content = content.replace("#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)", "#if defined(FORCE_PPL)\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || FORCE_PPL)\n#else\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)\n#endif")
         content = content.replace("#if !@disableNormals && @writeNormals", "#if defined(WRITE_NORMALS) && WRITE_NORMALS && @writeNormals")
+        content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
+        content = content.replace("uniform float near;" ,"//uniform float near;")
         terrainFrag.writeText(content + "\n#pragma CONVERTED\n")
     }
 
@@ -112,30 +129,79 @@ private fun patchShaders() {
         terrainVert.writeText(content + "\n#pragma CONVERTED\n")
     }
 
+    val groundcoverFrag = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/groundcover.frag")
+    content = groundcoverFrag.readText()
+    if (!content.contains("#pragma CONVERTED")) {
+        content = content.replace("#version 120","#version 120\n#pragma import_defines(WRITE_NORMALS)\n")
+        content = content.replace("#if !@disableNormals", "#if defined(WRITE_NORMALS) && WRITE_NORMALS")
+        content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
+        groundcoverFrag.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
+    val groundcoverVert = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/groundcover.vert")
+    content = groundcoverVert.readText()
+    if (!content.contains("#pragma CONVERTED")) {
+        content = content.replace("#include " + '"' + "lib/light/clamp.glsl" + '"' + "\n#include", "#include")
+        groundcoverVert.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
     val waterFrag = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/water.frag")
     content = waterFrag.readText()
     if (!content.contains("#pragma CONVERTED")) {
         content = content.replace("#version 120","#version 120\n#pragma import_defines(WRITE_NORMALS)\n")
         content = content.replace("#if !@disableNormals", "#if defined(WRITE_NORMALS) && WRITE_NORMALS")
+        content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
+        content = content.replace("uniform float near;" ,"//uniform float near;")
+        content = content.replace("uniform DirectionalLight sun;" ,"//uniform DirectionalLight sun;")
         waterFrag.writeText(content + "\n#pragma CONVERTED\n")
     }
 
-    val lighting = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/lighting.glsl")
-    content = lighting.readText()
+
+    val lighting_frag_impl = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/lighting_fragment_impl.glsl")
+    content = lighting_frag_impl.readText()
     if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#if !@classicFalloff", "#if defined(CLASSIC_FALLOFF) && !CLASSIC_FALLOFF")
-        lighting.writeText(content + "\n#pragma CONVERTED\n")
+        content = content.replace("#if @lightingMethodClustered", "#if defined(CLUSTERED_LIGHTING) && CLUSTERED_LIGHTING")
+        lighting_frag_impl.writeText(content + "\n#pragma CONVERTED\n")
     }
 
-    val lightingUtil = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/lighting_util.glsl")
-    content = lightingUtil.readText()
+    val lighting_vert_impl = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/lighting_vertex_impl.glsl")
+    content = lighting_vert_impl.readText()
     if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#define LIB_LIGHTING_UTIL", "#define LIB_LIGHTING_UTIL\n#pragma import_defines(CLAMP_LIGHTING, CLASSIC_FALLOFF, MAX_LIGHTS)")
-        content = content.replace("#if @clamp", "#if defined(CLAMP_LIGHTING) && CLAMP_LIGHTING")
-        content = content.replace("uniform int PointLightIndex[@maxLights];", "#if defined(MAX_LIGHTS)\nuniform int PointLightIndex[MAX_LIGHTS];\n#else\nuniform int PointLightIndex[@maxLights];\n#endif")
+        content = content.replace("#if @lightingMethodClustered", "#if defined(CLUSTERED_LIGHTING) && CLUSTERED_LIGHTING")
+        content = content.replace("#else\n    #include", "#elif @maxLights\n    #include")
+        content = content.replace("!@particlePointLighting", "defined(PARTICLE_POINT_LIGHTING) && !PARTICLE_POINT_LIGHTING")
+        lighting_vert_impl.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
+    val lightutil = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/util.glsl")
+    content = lightutil.readText()
+    if (!content.contains("#pragma CONVERTED")) {
+        content = content.replace("#if @lightingMethodClustered", "#if defined(CLUSTERED_LIGHTING) && CLUSTERED_LIGHTING")
+        content = content.replace("!@classicFalloff || @lightingMethodClustered", "(defined(CLASSIC_FALLOFF) && !CLASSIC_FALLOFF) || (defined(CLUSTERED_LIGHTING) && CLUSTERED_LIGHTING)")
+        content = content.replace("!@classicFalloff", "defined(CLASSIC_FALLOFF) && !CLASSIC_FALLOFF && defined(CLUSTERED_LIGHTING) && !CLUSTERED_LIGHTING")
+        content = content.replace("* int(gridSize.z)) /", "* gridSize.z) /")
+        lightutil.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
+    val bindings_legacy = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/bindings-legacy.glsl")
+    content = bindings_legacy.readText()
+    if (!content.contains("#pragma CONVERTED")) {
         content = content.replace("uniform mat4 LightBuffer[@maxLights];", "#if defined(MAX_LIGHTS)\nuniform mat4 LightBuffer[MAX_LIGHTS];\n#else\nuniform mat4 LightBuffer[@maxLights];\n#endif")
-        content = content.replace("#if !@classicFalloff", "#if defined(CLASSIC_FALLOFF) && !CLASSIC_FALLOFF")
-        lightingUtil.writeText(content + "\n#pragma CONVERTED\n")
+        bindings_legacy.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
+    val clamp = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/clamp.glsl")
+    content = clamp.readText()
+    if (!content.contains("#pragma CONVERTED")) {
+        content = content.replace("#if @clamp", "#if defined(CLAMP_LIGHTING) && CLAMP_LIGHTING")
+        clamp.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
+    val fog = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/fog.glsl")
+    content = fog.readText()
+    if (!content.contains("#pragma CONVERTED")) {
+        content = content.replace("#include", "//")
+        fog.writeText(content + "\n#pragma CONVERTED\n")
     }
 
     val alpha = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/material/alpha.glsl")

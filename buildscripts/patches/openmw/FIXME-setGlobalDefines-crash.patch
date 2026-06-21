@@ -1,8 +1,8 @@
 diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postprocessor.cpp
-index ff9ac2a42e..dcdc1b59e4 100644
+index 1787163bab..47c22931fd 100644
 --- a/apps/openmw/mwrender/postprocessor.cpp
 +++ b/apps/openmw/mwrender/postprocessor.cpp
-@@ -412,11 +410,14 @@ namespace MWRender
+@@ -412,11 +412,15 @@ namespace MWRender
  
              if (mNormalsSupported)
              {
@@ -13,23 +13,23 @@ index ff9ac2a42e..dcdc1b59e4 100644
                  defines["disableNormals"] = mNormals ? "0" : "1";
                  shaderManager.setGlobalDefines(defines);
 +*/
++
 +                mRendering.setWriteNormals(mNormals);
              }
  
              mRendering.getLightRoot()->setCollectPPLights(mPassLights);
 diff --git a/apps/openmw/mwrender/renderingmanager.cpp b/apps/openmw/mwrender/renderingmanager.cpp
-index 74916dcb61..861af0a2fb 100644
+index e842a37416..bd4f9ea04b 100644
 --- a/apps/openmw/mwrender/renderingmanager.cpp
 +++ b/apps/openmw/mwrender/renderingmanager.cpp
-@@ -1304,6 +1304,7 @@ namespace MWRender
-                 && (it->second == "force per pixel lighting" || it->second == "classic falloff"
+@@ -1319,16 +1319,18 @@ namespace MWRender
                      || it->second == "clamp lighting"))
              {
-+/*
                  mViewer->stopThreading();
- 
+-
++/*
                  auto defines = mResourceSystem->getSceneManager()->getShaderManager().getGlobalDefines();
-@@ -1311,11 +1312,13 @@ namespace MWRender
+                 defines["forcePPL"] = Settings::shaders().mForcePerPixelLighting ? "1" : "0";
                  defines["classicFalloff"] = Settings::shaders().mClassicFalloff ? "1" : "0";
                  defines["clamp"] = Settings::shaders().mClampLighting ? "1" : "0";
                  mResourceSystem->getSceneManager()->getShaderManager().setGlobalDefines(defines);
@@ -38,37 +38,38 @@ index 74916dcb61..861af0a2fb 100644
                  if (MWMechanics::getPlayer().isInCell() && it->second == "classic falloff")
                      configureAmbient(*MWMechanics::getPlayer().getCell()->getCell());
  
--                mViewer->startThreading();
-+//                mViewer->startThreading();
-+                  mStateUpdater->reset();
++                mStateUpdater->reset();
 +
+                 mViewer->startThreading();
              }
              else if (it->first == "Shaders"
-                 && (it->second == "light bounds multiplier" || it->second == "maximum light distance"
-@@ -1328,18 +1331,18 @@ namespace MWRender
+@@ -1341,7 +1343,8 @@ namespace MWRender
+                 lightManager->processChangedSettings(Settings::shaders().mLightRadiusMultiplier,
+                     Settings::shaders().mMaximumLightDistance, Settings::shaders().mLightFadeStart);
  
-                 if (it->second == "max lights")
-                 {
--                    mViewer->stopThreading();
-+//                    mViewer->stopThreading();
+-                configureAmbient(*MWMechanics::getPlayer().getCell()->getCell());
++                if (MWMechanics::getPlayer().isInCell())
++                    configureAmbient(*MWMechanics::getPlayer().getCell()->getCell());
+ 
+                 if (it->second == "max lights" || it->second == "clustered lighting"
+                     || it->second == "particle point lighting")
+@@ -1350,13 +1353,13 @@ namespace MWRender
  
                      lightManager->updateMaxLights(Settings::shaders().mMaxLights);
+                     lightManager->enableClustered(Settings::shaders().mClusteredLighting);
 -
 +/*
                      auto defines = mResourceSystem->getSceneManager()->getShaderManager().getGlobalDefines();
                      for (const auto& [name, key] : lightManager->getLightDefines())
                          defines[name] = key;
+                     defines["particlePointLighting"] = Settings::shaders().mParticlePointLighting ? "1" : "0";
                      mResourceSystem->getSceneManager()->getShaderManager().setGlobalDefines(defines);
 -
 +*/
                      mStateUpdater->reset();
  
--                    mViewer->startThreading();
-+//                    mViewer->startThreading();
-                 }
-             }
-             else if (it->first == "Post Processing" && it->second == "enabled")
-@@ -1588,4 +1591,9 @@ namespace MWRender
+                     mViewer->startThreading();
+@@ -1608,4 +1611,9 @@ namespace MWRender
      {
          mNavMesh->setMode(value);
      }
@@ -79,7 +80,7 @@ index 74916dcb61..861af0a2fb 100644
 +    }
  }
 diff --git a/apps/openmw/mwrender/renderingmanager.hpp b/apps/openmw/mwrender/renderingmanager.hpp
-index b8ad535eb3..a6e04698b6 100644
+index c416778bfa..a1a5f40bcd 100644
 --- a/apps/openmw/mwrender/renderingmanager.hpp
 +++ b/apps/openmw/mwrender/renderingmanager.hpp
 @@ -279,6 +279,8 @@ namespace MWRender
@@ -88,30 +89,14 @@ index b8ad535eb3..a6e04698b6 100644
  
 +        void setWriteNormals(bool enabled);
 +
-     private:
-         void updateTextureFiltering();
-         void updateAmbient();
-diff --git a/components/shader/shadervisitor.cpp b/components/shader/shadervisitor.cpp
-index a9ad457a67..2c70536861 100644
---- a/components/shader/shadervisitor.cpp
-+++ b/components/shader/shadervisitor.cpp
-@@ -677,7 +677,10 @@ namespace Shader
-             defineMap["endLight"] = "0";
- 
-         if (simpleLighting || dynamic_cast<osgParticle::ParticleSystem*>(&node))
--            defineMap["forcePPL"] = "0";
-+        {
-+             defineMap["forcePPL"] = "0";
-+            writableStateSet->setDefine("FORCE_PPL", "0", osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
-+        }
- 
-         bool particleOcclusion = false;
-         node.getUserValue("particleOcclusion", particleOcclusion);
+         void setProjectionOffset(const osg::Vec2f& offset)
+         {
+             mProjectionOffset = offset;
 diff --git a/components/sceneutil/stateupdater.cpp b/components/sceneutil/stateupdater.cpp
-index e30fbe7a47..35eed92ef9 100644
+index 1f271a7b03..73e5c0671f 100644
 --- a/components/sceneutil/stateupdater.cpp
 +++ b/components/sceneutil/stateupdater.cpp
-@@ -11,6 +11,7 @@
+@@ -10,6 +10,7 @@
  #include <components/resource/scenemanager.hpp>
  #include <components/stereo/multiview.hpp>
  #include <components/stereo/stereomanager.hpp>
@@ -119,20 +104,22 @@ index e30fbe7a47..35eed92ef9 100644
  
  namespace SceneUtil
  {
-@@ -140,6 +141,12 @@ namespace SceneUtil
+@@ -137,6 +138,14 @@ namespace SceneUtil
          }
          else
              stateset->removeAttribute(osg::StateAttribute::POLYGONMODE);
 +
-+            stateset->setDefine("WRITE_NORMALS", (mWriteNormals) ? "1" : "0", osg::StateAttribute::ON);
-+            stateset->setDefine("FORCE_PPL", (Settings::shaders().mForcePerPixelLighting == true) ? "1" : "0", osg::StateAttribute::ON);
-+            stateset->setDefine("CLASSIC_FALLOFF", (Settings::shaders().mClassicFalloff == true) ? "1" : "0", osg::StateAttribute::ON);
-+            stateset->setDefine("CLAMP_LIGHTING", (Settings::shaders().mClampLighting == true) ? "1" : "0", osg::StateAttribute::ON);
-+            stateset->setDefine("MAX_LIGHTS", std::to_string(Settings::shaders().mMaxLights), osg::StateAttribute::ON);
++        stateset->setDefine("WRITE_NORMALS", (mWriteNormals) ? "1" : "0", osg::StateAttribute::ON);
++        stateset->setDefine("FORCE_PPL", (Settings::shaders().mForcePerPixelLighting == true) ? "1" : "0", osg::StateAttribute::ON);
++        stateset->setDefine("CLASSIC_FALLOFF", (Settings::shaders().mClassicFalloff == true) ? "1" : "0", osg::StateAttribute::ON);
++        stateset->setDefine("CLAMP_LIGHTING", (Settings::shaders().mClampLighting == true) ? "1" : "0", osg::StateAttribute::ON);
++        stateset->setDefine("MAX_LIGHTS", std::to_string(Settings::shaders().mMaxLights), osg::StateAttribute::ON);
++        stateset->setDefine("CLUSTERED_LIGHTING", (Settings::shaders().mClusteredLighting == true) ? "1" : "0", osg::StateAttribute::ON);
++        stateset->setDefine("PARTICLE_POINT_LIGHTING", (Settings::shaders().mParticlePointLighting == true) ? "1" : "0", osg::StateAttribute::ON);
      }
  
      void StateUpdater::apply(osg::StateSet* stateset, osg::NodeVisitor*)
-@@ -151,6 +158,8 @@ namespace SceneUtil
+@@ -146,6 +155,8 @@ namespace SceneUtil
          fog->setColor(mFogColor);
          fog->setStart(mFogStart);
          fog->setEnd(mFogEnd);
@@ -141,7 +128,7 @@ index e30fbe7a47..35eed92ef9 100644
      }
  
      void StateUpdater::setAmbientColor(const osg::Vec4f& col)
-@@ -187,4 +196,9 @@ namespace SceneUtil
+@@ -182,4 +193,9 @@ namespace SceneUtil
          return mWireframe;
      }
  
@@ -151,6 +138,7 @@ index e30fbe7a47..35eed92ef9 100644
 +    }
 +
  }
+
 diff --git a/components/sceneutil/stateupdater.hpp b/components/sceneutil/stateupdater.hpp
 index ffdf04e140..da7235b350 100644
 --- a/components/sceneutil/stateupdater.hpp
@@ -174,3 +162,19 @@ index ffdf04e140..da7235b350 100644
 -#endif
 \ No newline at end of file
 +#endif
+diff --git a/components/shader/shadervisitor.cpp b/components/shader/shadervisitor.cpp
+index e95311e738..c06dc546da 100644
+--- a/components/shader/shadervisitor.cpp
++++ b/components/shader/shadervisitor.cpp
+@@ -680,7 +680,10 @@ namespace Shader
+             defineMap["simpleLighting"] = "1";
+ 
+         if (simpleLighting || isParticle)
+-            defineMap["forcePPL"] = "0";
++        {
++             defineMap["forcePPL"] = "0";
++            writableStateSet->setDefine("FORCE_PPL", "0", osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
++        }
+ 
+         bool particleOcclusion = false;
+         node.getUserValue("particleOcclusion", particleOcclusion);

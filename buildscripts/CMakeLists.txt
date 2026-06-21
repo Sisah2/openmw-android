@@ -48,15 +48,15 @@ set(OSG_HASH SHA256=aea196550f02974d6d09291c5d83b51ca6a03b3767e234a8c0e21322927d
 set(LZ4_VERSION 1.9.3)
 set(LZ4_HASH SHA256=030644df4611007ff7dc962d981f390361e6c97a34e5cbc393ddfbe019ffe2c1)
 
-# https://luajit.org/download.html
-set(LUAJIT_VERSION 2.1.ROLLING)
+# https://github.com/dreamweave-mp/rubic0n
+set(LUAJIT_VERSION 4059de7fe88a16915861621b83735919ba828567)
 set(LUAJIT_HASH SHA256=1ad2e34b111c802f9d0cdf019e986909123237a28c746b21295b63c9e785d9c3)
 
 set(LIBICU_VERSION 70-1)
 set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
 
 # https://github.com/sisah2/openmw/commits/clean
-set(OPENMW_VERSION 7a27f1559d42237d3b36212444ac1e98ad13bf59)
+set(OPENMW_VERSION 1d880ff3c63fc3e30a4b2bc316db31f923bf5970)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
@@ -418,7 +418,7 @@ set(LUAJIT_MAKE_FLAGS
 )
 
 ExternalProject_Add(luajit
-	URL https://github.com/luaJit/LuaJIT/archive/v${LUAJIT_VERSION}.tar.gz
+	URL https://github.com/dreamweave-mp/rubic0n/archive/${LUAJIT_VERSION}.tar.gz
 #	URL_HASH ${LUAJIT_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
@@ -628,13 +628,14 @@ set(OPENMW_PATCH
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/allow-more-es-versions.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/disableShadowsForStateSet.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/disablePBOforlocalmap.patch &&
-	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/androidmain.cpp
+	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/androidmain.cpp &&
+	sed -i -e "s/if(FFmpeg_FOUND)/if(NOT FFmpeg_FOUND)/g" <SOURCE_DIR>/CMakeLists.txt
 )
 
 ExternalProject_Add(openmw
 	DEPENDS boost openal osg mygui ffmpeg sdl2 bullet lz4 luajit libicu
 
-	URL https://github.com/openmw/openmw/archive/${OPENMW_VERSION}.tar.gz
+	URL https://github.com/sisah2/openmw/archive/${OPENMW_VERSION}.tar.gz
 #	URL_HASH ${OPENMW_HASH}
 	DOWNLOAD_DIR ${download_dir}
 

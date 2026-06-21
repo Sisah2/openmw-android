@@ -66,14 +66,6 @@
             android:defaultValue="0.9"
             android:summary="The fraction of the limit above at which shadows begin to gradually fade away."/>
 
-        <ListPreference
-            android:key="gs_shadows_pcf"
-            android:summary="%s \nSmooth out shadows edges if small resolution is set. Higher values may have significant performance impact."
-            android:title="Shadows PCF Filter"
-            android:dialogTitle="Shadows PCF Filter"
-            android:entries="@array/gs_shadow_pcf_entries"
-            android:entryValues="@array/gs_shadow_pcf_values"
-            android:defaultValue="0" />
     </PreferenceCategory>
 
 </PreferenceScreen>

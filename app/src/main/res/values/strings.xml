@@ -94,24 +94,6 @@
         <item>primitives</item>
     </string-array>
 
-    <string-array name="gs_shadow_pcf_entries">
-        <item>1 sample</item>
-        <item>4 samples</item>
-        <item>9 samples</item>
-        <item>16 samples</item>
-        <item>25 samples</item>
-        <item>36 samples</item>
-    </string-array>
-
-    <string-array name="gs_shadow_pcf_values">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-        <item>3</item>
-        <item>4</item>
-        <item>5</item>
-    </string-array>
-
     <string name="general_settings">Setup</string>
     <string name="start_game_label">Start game</string>
     <string name="closeDrawer">Navigation View</string>

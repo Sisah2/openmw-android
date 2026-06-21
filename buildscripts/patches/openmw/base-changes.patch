@@ -43,6 +43,7 @@ index 8d8a0bc7b9..abe143fa03 100644
      // Save user settings
      Settings::Manager::saveUser(mCfgMgr.getUserConfigPath() / "settings.cfg");
      Settings::ShaderManager::get().save();
+
 diff --git a/components/resource/imagemanager.cpp b/components/resource/imagemanager.cpp
 index 082b3a2536..a9883e562b 100644
 --- a/components/resource/imagemanager.cpp
@@ -55,30 +56,6 @@ index 082b3a2536..a9883e562b 100644
  USE_OSGPLUGIN(jpeg)
  USE_OSGPLUGIN(bmp)
  USE_OSGPLUGIN(osg)
-diff --git a/components/sceneutil/lightmanager.cpp b/components/sceneutil/lightmanager.cpp
-index 86482350e9..2baf27003e 100644
---- a/components/sceneutil/lightmanager.cpp
-+++ b/components/sceneutil/lightmanager.cpp
-@@ -718,6 +718,7 @@ namespace SceneUtil
- 
-         if (!mInitLayout)
-         {
-+/*
-             mDummyProgram->apply(state);
-             auto handle = mDummyProgram->getPCP(state)->getHandle();
-             auto* ext = state.get<osg::GLExtensions>();
-@@ -727,8 +728,10 @@ namespace SceneUtil
- 
-             // wait until the UBO binding is created
-             if (activeUniformBlocks > 0)
-+*/
-             {
--                initSharedLayout(ext, handle, frame);
-+                //initSharedLayout(ext, handle, frame);
-+                mTemplate->configureLayout(0, 16, 32, 16384, 0);
-                 mInitLayout = true;
-             }
-         }
 diff --git a/files/data/mygui/openmw_postprocessor_hud.layout b/files/data/mygui/openmw_postprocessor_hud.layout
 index 4ed8ecdb36..758b1b2e99 100644
 --- a/files/data/mygui/openmw_postprocessor_hud.layout
@@ -101,92 +78,3 @@ index 4ed8ecdb36..758b1b2e99 100644
                  <UserString key="HStretch" value="true"/>
                  <UserString key="VStretch" value="false"/>
  
-diff --git a/files/shaders/lib/core/fragment.h.glsl b/files/shaders/lib/core/fragment.h.glsl
-index 9b7ef768e6..fc9cf8f7a7 100644
---- a/files/shaders/lib/core/fragment.h.glsl
-+++ b/files/shaders/lib/core/fragment.h.glsl
-@@ -1,22 +1,50 @@
- #ifndef OPENMW_FRAGMENT_H_GLSL
- #define OPENMW_FRAGMENT_H_GLSL
- 
--@link "lib/core/fragment.glsl" if !@useOVR_multiview
--@link "lib/core/fragment_multiview.glsl" if @useOVR_multiview
-+uniform sampler2D reflectionMap;
- 
--vec4 sampleReflectionMap(vec2 uv);
-+vec4 sampleReflectionMap(vec2 uv)
-+{
-+    return texture2D(reflectionMap, uv);
-+}
- 
- #if @waterRefraction
--vec4 sampleRefractionMap(vec2 uv);
--float sampleRefractionDepthMap(vec2 uv);
-+uniform sampler2D refractionMap;
-+uniform highp sampler2D refractionDepthMap;
-+
-+vec4 sampleRefractionMap(vec2 uv)
-+{
-+    return texture2D(refractionMap, uv);
-+}
-+
-+float sampleRefractionDepthMap(vec2 uv)
-+{
-+    return texture2D(refractionDepthMap, uv).x;
-+}
-+
- #endif
- 
--vec4 samplerLastShader(vec2 uv);
-+uniform sampler2D lastShader;
-+
-+vec4 samplerLastShader(vec2 uv)
-+{
-+    return texture2D(lastShader, uv);
-+}
- 
- #if @skyBlending
--vec3 sampleSkyColor(vec2 uv);
-+uniform sampler2D sky;
-+
-+vec3 sampleSkyColor(vec2 uv)
-+{
-+    return texture2D(sky, uv).xyz;
-+}
- #endif
- 
--vec4 sampleOpaqueDepthTex(vec2 uv);
-+uniform sampler2D opaqueDepthTex;
-+
-+vec4 sampleOpaqueDepthTex(vec2 uv)
-+{
-+    return texture2D(opaqueDepthTex, uv);
-+}
- 
- #endif  // OPENMW_FRAGMENT_H_GLSL
-diff --git a/files/shaders/lib/core/vertex.h.glsl b/files/shaders/lib/core/vertex.h.glsl
-index 6e22f6deb1..c8a1080574 100644
---- a/files/shaders/lib/core/vertex.h.glsl
-+++ b/files/shaders/lib/core/vertex.h.glsl
-@@ -1,6 +1,16 @@
--@link "lib/core/vertex.glsl" if !@useOVR_multiview
--@link "lib/core/vertex_multiview.glsl" if @useOVR_multiview
-+uniform mat4 projectionMatrix;
- 
--vec4 modelToClip(vec4 pos);
--vec4 modelToView(vec4 pos);
--vec4 viewToClip(vec4 pos);
-+vec4 modelToView(vec4 pos)
-+{
-+    return gl_ModelViewMatrix * pos;
-+}
-+
-+vec4 modelToClip(vec4 pos)
-+{
-+    return projectionMatrix * modelToView(pos);
-+}
-+
-+vec4 viewToClip(vec4 pos)
-+{
-+    return projectionMatrix * pos;
-+}
