@@ -208,7 +208,7 @@ index e95311e738..a52ec0ed19 100644
          if (simpleLighting || isParticle)
 +        {
              defineMap["forcePPL"] = "0";
-+            writableStateSet()->setDefine("FORCE_PPL", "0", osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
++            writableStateSet->setDefine("FORCE_PPL", "0", osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
 +        }
  
          bool particleOcclusion = false;
