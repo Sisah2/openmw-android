@@ -56,7 +56,7 @@ set(LIBICU_VERSION 70-1)
 set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
 
 # https://github.com/sisah2/openmw/commits/clean
-set(OPENMW_VERSION 1d880ff3c63fc3e30a4b2bc316db31f923bf5970)
+set(OPENMW_VERSION 4c7d411d072a158ba4cf6303e69c183d2557cba2)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
@@ -293,27 +293,17 @@ ExternalProject_Add(sdl2
 #	PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-android-120hz-gyroscope.patch
 #	COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/sdl2-disable-declaration-after-statement-warning.patch
 
+	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
+	${COMMON_CMAKE_ARGS}
+        -DSDL_STATIC=OFF
+        -DHAVE_GCC_FVISIBILITY=OFF
 
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ${wrapper_command} ndk-build
-	${COMMON_NDK_BUILD_FLAGS}
+	BUILD_COMMAND ${wrapper_command} $(MAKE)
 
-        INSTALL_COMMAND mkdir -p ${prefix}/lib/
-	COMMAND cp libs/${app_abi}/libSDL2.so ${prefix}/lib/
+	INSTALL_COMMAND ${wrapper_command} $(MAKE) install
+
+	COMMAND cp libSDL2.so ${prefix}/lib/
 	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
-
-	#CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
-	#${COMMON_CMAKE_ARGS}
-       # -DSDL_STATIC=OFF
-       # -DHAVE_GCC_FVISIBILITY=OFF
-
-	#BUILD_COMMAND ${wrapper_command} $(MAKE)
-
-	#INSTALL_COMMAND ${wrapper_command} $(MAKE) install
-
-	#COMMAND cp libSDL2.so ${prefix}/lib/
-#	COMMAND cp libhidapi.so ${prefix}/lib/
-	#COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
 )
 
 ExternalProject_Add(bullet
@@ -621,7 +611,6 @@ set(OPENMW_PATCH
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/FIXME-setGlobalDefines-crash.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/disable-postprocessing-ubo.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/navmeshtool.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/SDLLink.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/ktx.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/bsatool-extract-dds-only.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/base-changes.patch &&

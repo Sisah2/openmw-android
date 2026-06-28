@@ -185,7 +185,7 @@ private fun patchShaders() {
     val bindings_legacy = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/bindings-legacy.glsl")
     content = bindings_legacy.readText()
     if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("uniform mat4 LightBuffer[@maxLights];", "#if defined(MAX_LIGHTS)\nuniform mat4 LightBuffer[MAX_LIGHTS];\n#else\nuniform mat4 LightBuffer[8];\n#endif")
+        content = content.replace("uniform mat4 LightBuffer[@maxLights];", "#if defined(MAX_LIGHTS)\nuniform mat4 LightBuffer[MAX_LIGHTS];\n#else\nmat4 LightBuffer[1];\n#endif")
         bindings_legacy.writeText(content + "\n#pragma CONVERTED\n")
     }
 
