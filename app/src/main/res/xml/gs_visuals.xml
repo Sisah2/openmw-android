@@ -26,16 +26,7 @@
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Graphics">
-<!--
-        <ListPreference
-            android:key="gs_antialiasing"
-            android:summary="%s"
-            android:title="Antialiasing"
-            android:dialogTitle="Antialiasing"
-            android:entries="@array/gs_antialiasing_entries"
-            android:entryValues="@array/gs_antialiasing_values"
-            android:defaultValue="0" />
--->
+
         <EditTextPreference
             android:key="gs_framerate_limit"
             android:title="Framerate Limit"
@@ -50,6 +41,27 @@
             android:title="Reverse-z Depth Buffer"
             android:defaultValue="false"
             android:summary="Enabling reduce z fighting."/>
+
+        <ListPreference
+            android:key="gs_antialiasing"
+            android:summary="%s \nAnti-aliasing reduces jagged polygon edges."
+            android:title="Antialiasing"
+            android:dialogTitle="Antialiasing"
+            android:entries="@array/gs_antialiasing_entries"
+            android:entryValues="@array/gs_antialiasing_values"
+            android:defaultValue="0" />
+
+        <CheckBoxPreference
+            android:key="gs_antialias_alpha_test"
+            android:title="Antialias Alpha Test"
+            android:defaultValue="false"
+            android:summary="Convert the alpha test (cutout/punchthrough alpha) to alpha-to-coverage. This allows MSAA to work with alpha-tested meshes, producing better-looking edges without pixelation. When MSAA is off, this setting will have no visible effect, but might have a performance cost."/>
+
+        <CheckBoxPreference
+            android:key="gs_adjust_coverage_for_alpha_test"
+            android:title="Adjust Coverage For Alpha Test"
+            android:defaultValue="false"
+            android:summary="Attempt to simulate coverage-preserving mipmaps in textures created without them which are used for alpha testing anyway. This will somewhat mitigate these objects appearing to shrink as they get further from the camera, but isn't perfect. Better results can be achieved by generating more appropriate mipmaps in the first place, but if this workaround is used with such textures, affected objects will appear to grow as they get further from the camera. It is recommended that mod authors specify how this setting should be set, and mod users follow their advice."/>
 
     </PreferenceCategory>
 

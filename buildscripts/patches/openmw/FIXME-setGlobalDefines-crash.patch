@@ -18,45 +18,63 @@ index 1787163bab..76633af3b6 100644
  
              mRendering.getLightRoot()->setCollectPPLights(mPassLights);
 diff --git a/apps/openmw/mwrender/renderingmanager.cpp b/apps/openmw/mwrender/renderingmanager.cpp
-index 8b047b12ce..523c2fd718 100644
+index 3fd0f08f02..5575fcdf87 100644
 --- a/apps/openmw/mwrender/renderingmanager.cpp
 +++ b/apps/openmw/mwrender/renderingmanager.cpp
-@@ -115,6 +115,8 @@ namespace
-                     Settings::shaders().mMaximumLightDistance, Settings::shaders().mLightFadeStart);
-                 lm->updateMaxLights(Settings::shaders().mMaxLights);
-                 lm->enableClustered(Settings::shaders().mClusteredLighting);
-+
-+                lm->updateOSGDefines();
+@@ -116,6 +116,7 @@ namespace
+                 {
+                     lm->updateMaxLights(Settings::shaders().mMaxLights);
+                     lm->enableClustered(Settings::shaders().mClusteredLighting);
++                    lm->updateOSGDefines();
+                 }
+ 
+                 lm->processChangedSettings(Settings::shaders().mLightRadiusMultiplier,
+@@ -1366,12 +1367,16 @@ namespace MWRender
+                 if (MWMechanics::getPlayer().isInCell())
+                     configureAmbient(*MWMechanics::getPlayer().getCell()->getCell());
              }
-             traverse(node);
-         }
-@@ -1360,15 +1362,21 @@ namespace MWRender
+-            else if (it->first == "Shaders"
++/*            else if (it->first == "Shaders"
+                 && (it->second == "force per pixel lighting" || it->second == "classic falloff"
+                     || it->second == "clamp lighting"))
              {
                  mViewer->stopThreading();
  
 +                LightManagerUpdateVisitor visitor;
++                visitor.setDoThreadUnsafeOps(true);
 +                mViewer->getSceneData()->accept(visitor);
 +
-+/*
                  auto defines = mResourceSystem->getSceneManager()->getShaderManager().getGlobalDefines();
                  defines["forcePPL"] = Settings::shaders().mForcePerPixelLighting ? "1" : "0";
                  defines["classicFalloff"] = Settings::shaders().mClassicFalloff ? "1" : "0";
-                 defines["clamp"] = Settings::shaders().mClampLighting ? "1" : "0";
-                 mResourceSystem->getSceneManager()->getShaderManager().setGlobalDefines(defines);
--
-+*/
-                 if (MWMechanics::getPlayer().isInCell() && it->second == "classic falloff")
+@@ -1382,11 +1387,11 @@ namespace MWRender
                      configureAmbient(*MWMechanics::getPlayer().getCell()->getCell());
  
-+                mStateUpdater->reset();
-+
                  mViewer->startThreading();
-             }
-             else if (it->first == "Shaders"
-@@ -1386,13 +1394,13 @@ namespace MWRender
+-            }
+-            else if (it->first == "Shaders"
++            }*/
++            else if (it->first == "Shaders"/*
+                 && (it->second == "light radius multiplier" || it->second == "maximum light distance"
+                     || it->second == "light fade start" || it->second == "max lights"
+-                    || it->second == "clustered lighting" || it->second == "particle point lighting"))
++                    || it->second == "clustered lighting" || it->second == "particle point lighting")*/)
+             {
+                 if (MWMechanics::getPlayer().isInCell())
+                     configureAmbient(*MWMechanics::getPlayer().getCell()->getCell());
+@@ -1395,20 +1400,21 @@ namespace MWRender
+                 bool lightManagersUpdated = false;
  
-                     LightManagerUpdateVisitor visitor;
+                 if (it->second == "max lights" || it->second == "clustered lighting"
+-                    || it->second == "particle point lighting")
++                    || it->second == "particle point lighting" || it->second == "force per pixel lighting" || it->second == "classic falloff"
++                    || it->second == "clamp lighting")
+                 {
+                     mViewer->stopThreading();
+ 
+                     visitor.setDoThreadUnsafeOps(true);
                      mViewer->getSceneData()->accept(visitor);
+                     lightManagersUpdated = true;
 -
 +/*
                      auto defines = mResourceSystem->getSceneManager()->getShaderManager().getGlobalDefines();
@@ -69,7 +87,7 @@ index 8b047b12ce..523c2fd718 100644
                      mStateUpdater->reset();
  
                      mViewer->startThreading();
-@@ -1644,4 +1652,9 @@ namespace MWRender
+@@ -1663,4 +1669,10 @@ namespace MWRender
      {
          mNavMesh->setMode(value);
      }
@@ -78,6 +96,7 @@ index 8b047b12ce..523c2fd718 100644
 +    {
 +        mStateUpdater->setWriteNormals(enabled);
 +    }
++
  }
 diff --git a/apps/openmw/mwrender/renderingmanager.hpp b/apps/openmw/mwrender/renderingmanager.hpp
 index c3e624dbb6..12b0c6125a 100644
@@ -208,7 +227,7 @@ index e95311e738..a52ec0ed19 100644
          if (simpleLighting || isParticle)
 +        {
              defineMap["forcePPL"] = "0";
-+            writableStateSet()->setDefine("FORCE_PPL", "0", osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
++            writableStateSet->setDefine("FORCE_PPL", "0", osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
 +        }
  
          bool particleOcclusion = false;

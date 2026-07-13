@@ -210,6 +210,15 @@ private fun patchShaders() {
         alpha.writeText(content + "\n#pragma CONVERTED\n")
     }
 
+    val parallax = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/material/parallax.glsl")
+    content = parallax.readText()
+    if (!content.contains("#pragma CONVERTED")) {
+        content = content.replace("mat3 inverse(", "mat3 inverse2(")
+        content = content.replace("struct DirectionalLight", "/*struct DirectionalLight")
+        content = content.replace("uniform DirectionalLight sun;", "uniform DirectionalLight sun;*/")
+        parallax.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
     val shadows = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/shadows_fragment.glsl")
     content = shadows.readText()
     if (!content.contains("#pragma CONVERTED")) {

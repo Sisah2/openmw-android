@@ -500,6 +500,9 @@ class MainActivity : AppCompatActivity() {
 	// Visuals graphics
 	writeSetting("Video", "framerate limit", prefs.getString("gs_framerate_limit", "60").toString())
 	writeSetting("Camera", "reverse z", if(prefs.getBoolean("gs_reverse_z", /*true*/false)) "true" else "false")
+	writeSetting("Video", "antialiasing", prefs.getString("gs_antialiasing", "0").toString())
+	writeSetting("Shaders", "antialias alpha test", if(prefs.getBoolean("gs_antialias_alpha_test", false)) "true" else "false")
+	writeSetting("Shaders", "adjust coverage for alpha test", if(prefs.getBoolean("gs_adjust_coverage_for_alpha_test", false)) "true" else "false")
 
 	// Visuals shaders
 	writeSetting("Shaders", "auto use object normal maps", if(prefs.getBoolean("gs_auto_use_object_normal_maps", false)) "true" else "false")

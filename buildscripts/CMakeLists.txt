@@ -55,8 +55,8 @@ set(LUAJIT_HASH SHA256=1ad2e34b111c802f9d0cdf019e986909123237a28c746b21295b63c9e
 set(LIBICU_VERSION 70-1)
 set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
 
-# https://github.com/sisah2/openmw/commits/clean
-set(OPENMW_VERSION 4c7d411d072a158ba4cf6303e69c183d2557cba2)
+# https://github.com/sisah2/openmw/commits/master
+set(OPENMW_VERSION 8d2a3c792e58dab73b8b3a9fa79dab9bba8a7f5e)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
@@ -342,7 +342,7 @@ ExternalProject_Add(NG-GL4ES
 	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
 	${COMMON_CMAKE_ARGS}
         -DSPIRV-Headers_SOURCE_DIR=<SOURCE_DIR>/3rdparty/SPIRV-headers
-        -DINCLUDE_SPIRV_TOOLS=ON
+        -DINCLUDE_SPIRV_TOOLS=OFF
 
 	BUILD_COMMAND ${wrapper_command} $(MAKE)
 
@@ -530,7 +530,6 @@ set(OSG_PATCH
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/force-add-plugins.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/dae_collada.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/ng-gl4es.patch &&
-	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/wtf.patch &&
 #	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/cubic-filtering.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0005-CullSettings-make-inheritanceMask-atomic-to-silence-.patch
 )

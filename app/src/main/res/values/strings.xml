@@ -41,19 +41,19 @@
     </string-array>
 
     <string-array name="gs_antialiasing_entries">
-        <item>0</item>
+        <item>Off</item>
+        <item>1</item>
         <item>2</item>
+        <item>3</item>
         <item>4</item>
-        <item>8</item>
-        <item>16</item>
     </string-array>
 
     <string-array name="gs_antialiasing_values">
         <item>0</item>
+        <item>1</item>
         <item>2</item>
+        <item>3</item>
         <item>4</item>
-        <item>8</item>
-        <item>16</item>
     </string-array>
 
     <string-array name="gs_groundcover_handling_entries">

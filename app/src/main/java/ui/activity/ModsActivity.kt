@@ -62,10 +62,10 @@ import android.widget.Spinner
 import kotlinx.coroutines.*
 
 class ModsActivity : AppCompatActivity() {
-    var mPluginAdapter = ModsAdapter(this)
-    var mResourceAdapter = ModsAdapter(this)
-    var mDirAdapter = ModsAdapter(this)
-    var mGroundcoverAdapter = ModsAdapter(this)
+    var mPluginAdapter = ModsAdapter(this, false)
+    var mResourceAdapter = ModsAdapter(this, false)
+    var mDirAdapter = ModsAdapter(this, true)
+    var mGroundcoverAdapter = ModsAdapter(this, false)
 
     var fallbackList = mutableSetOf<String>()
     var archiveList = mutableListOf<Pair<String, Boolean>>()
@@ -96,8 +96,7 @@ class ModsActivity : AppCompatActivity() {
 
                 // Reload mod list when moving from data dir tab
                 if(flipper.displayedChild == 2) {
-                    saveCFG()
-                    updateModList()
+                    updateListsView()
                 }
 
                 flipper.displayedChild = tab.position
@@ -124,7 +123,7 @@ class ModsActivity : AppCompatActivity() {
             File(Constants.USER_OPENMW_CFG).writeText("data=" + gameDir + "/Data Files\ncontent=Morrowind.esm\ncontent=Tribunal.esm\ncontent=Bloodmoon.esm\nfallback-archive=Morrowind.bsa\nfallback-archive=Tribunal.bsa\nfallback-archive=Bloodmoon.bsa\n" + base)
         }
 
-        parseCFG(Pair("", false))
+        parseCFG()
 
         // Set up adapters for the lists
         setupModList(findViewById(R.id.list_mods), ModType.Plugin)
@@ -142,7 +141,7 @@ class ModsActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    private fun parseCFG(addedDir: Pair<String, Boolean>) {
+    private fun parseCFG() {
         fallbackList.clear()
         archiveList.clear()
         dataDirsList.clear()
@@ -178,9 +177,6 @@ class ModsActivity : AppCompatActivity() {
             if (!it.isFile() && !dataDirsNames.contains(gameDir + "/" + it.name) && it.name != "Data Files")
                 dataDirsList.add(Pair(gameDir + "/" + it.name, false))
         }
-
-        if (addedDir.second == true)
-            dataDirsList.add(addedDir)
 
         dataDirsList.forEach {
             val enabled = it.second
@@ -251,14 +247,18 @@ class ModsActivity : AppCompatActivity() {
         File(Constants.USER_FILE_STORAGE + "/launcher/ModCollections/" + currentPreset).writeText(output)
     }
 
-    private fun updateModList() {
-        parseCFG(Pair("", false))
+    private fun loadCFG() {
+        parseCFG()
 
         mPluginAdapter.collection = ModsCollection(ModType.Plugin, dataDirsList, contentList, groundcoverList, fsPlugins, fsArchives)
         mResourceAdapter.collection = ModsCollection(ModType.Resource, dataDirsList, archiveList, groundcoverList, fsPlugins, fsArchives)
         mDirAdapter.collection = ModsCollection(ModType.Dir, dataDirsList, dataDirsList, groundcoverList, fsPlugins, fsArchives)
         mGroundcoverAdapter.collection = ModsCollection(ModType.Groundcover, dataDirsList, groundcoverList, groundcoverList, fsPlugins, fsArchives)
 
+        updateListsView()
+    }
+
+    private fun updateListsView() {
         mPluginAdapter.notifyDataSetChanged()
         mResourceAdapter.notifyDataSetChanged()
         mDirAdapter.notifyDataSetChanged()
@@ -543,7 +543,7 @@ class ModsActivity : AppCompatActivity() {
                         putString("modCollection", modPresets[which])
                        apply()
                     }
-                    updateModList()
+                    loadCFG()
                     dialog.dismiss()
                 }
                 .setNegativeButton("New") { dialog, which -> 
@@ -570,7 +570,7 @@ class ModsActivity : AppCompatActivity() {
                                     putString("modCollection", input.text.toString())
                                     apply()
                                 }
-                                updateModList()
+                                loadCFG()
                             }
                             dialog.cancel()
                         }
@@ -591,7 +591,7 @@ class ModsActivity : AppCompatActivity() {
                                 putString("modCollection", "Default")
                                 apply()
                             }
-                            updateModList()
+                            loadCFG()
                             File(Constants.USER_FILE_STORAGE + "/launcher/ModCollections/" + currentPreset).delete()
                             dialog.cancel()
                         }
@@ -961,18 +961,18 @@ class ModsActivity : AppCompatActivity() {
         }
     }
 
-    private fun addMod(path: String) {
+    fun processDirectoriesChange() {
         saveCFG()
-        parseCFG(Pair(path, true))
+        loadCFG()
+    }
 
-        mPluginAdapter.collection = ModsCollection(ModType.Plugin, dataDirsList, contentList, groundcoverList, fsPlugins, fsArchives)
-        mResourceAdapter.collection = ModsCollection(ModType.Resource, dataDirsList, archiveList, groundcoverList, fsPlugins, fsArchives)
-        mDirAdapter.collection = ModsCollection(ModType.Dir, dataDirsList, dataDirsList, groundcoverList, fsPlugins, fsArchives)
-        mGroundcoverAdapter.collection = ModsCollection(ModType.Groundcover, dataDirsList, groundcoverList, groundcoverList, fsPlugins, fsArchives)
+    private fun addMod(path: String) {
+        var maxOrder = mDirAdapter.collection.mods.maxBy { it.order }?.order ?: 0
 
-        mPluginAdapter.notifyDataSetChanged()
-        mResourceAdapter.notifyDataSetChanged()
-        mDirAdapter.notifyDataSetChanged()
-        mGroundcoverAdapter.notifyDataSetChanged()
+        mDirAdapter.collection.mods.add(Mod(ModType.Dir, path, maxOrder, true))
+
+        processDirectoriesChange()
+
+        updateListsView()
     }
 }

@@ -34,13 +34,15 @@ import android.widget.TextView
 import com.libopenmw.openmw.R
 import java.util.*
 import android.content.Context
+import ui.activity.ModsActivity
 /**
  * An adapter to put a ModsCollection into a UI list
  */
-class ModsAdapter(private val ctx: Context) : RecyclerView.Adapter<ModsAdapter.ModViewHolder>() {
+class ModsAdapter(private val ctx: Context, private val isDirectoriesAdapter: Boolean) : RecyclerView.Adapter<ModsAdapter.ModViewHolder>() {
 
     lateinit var touchHelper: ItemTouchHelper
     lateinit var collection: ModsCollection
+    private val modsActivity = ctx as ModsActivity
 
     /**
      * A row representation of a mod
@@ -70,6 +72,7 @@ class ModsAdapter(private val ctx: Context) : RecyclerView.Adapter<ModsAdapter.M
         holder.mCheckbox.isChecked = mod.enabled
         holder.mCheckbox.setOnClickListener {
             mod.enabled = (it as CheckBox).isChecked
+            if (isDirectoriesAdapter) modsActivity.processDirectoriesChange()
         }
     }
 
