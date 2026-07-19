@@ -1,0 +1,129 @@
+diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postprocessor.cpp
+index 1787163bab..a048a713fb 100644
+--- a/apps/openmw/mwrender/postprocessor.cpp
++++ b/apps/openmw/mwrender/postprocessor.cpp
+@@ -1,6 +1,6 @@
+ #include "postprocessor.hpp"
+ 
+-#include <SDL_opengl_glext.h>
++#include <SDL_opengles2_gl2ext.h>
+ #include <algorithm>
+ #include <chrono>
+ #include <thread>
+diff --git a/apps/openmw/mwrender/sky.cpp b/apps/openmw/mwrender/sky.cpp
+index b705fb9b94..b5acf6f707 100644
+--- a/apps/openmw/mwrender/sky.cpp
++++ b/apps/openmw/mwrender/sky.cpp
+@@ -272,7 +272,7 @@ namespace MWRender
+         // render before the world is rendered
+         mEarlyRenderBinRoot->getOrCreateStateSet()->setRenderBinDetails(RenderBin_Sky, "RenderBin");
+         // Prevent unwanted clipping by water reflection camera's clipping plane
+-        mEarlyRenderBinRoot->getOrCreateStateSet()->setMode(GL_CLIP_PLANE0, osg::StateAttribute::OFF);
++        //mEarlyRenderBinRoot->getOrCreateStateSet()->setMode(GL_CLIP_PLANE0, osg::StateAttribute::OFF);
+ 
+         if (enableSkyRTT)
+         {
+@@ -364,7 +364,7 @@ namespace MWRender
+         depth->setWriteMask(false);
+         mEarlyRenderBinRoot->getOrCreateStateSet()->setAttributeAndModes(depth);
+         mEarlyRenderBinRoot->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+-        mEarlyRenderBinRoot->getOrCreateStateSet()->setMode(GL_FOG, osg::StateAttribute::OFF);
++        //mEarlyRenderBinRoot->getOrCreateStateSet()->setMode(GL_FOG, osg::StateAttribute::OFF);
+ 
+         mMoonScriptColor = Fallback::Map::getColour("Moons_Script_Color");
+ 
+diff --git a/components/debug/gldebug.cpp b/components/debug/gldebug.cpp
+index b9bebb675d..490590e17b 100644
+--- a/components/debug/gldebug.cpp
++++ b/components/debug/gldebug.cpp
+@@ -38,7 +38,7 @@ either expressed or implied, of the FreeBSD Project.
+ #include <components/debug/debuglog.hpp>
+ 
+ // OpenGL constants not provided by OSG:
+-#include <SDL_opengl_glext.h>
++#include <SDL_opengles2_gl2ext.h>
+ 
+ namespace Debug
+ {
+diff --git a/components/fx/technique.cpp b/components/fx/technique.cpp
+index 945a3cf1b1..3244b6bd42 100644
+--- a/components/fx/technique.cpp
++++ b/components/fx/technique.cpp
+@@ -9,7 +9,7 @@
+ #include <osg/Texture2D>
+ #include <osg/Texture3D>
+ 
+-#include <SDL_opengl_glext.h>
++#include <SDL_opengles2_gl2ext.h>
+ 
+ #include <components/debug/debuglog.hpp>
+ #include <components/files/conversion.hpp>
+diff --git a/components/myguiplatform/myguirendermanager.cpp b/components/myguiplatform/myguirendermanager.cpp
+index de54119189..1874a7a173 100644
+--- a/components/myguiplatform/myguirendermanager.cpp
++++ b/components/myguiplatform/myguirendermanager.cpp
+@@ -93,10 +93,11 @@ namespace MyGUIPlatform
+             state->apply();
+ 
+             state->disableAllVertexArrays();
+-            state->setClientActiveTextureUnit(0);
+-            glEnableClientState(GL_VERTEX_ARRAY);
+-            glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+-            glEnableClientState(GL_COLOR_ARRAY);
++
++            // Enable attribute arrays for Position (0), Color (3), and TexCoord (8)
++            glEnableVertexAttribArray(0);
++            glEnableVertexAttribArray(2);
++            glEnableVertexAttribArray(3);
+ 
+             mReadFrom = (mReadFrom + 1) % sNumBuffers;
+             const std::vector<Batch>& vec = mBatchVector[mReadFrom];
+@@ -123,22 +121,21 @@ namespace MyGUIPlatform
+                 osg::GLBufferObject* bufferobject = state->isVertexBufferObjectSupported()
+                     ? vbo->getOrCreateGLBufferObject(state->getContextID())
+                     : nullptr;
++
+                 if (bufferobject)
+                 {
+                     state->bindVertexBufferObject(bufferobject);
+-
+-                    glVertexPointer(3, GL_FLOAT, sizeof(MyGUI::Vertex), reinterpret_cast<char*>(0));
+-                    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(MyGUI::Vertex), reinterpret_cast<char*>(12));
+-                    glTexCoordPointer(2, GL_FLOAT, sizeof(MyGUI::Vertex), reinterpret_cast<char*>(16));
++                    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(MyGUI::Vertex), reinterpret_cast<char*>(0));
++                    glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(MyGUI::Vertex), reinterpret_cast<char*>(12));
++                    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(MyGUI::Vertex), reinterpret_cast<char*>(16));
+                 }
+                 else
+                 {
+-                    glVertexPointer(3, GL_FLOAT, sizeof(MyGUI::Vertex),
+-                        reinterpret_cast<const char*>(vbo->getArray(0)->getDataPointer()));
+-                    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(MyGUI::Vertex),
+-                        reinterpret_cast<const char*>(vbo->getArray(0)->getDataPointer()) + 12);
+-                    glTexCoordPointer(2, GL_FLOAT, sizeof(MyGUI::Vertex),
+-                        reinterpret_cast<const char*>(vbo->getArray(0)->getDataPointer()) + 16);
++                    state->unbindVertexBufferObject();
++                    const char* data = reinterpret_cast<const char*>(vbo->getArray(0)->getDataPointer());
++                    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(MyGUI::Vertex), data);
++                    glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(MyGUI::Vertex), data + 12);
++                    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(MyGUI::Vertex), data + 16);
+                 }
+ 
+                 glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(batch.mVertexCount));
+@@ -150,12 +147,11 @@ namespace MyGUIPlatform
+                 }
+             }
+ 
+-            glDisableClientState(GL_VERTEX_ARRAY);
+-            glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+-            glDisableClientState(GL_COLOR_ARRAY);
++            glDisableVertexAttribArray(0);
++            glDisableVertexAttribArray(2);
++            glDisableVertexAttribArray(3);
+ 
+             state->popStateSet();
+-
+             state->unbindVertexBufferObject();
+             state->dirtyAllVertexArrays();
+             state->disableAllVertexArrays();
+

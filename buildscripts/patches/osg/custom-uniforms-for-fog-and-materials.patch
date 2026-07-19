@@ -1,0 +1,270 @@
+diff --git a/include/osg/Fog b/include/osg/Fog
+index abed4b1df..157f30833 100644
+--- a/include/osg/Fog
++++ b/include/osg/Fog
+@@ -16,6 +16,7 @@
+ 
+ #include <osg/StateAttribute>
+ #include <osg/Vec4>
++#include <osg/Uniform>
+ 
+ #ifndef GL_FOG_DISTANCE_MODE_NV
+     #define GL_FOG_DISTANCE_MODE_NV 0x855A
+@@ -84,6 +85,11 @@ class OSG_EXPORT Fog : public StateAttribute
+             COMPARE_StateAttribute_Parameter(_fogCoordinateSource)
+             COMPARE_StateAttribute_Parameter(_useRadialFog)
+ 
++            COMPARE_StateAttribute_Parameter(_startUniform)
++            COMPARE_StateAttribute_Parameter(_endUniform)
++            //COMPARE_StateAttribute_Parameter(_densityUniform)
++            COMPARE_StateAttribute_Parameter(_colorUniform)
++
+             return 0; // passed all the above comparison macros, must be equal.
+         }
+ 
+@@ -102,16 +108,16 @@ class OSG_EXPORT Fog : public StateAttribute
+         inline void  setMode( Mode mode )         { _mode = mode; }
+         inline Mode getMode() const                     { return _mode; }
+ 
+-        inline void  setDensity( float density )  { _density = density; }
++        inline void  setDensity( float density )  { _density = density;/* _densityUniform->set(density);*/ }
+         inline float getDensity() const           { return _density; }
+ 
+-        inline void  setStart( float start )      { _start = start; }
++        inline void  setStart( float start )      { _start = start; _startUniform->set(start); }
+         inline float getStart() const             { return _start; }
+ 
+-        inline void  setEnd( float end )          { _end = end; }
++        inline void  setEnd( float end )          { _end = end; _endUniform->set(end); }
+         inline float getEnd() const               { return _end; }
+ 
+-        inline void  setColor( const Vec4 &color ) { _color = color; }
++        inline void  setColor( const Vec4 &color ) { _color = color; _colorUniform->set(color); }
+         inline const Vec4& getColor() const        { return _color; }
+ 
+         inline void setUseRadialFog( bool useRadialFog ) { _useRadialFog = useRadialFog; }
+@@ -139,6 +145,11 @@ class OSG_EXPORT Fog : public StateAttribute
+         Vec4    _color;
+         GLint   _fogCoordinateSource;
+         bool    _useRadialFog;
++
++        osg::ref_ptr<osg::Uniform> _startUniform;
++        osg::ref_ptr<osg::Uniform> _endUniform;
++       // osg::ref_ptr<osg::Uniform> _densityUniform;
++        osg::ref_ptr<osg::Uniform> _colorUniform;
+ };
+ 
+ }
+diff --git a/include/osg/Material b/include/osg/Material
+index 459d1e4da..f373ed765 100644
+--- a/include/osg/Material
++++ b/include/osg/Material
+@@ -52,7 +52,12 @@ class OSG_EXPORT Material : public StateAttribute
+             _emissionBack(mat._emissionBack),
+             _shininessFrontAndBack(mat._shininessFrontAndBack),
+             _shininessFront(mat._shininessFront),
+-            _shininessBack(mat._shininessBack) {}
++            _shininessBack(mat._shininessBack),
++            _ambientFrontUniform(mat._ambientFrontUniform),
++            _diffuseFrontUniform(mat._diffuseFrontUniform),
++            _specularFrontUniform(mat._specularFrontUniform),
++            _emissionFrontUniform(mat._emissionFrontUniform),
++            _shininessFrontUniform(mat._shininessFrontUniform) {}
+ 
+         META_StateAttribute(osg, Material, MATERIAL);
+ 
+@@ -80,6 +85,11 @@ class OSG_EXPORT Material : public StateAttribute
+             COMPARE_StateAttribute_Parameter(_shininessFrontAndBack)
+             COMPARE_StateAttribute_Parameter(_shininessFront)
+             COMPARE_StateAttribute_Parameter(_shininessBack)
++            COMPARE_StateAttribute_Parameter(_ambientFrontUniform)
++            COMPARE_StateAttribute_Parameter(_diffuseFrontUniform)
++            COMPARE_StateAttribute_Parameter(_specularFrontUniform)
++            COMPARE_StateAttribute_Parameter(_emissionFrontUniform)
++            COMPARE_StateAttribute_Parameter(_shininessFrontUniform)
+ 
+             return 0; // passed all the above comparison macros, must be equal.
+         }
+@@ -198,6 +208,11 @@ class OSG_EXPORT Material : public StateAttribute
+         float  _shininessFront;                      // values 0 - 128.0
+         float  _shininessBack;                       // values 0 - 128.0
+ 
++        osg::ref_ptr<osg::Uniform> _ambientFrontUniform;
++        osg::ref_ptr<osg::Uniform> _diffuseFrontUniform;
++        osg::ref_ptr<osg::Uniform> _specularFrontUniform;
++        osg::ref_ptr<osg::Uniform> _emissionFrontUniform;
++        osg::ref_ptr<osg::Uniform> _shininessFrontUniform;
+ };
+ 
+ }
+diff --git a/src/osg/Fog.cpp b/src/osg/Fog.cpp
+index 1eb065840..ecf1f81d0 100644
+--- a/src/osg/Fog.cpp
++++ b/src/osg/Fog.cpp
+@@ -14,6 +14,7 @@
+ #include <osg/State>
+ #include <osg/Fog>
+ #include <osg/Notify>
++#include <osg/Uniform>
+ 
+ using namespace osg;
+ 
+@@ -30,6 +31,11 @@ Fog::Fog()
+     _color.set( 0.0f, 0.0f, 0.0f, 0.0f);
+     _fogCoordinateSource = FRAGMENT_DEPTH;
+     _useRadialFog = false;
++
++    _startUniform = new osg::Uniform("osg_Fog_start", _start);
++    _endUniform = new osg::Uniform("osg_Fog_end", _end);
++//    _densityUniform = new osg::Uniform("osg_Fog_density", _density);
++    _colorUniform = new osg::Uniform("osg_Fog_color", _color);
+ }
+ 
+ 
+@@ -68,6 +74,11 @@ void Fog::apply(State& state) const
+     }
+ 
+ #else
+-    OSG_NOTICE<<"Warning: Fog::apply(State&) - not supported."<<std::endl;
++    //OSG_NOTICE<<"Warning: Fog::apply(State&) - not supported."<<std::endl;
++
++    state.applyShaderCompositionUniform(_startUniform.get());
++    state.applyShaderCompositionUniform(_endUniform.get());
++//    state.applyShaderCompositionUniform(_densityUniform.get());
++    state.applyShaderCompositionUniform(_colorUniform.get());
+ #endif
+ }
+diff --git a/src/osg/Material.cpp b/src/osg/Material.cpp
+index 8385809fe..960485253 100644
+--- a/src/osg/Material.cpp
++++ b/src/osg/Material.cpp
+@@ -14,6 +14,7 @@
+ #include <osg/BoundsChecking>
+ #include <osg/State>
+ #include <osg/Notify>
++#include <osg/Uniform>
+ 
+ using namespace osg;
+ 
+@@ -40,6 +41,12 @@ Material::Material()
+     _shininessFrontAndBack = true;
+     _shininessFront = 0.0f;
+     _shininessBack = 0.0f;
++
++    _ambientFrontUniform = new osg::Uniform("osg_FrontMaterial_ambient", _ambientFront);
++    _diffuseFrontUniform = new osg::Uniform("osg_FrontMaterial_diffuse", _diffuseFront);
++    _specularFrontUniform = new osg::Uniform("osg_FrontMaterial_specular", _specularFront);
++    _emissionFrontUniform = new osg::Uniform("osg_FrontMaterial_emission", _emissionFront);
++    _shininessFrontUniform = new osg::Uniform("osg_FrontMaterial_shininess", _shininessFront);
+ }
+ 
+ 
+@@ -68,6 +75,12 @@ Material& Material:: operator = (const Material& rhs)
+     _shininessFront= rhs._shininessFront;
+     _shininessBack= rhs._shininessBack;
+ 
++    _ambientFrontUniform= rhs._ambientFrontUniform;
++    _diffuseFrontUniform= rhs._diffuseFrontUniform;
++    _specularFrontUniform= rhs._specularFrontUniform;
++    _emissionFrontUniform= rhs._emissionFrontUniform;
++    _shininessFrontUniform= rhs._ambientFrontUniform;
++
+     return *this;
+ }
+ 
+@@ -79,6 +92,7 @@ void Material::setAmbient(Face face, const Vec4& ambient )
+         case(FRONT):
+             _ambientFrontAndBack = false;
+             _ambientFront = ambient;
++            _ambientFrontUniform->set(ambient);
+             //clampArray4BetweenRange(_ambientFront,0.0f,1.0f,"osg::Material::setAmbient(..)");
+             break;
+         case(BACK):
+@@ -89,6 +103,7 @@ void Material::setAmbient(Face face, const Vec4& ambient )
+         case(FRONT_AND_BACK):
+             _ambientFrontAndBack = true;
+             _ambientFront = ambient;
++            _ambientFrontUniform->set(ambient);
+             //clampArray4BetweenRange(_ambientFront,0.0f,1.0f,"Material::setAmbient(..)");
+             _ambientBack = _ambientFront;
+             break;
+@@ -126,6 +141,7 @@ void Material::setDiffuse(Face face, const Vec4& diffuse )
+         case(FRONT):
+             _diffuseFrontAndBack = false;
+             _diffuseFront = diffuse;
++            _diffuseFrontUniform->set(diffuse);
+             //clampArray4BetweenRange(_diffuseFront,0.0f,1.0f,"Material::setDiffuse(..)");
+             break;
+         case(BACK):
+@@ -136,6 +152,7 @@ void Material::setDiffuse(Face face, const Vec4& diffuse )
+         case(FRONT_AND_BACK):
+             _diffuseFrontAndBack = true;
+             _diffuseFront = diffuse;
++            _diffuseFrontUniform->set(diffuse);
+             //clampArray4BetweenRange(_diffuseFront,0.0f,1.0f,"Material::setDiffuse(..)");
+             _diffuseBack = _diffuseFront;
+             break;
+@@ -174,6 +191,7 @@ void Material::setSpecular(Face face, const Vec4& specular )
+         case(FRONT):
+             _specularFrontAndBack = false;
+             _specularFront = specular;
++            _specularFrontUniform->set(specular);
+             //clampArray4BetweenRange(_specularFront,0.0f,1.0f,"Material::setSpecular(..)");
+             break;
+         case(BACK):
+@@ -184,6 +202,7 @@ void Material::setSpecular(Face face, const Vec4& specular )
+         case(FRONT_AND_BACK):
+             _specularFrontAndBack = true;
+             _specularFront = specular;
++            _specularFrontUniform->set(specular);
+             //clampArray4BetweenRange(_specularFront,0.0f,1.0f,"Material::setSpecular(..)");
+             _specularBack = _specularFront;
+             break;
+@@ -222,6 +241,7 @@ void Material::setEmission(Face face, const Vec4& emission )
+         case(FRONT):
+             _emissionFrontAndBack = false;
+             _emissionFront = emission;
++            _emissionFrontUniform->set(emission);
+             //clampArray4BetweenRange(_emissionFront,0.0f,1.0f,"Material::setEmission(..)");
+             break;
+         case(BACK):
+@@ -232,6 +252,7 @@ void Material::setEmission(Face face, const Vec4& emission )
+         case(FRONT_AND_BACK):
+             _emissionFrontAndBack = true;
+             _emissionFront = emission;
++            _emissionFrontUniform->set(emission);
+             //clampArray4BetweenRange(_emissionFront,0.0f,1.0f,"Material::setEmission(..)");
+             _emissionBack = _emissionFront;
+             break;
+@@ -272,6 +293,7 @@ void Material::setShininess(Face face, float shininess )
+         case(FRONT):
+             _shininessFrontAndBack = false;
+             _shininessFront = shininess;
++            _shininessFrontUniform->set(shininess);
+             break;
+         case(BACK):
+             _shininessFrontAndBack = false;
+@@ -280,6 +302,7 @@ void Material::setShininess(Face face, float shininess )
+         case(FRONT_AND_BACK):
+             _shininessFrontAndBack = true;
+             _shininessFront = shininess;
++            _shininessFrontUniform->set(shininess);
+             _shininessBack = shininess;
+             break;
+         default:
+@@ -443,8 +466,14 @@ void Material::apply(State&) const
+ #else
+ void Material::apply(State& state) const
+ {
+-    OSG_NOTICE<<"Warning: Material::apply(State&) - not supported."<<std::endl;
++//    OSG_NOTICE<<"Warning: Material::apply(State&) - not supported."<<std::endl;
+ 
+     state.Color(_diffuseFront.r(), _diffuseFront.g(), _diffuseFront.b(), _diffuseFront.a());
++
++    state.applyShaderCompositionUniform(_ambientFrontUniform.get());
++    state.applyShaderCompositionUniform(_diffuseFrontUniform.get());
++    state.applyShaderCompositionUniform(_specularFrontUniform.get());
++    state.applyShaderCompositionUniform(_emissionFrontUniform.get());
++    state.applyShaderCompositionUniform(_shininessFrontUniform.get());
+ }
+ #endif

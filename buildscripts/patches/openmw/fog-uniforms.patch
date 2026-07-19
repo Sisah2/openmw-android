@@ -1,0 +1,34 @@
+diff --git a/components/sceneutil/stateupdater.cpp b/components/sceneutil/stateupdater.cpp
+index 1f271a7b03..f50d606db4 100644
+--- a/components/sceneutil/stateupdater.cpp
++++ b/components/sceneutil/stateupdater.cpp
+@@ -2,6 +2,7 @@
+ 
+ #include <osg/Fog>
+ #include <osg/PolygonMode>
++#include <osg/Uniform>
+ 
+ #include "depth.hpp"
+ #include "rtt.hpp"
+@@ -137,6 +138,10 @@ namespace SceneUtil
+         }
+         else
+             stateset->removeAttribute(osg::StateAttribute::POLYGONMODE);
++
++        stateset->addUniform(new osg::Uniform("omw_Fog_start", 0.f));
++        stateset->addUniform(new osg::Uniform("omw_Fog_end", 0.f));
++        stateset->addUniform(new osg::Uniform("omw_Fog_color", osg::Vec4f(0.f, 0.f, 0.f, 1.f)));
+     }
+ 
+     void StateUpdater::apply(osg::StateSet* stateset, osg::NodeVisitor*)
+@@ -146,6 +151,10 @@ namespace SceneUtil
+         fog->setColor(mFogColor);
+         fog->setStart(mFogStart);
+         fog->setEnd(mFogEnd);
++
++        stateset->getUniform("omw_Fog_start")->set(mFogStart);
++        stateset->getUniform("omw_Fog_end")->set(mFogEnd);
++        stateset->getUniform("omw_Fog_color")->set(mFogColor);
+     }
+ 
+     void StateUpdater::setAmbientColor(const osg::Vec4f& col)

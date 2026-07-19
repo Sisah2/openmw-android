@@ -36,12 +36,8 @@ set(BULLET_HASH SHA256=baa642c906576d4d98d041d0acb80d85dd6eff6e3c16a009b1abf1ccd
 set(MYGUI_VERSION 3.4.3)
 set(MYGUI_HASH SHA256=d1d5f294670ae71f7200ed4b30859018281d8cfd45d6a38d18b97a4aba604c42)
 
-# https://github.com/sisah2/ng_gl4es/releases
-set(GL4ES_VERSION f7a8370852579d6a11154178929a02e0cf60d574)
-set(GL4ES_HASH SHA256=b565e717c7d192e936bda25f3cb90ad8db398af56414ec08294b6716574c1a6d)
-
-# https://github.com/openscenegraph/OpenSceneGraph/releases
-set(OSG_VERSION 8aa8d91747ff414ab0de19aae1e0dbd739acea2c)
+# https://github.com/sisah2/OpenSceneGraph/releases
+set(OSG_VERSION 638f0a1e73687633fd99bf110d04226e78ff69c6)
 set(OSG_HASH SHA256=aea196550f02974d6d09291c5d83b51ca6a03b3767e234a8c0e21322927d1e12)
 
 # https://github.com/lz4/lz4/releases
@@ -328,31 +324,6 @@ ExternalProject_Add(bullet
 	INSTALL_COMMAND $(MAKE) install >> /dev/null
 )
 
-ExternalProject_Add(NG-GL4ES
-	DOWNLOAD_COMMAND git clone --recurse-submodules https://github.com/sisah2/Ng-gl4es -b Openmw3 <SOURCE_DIR>
-#	DOWNLOAD_DIR ${download_dir}
-
-    #    BUILD_IN_SOURCE 0
-	
-        PATCH_COMMAND sed -i -e "s/3.22.1/3.19.6/g" <SOURCE_DIR>/3rdparty/glslang/CMakeLists.txt &&
-        PATCH_COMMAND sed -i -e "s/3.22.1/3.19.6/g" <SOURCE_DIR>/3rdparty/SPIRV-Tools/CMakeLists.txt &&
-        PATCH_COMMAND sed -i -e "s/VERSION_GREATER_EQUAL/VERSION_LESS/g" <SOURCE_DIR>/3rdparty/SPIRV-Tools/CMakeLists.txt &&
-        sed -i -e "s/CMAKE_CXX_STANDARD 23/CMAKE_CXX_STANDARD 17/g" <SOURCE_DIR>/CMakeLists.txt
-
-	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
-	${COMMON_CMAKE_ARGS}
-        -DSPIRV-Headers_SOURCE_DIR=<SOURCE_DIR>/3rdparty/SPIRV-headers
-        -DINCLUDE_SPIRV_TOOLS=OFF
-
-	BUILD_COMMAND ${wrapper_command} $(MAKE)
-
-	INSTALL_COMMAND mkdir -p ${prefix}/lib/
-	COMMAND cp libng_gl4es.so ${prefix}/lib/
-	#COMMAND cp <SOURCE_DIR>/library/android/arm64-v8a/libspirv-cross-c-shared.so ${prefix}/lib/
-        #COMMAND cp <SOURCE_DIR>/libraries/arm64-v8a/libspirv-cross-c-shared.so ${prefix}/lib/
-	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/include/gl4es/
-	COMMAND cp -r <SOURCE_DIR>/include ${prefix}/
-)
 
 ExternalProject_Add(mygui
 	DEPENDS freetype2
@@ -486,7 +457,7 @@ ExternalProject_Add(libcollada
 )
 
 set(OSG_COMMON
-	-DOPENGL_PROFILE="GL2"
+	-DOPENGL_PROFILE="GLES3"
 	-DDYNAMIC_OPENTHREADS=OFF
 	-DDYNAMIC_OPENSCENEGRAPH=OFF
 	-DBUILD_OSG_PLUGIN_OSG=ON
@@ -498,26 +469,21 @@ set(OSG_COMMON
 	-DBUILD_OSG_PLUGIN_JPEG=ON
 	-DBUILD_OSG_PLUGIN_PNG=ON
 	-DBUILD_OSG_PLUGIN_FREETYPE=ON
+	-DOSG_CPP_EXCEPTIONS_AVAILABLE=TRUE
+	-DOSG_GL1_AVAILABLE=OFF
+	-DOSG_GL2_AVAILABLE=OFF
+	-DOSG_GL3_AVAILABLE=OFF
+	-DOSG_GLES1_AVAILABLE=OFF
+	-DOSG_GLES2_AVAILABLE=OFF
+	-DOSG_GLES3_AVAILABLE=ON
+	-DBUILD_OSG_APPLICATIONS=OFF
+	-DBUILD_OSG_PLUGINS_BY_DEFAULT=OFF
+	-DBUILD_OSG_DEPRECATED_SERIALIZERS=OFF
 	-DJPEG_INCLUDE_DIR=${prefix}/include/
 	-DPNG_INCLUDE_DIR=${prefix}/include/
 	-DFREETYPE_DIR=${prefix}
         -DCOLLADA_INCLUDE_DIR=${prefix}/include/collada-dom2.5
         -DCOLLADA_DIR=${prefix}/include/collada-dom2.5/1.4
-	-DOSG_CPP_EXCEPTIONS_AVAILABLE=TRUE
-	-DOSG_GL1_AVAILABLE=ON
-	-DOSG_GL2_AVAILABLE=ON
-	-DOSG_GL3_AVAILABLE=OFF
-	-DOSG_GLES1_AVAILABLE=OFF
-	-DOSG_GLES2_AVAILABLE=OFF
-	-DOSG_GL_LIBRARY_STATIC=OFF
-	-DOSG_GL_DISPLAYLISTS_AVAILABLE=OFF
-	-DOSG_GL_MATRICES_AVAILABLE=ON
-	-DOSG_GL_VERTEX_FUNCS_AVAILABLE=ON
-	-DOSG_GL_VERTEX_ARRAY_FUNCS_AVAILABLE=ON
-	-DOSG_GL_FIXED_FUNCTION_AVAILABLE=ON
-	-DBUILD_OSG_APPLICATIONS=OFF
-	-DBUILD_OSG_PLUGINS_BY_DEFAULT=OFF
-        -DOPENGL_gl_LIBRARY=${prefix}/lib/libng_gl4es.so
 )
 
 set(OSG_PATCH
@@ -529,15 +495,14 @@ set(OSG_PATCH
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0004-IncrementalCompileOperation-wrap-some-stuff-in-atomi.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/force-add-plugins.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/dae_collada.patch &&
-	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/ng-gl4es.patch &&
-#	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/cubic-filtering.patch &&
+	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/custom-uniforms-for-fog-and-materials.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0005-CullSettings-make-inheritanceMask-atomic-to-silence-.patch
 )
 
 ExternalProject_Add(osg
-	DEPENDS libjpeg-turbo libpng NG-GL4ES freetype2 libcollada
+	DEPENDS libjpeg-turbo libpng freetype2 libcollada
 
-	URL https://github.com/openmw/osg/archive/${OSG_VERSION}.tar.gz
+	URL https://github.com/sisah2/osg/archive/${OSG_VERSION}.tar.gz
 	DOWNLOAD_DIR ${download_dir}
 
 	PATCH_COMMAND ${OSG_PATCH}
@@ -588,13 +553,8 @@ set(OPENMW_COMMON
 	-DOPENMW_USE_SYSTEM_SQLITE3=OFF
 	-DOPENMW_USE_SYSTEM_YAML_CPP=OFF
 	-DOPENMW_USE_SYSTEM_ICU=ON
- 	#-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
- 	#-DCMAKE_POLICY_DEFAULT_CMP0069=NEW
-	#-DOPENMW_LTO_BUILD=1
-	-DOPENGL_gl_LIBRARY=${prefix}/lib/libng_gl4es.so
-	-DOPENGL_glx_LIBRARY=${prefix}/lib/libng_gl4es.so
-	-DOPENGL_INCLUDE_DIR=${prefix}/include/gl4es/
-	#-DOPENMW_GL4ES_MANUAL_INIT=ON
+        -DOPENGL_gl_LIBRARY=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/26/libGLESv3.so
+        -DOPENGL_INCLUDE_DIR=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include
 	-DOPENAL_INCLUDE_DIR=${prefix}/include/AL/
 	-DBullet_INCLUDE_DIR=${prefix}/include/bullet/
 	-DOSG_STATIC=TRUE
@@ -606,16 +566,19 @@ set(OPENMW_PATCH
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0001-loadingscreen-disable-for-now.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0009-windowmanagerimp-always-show-mouse-when-possible-pat.patch &&
         #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0010-android-fix-context-being-lost-on-app-minimize.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/FIXME-composie-maps-mipmaps.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/FIXME-setGlobalDefines-crash.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/disable-postprocessing-ubo.patch &&
+        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/FIXME-composie-maps-mipmaps.patch &&
+        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/FIXME-setGlobalDefines-crash.patch &&
+        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/disable-postprocessing-ubo.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/navmeshtool.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/ktx.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/bsatool-extract-dds-only.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/base-changes.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/allow-more-es-versions.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/disableShadowsForStateSet.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/disablePBOforlocalmap.patch &&
+        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/disableShadowsForStateSet.patch &&
+        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/disablePBOforlocalmap.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/GLES-3-OMW.patch &&
+        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/fog-uniforms.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/explicitly-set-rgba-format-for-rtts.patch &&
 	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/androidmain.cpp &&
 	sed -i -e "s/if(FFmpeg_FOUND)/if(NOT FFmpeg_FOUND)/g" <SOURCE_DIR>/CMakeLists.txt
 )

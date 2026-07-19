@@ -1,0 +1,46 @@
+diff --git a/apps/openmw/mwrender/localmap.cpp b/apps/openmw/mwrender/localmap.cpp
+index 74cfeaaad3..9dfc10d0e4 100644
+--- a/apps/openmw/mwrender/localmap.cpp
++++ b/apps/openmw/mwrender/localmap.cpp
+@@ -700,6 +700,8 @@ namespace MWRender
+         mViewMatrix.makeLookAt(osg::Vec3d(x, y, zmax + 5), osg::Vec3d(x, y, zmin), upVector);
+ 
+         setUpdateCallback(new CameraLocalUpdateCallback);
++
++        setColorBufferInternalFormat(GL_RGBA);
+         setDepthBufferInternalFormat(GL_DEPTH24_STENCIL8);
+     }
+ 
+diff --git a/apps/openmw/mwrender/sky.cpp b/apps/openmw/mwrender/sky.cpp
+index b705fb9b94..cc9f09d9f2 100644
+--- a/apps/openmw/mwrender/sky.cpp
++++ b/apps/openmw/mwrender/sky.cpp
+@@ -210,6 +210,7 @@ namespace
+                 MWRender::shouldAddMSAAIntermediateTarget())
+             , mEarlyRenderBinRoot(earlyRenderBinRoot)
+         {
++            setColorBufferInternalFormat(GL_RGBA);
+             setDepthBufferInternalFormat(GL_DEPTH24_STENCIL8);
+         }
+ 
+diff --git a/apps/openmw/mwrender/water.cpp b/apps/openmw/mwrender/water.cpp
+index f3c767c4d8..411b7a29ef 100644
+--- a/apps/openmw/mwrender/water.cpp
++++ b/apps/openmw/mwrender/water.cpp
+@@ -241,6 +241,7 @@ namespace MWRender
+             : RTTNode(rttSize, rttSize, 0, false, 1, StereoAwareness::Aware, shouldAddMSAAIntermediateTarget())
+             , mNodeMask(Refraction::sDefaultCullMask)
+         {
++            setColorBufferInternalFormat(GL_RGBA);
+             setDepthBufferInternalFormat(GL_DEPTH24_STENCIL8);
+             mClipCullNode = new ClipCullNode;
+         }
+@@ -320,6 +321,7 @@ namespace MWRender
+             : RTTNode(rttSize, rttSize, 0, false, 0, StereoAwareness::Aware, shouldAddMSAAIntermediateTarget())
+         {
+             setInterior(isInterior);
++            setColorBufferInternalFormat(GL_RGBA);
+             setDepthBufferInternalFormat(GL_DEPTH24_STENCIL8);
+             mClipCullNode = new ClipCullNode;
+         }
+
