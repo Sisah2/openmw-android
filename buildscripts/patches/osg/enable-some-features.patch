@@ -15,7 +15,7 @@ index 357796b17..f00912957 100644
  
      isClipControlSupported = validContext &&
                               (isGLExtensionSupported(contextID,"GL_ARB_clip_control") ||
-+                             (isGLExtensionSupported(contextID,"GL_EXT_clip_control")
++                             (isGLExtensionSupported(contextID,"GL_EXT_clip_control") ||
                               (glVersion >= 4.5f));
  
  
