@@ -171,10 +171,10 @@ private fun patchShadersToGLES() {
            content = content.replace("osg_Position", "gl_Position")
            content = content.replace("osg_FragCoord", "gl_FragCoord")
 
-           content = content.replace("osg_Fog.start", "osg_Fog_start")
-           content = content.replace("osg_Fog.end", "osg_Fog_end")
-           content = content.replace("osg_Fog.scale", "(1.0 / (osg_Fog_end - osg_Fog_start))")
-           content = content.replace("osg_Fog.color", "osg_Fog_color")
+           content = content.replace("osg_Fog.start", "omw_Fog_start")
+           content = content.replace("osg_Fog.end", "omw_Fog_end")
+           content = content.replace("osg_Fog.scale", "(1.0 / (omw_Fog_end - omw_Fog_start))")
+           content = content.replace("osg_Fog.color", "omw_Fog_color")
 
            // gl_ClipVertex not supported on GLES
            content = content.replace("osg_ClipVertex", "//osg_ClipVertex")
@@ -225,9 +225,9 @@ private fun patchShadersToGLES() {
                content = addLineToHeader(content, "uniform mat3 osg_NormalMatrix;")
 
                // Replace gl_Fog with custom uniforms
-               content = addLineToHeader(content, "uniform float osg_Fog_start;")
-               content = addLineToHeader(content, "uniform float osg_Fog_end;")
-               content = addLineToHeader(content, "uniform vec4 osg_Fog_color;")
+               content = addLineToHeader(content, "uniform float omw_Fog_start;")
+               content = addLineToHeader(content, "uniform float omw_Fog_end;")
+               content = addLineToHeader(content, "uniform vec4 omw_Fog_color;")
 
                // Add fragment output variables
                content = addLineToHeader(content, "layout(location = 0) out vec4 Color0;")
@@ -239,9 +239,11 @@ private fun patchShadersToGLES() {
                // Add some defines
                content = addLineToHeader(content, "#define texture2D texture")
                content = addLineToHeader(content, "#define textureSize2D textureSize")
-               content = addLineToHeader(content, "#define shadow2DProj textureProj")
                content = addLineToHeader(content, "#define varying in")
 
+               // Add some shadows stuff
+               content = addLineToHeader(content, "#define shadow2DProj custom_shadow2DProj")
+               content = addLineToHeader(content, "vec4 custom_shadow2DProj(sampler2DShadow sampler, vec4 uv) { return vec4(textureProj(sampler, uv)); }")
            }
            else if (it.extension == "vert") {
                // Add osg build-in attributes/uniforms
@@ -264,6 +266,12 @@ private fun patchShadersToGLES() {
                // Add some defines
                content = addLineToHeader(content, "#define attribute in")
                content = addLineToHeader(content, "#define varying out")
+           }
+           else if (it.extension == "glsl") {
+               content = content.replace("vec4 applyFogAtDist(vec4 color, float euclideanDist, float linearDist, float far)\n{", "uniform bool isReflection;\nvec4 applyFogAtDist(vec4 color, float euclideanDist, float linearDist, float far)\n{\nif (omw_Fog_end == 0.0) return color;")
+
+               content = content.replace("sampler2DShadow", "highp sampler2DShadow")
+               content = content.replace("textureSize2D(diffuseMap, 0);", "vec2(textureSize2D(diffuseMap, 0));")
            }
 
            File(it.toString()).writeText(content + "\n#pragma GLES\n")

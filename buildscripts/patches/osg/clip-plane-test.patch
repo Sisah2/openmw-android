@@ -1,0 +1,101 @@
+diff --git a/include/osg/ClipPlane b/include/osg/ClipPlane
+index 52f2a7816..91b894965 100644
+--- a/include/osg/ClipPlane
++++ b/include/osg/ClipPlane
+@@ -17,6 +17,7 @@
+ #include <osg/Vec4d>
+ #include <osg/Plane>
+ #include <osg/StateAttribute>
++#include <osg/Uniform>
+ 
+ #ifndef GL_CLIP_PLANE0
+     #define GL_CLIP_PLANE0 0x3000
+@@ -50,6 +51,7 @@ class OSG_EXPORT ClipPlane : public StateAttribute
+             _clipPlane[2]=cp._clipPlane[2];
+             _clipPlane[3]=cp._clipPlane[3];
+             _clipPlaneNum=cp._clipPlaneNum;
++            _clipPlaneUniform=cp._clipPlaneUniform
+         }
+ 
+         virtual osg::Object* cloneType() const { return new ClipPlane( _clipPlaneNum ); }
+@@ -72,6 +74,7 @@ class OSG_EXPORT ClipPlane : public StateAttribute
+             COMPARE_StateAttribute_Parameter(_clipPlane[1])
+             COMPARE_StateAttribute_Parameter(_clipPlane[2])
+             COMPARE_StateAttribute_Parameter(_clipPlane[3])
++            COMPARE_StateAttribute_Parameter(_clipPlaneUniform)
+ 
+             return 0; // Passed all the above comparison macros, so must be equal.
+         }
+@@ -89,16 +92,18 @@ class OSG_EXPORT ClipPlane : public StateAttribute
+         void setClipPlane(const Plane& plane)
+         {
+            _clipPlane.set(plane[0],plane[1],plane[2],plane[3]);
++           _clipPlaneUniform->set(_clipPlane);
+         }
+ 
+         /** Defines the plane as [ a b c d ]. */
+         void setClipPlane(double a,double b,double c,double d)
+         {
+             _clipPlane.set(a,b,c,d);
++            _clipPlaneUniform->set(_clipPlane);
+         }
+ 
+         /** Set the clip plane with the given Vec4. */
+-        inline void setClipPlane(const Vec4d& plane) { _clipPlane = plane; }
++        inline void setClipPlane(const Vec4d& plane) { _clipPlane = plane; _clipPlaneUniform->set(_clipPlane); }
+ 
+         /** Gets the clip plane as a Vec4d. */
+         const Vec4d& getClipPlane() const { return _clipPlane; }
+@@ -120,6 +125,7 @@ class OSG_EXPORT ClipPlane : public StateAttribute
+         Vec4d               _clipPlane;
+         unsigned int        _clipPlaneNum;
+ 
++        osg::ref_ptr<osg::Uniform> _clipPlaneUniform;
+ };
+ 
+ }
+diff --git a/src/osg/ClipPlane.cpp b/src/osg/ClipPlane.cpp
+index 3a3fd8567..7081cf6cc 100644
+--- a/src/osg/ClipPlane.cpp
++++ b/src/osg/ClipPlane.cpp
+@@ -13,6 +13,7 @@
+ #include <osg/ClipPlane>
+ #include <osg/StateSet>
+ #include <osg/Notify>
++#include <osg/Uniform>
+ 
+ using namespace osg;
+ 
+@@ -20,6 +21,8 @@ ClipPlane::ClipPlane()
+ {
+     _clipPlane.set(0.0,0.0,0.0,0.0);
+     _clipPlaneNum = 0;
++
++    _clipPlaneUniform = new osg::Uniform("osg_clipPlane0", _clipPlane);
+ }
+ 
+ 
+@@ -46,7 +49,10 @@ void ClipPlane::apply(State&) const
+ #if defined(OSG_GL_FIXED_FUNCTION_AVAILABLE) && !defined(OSG_GLES1_AVAILABLE)
+     glClipPlane((GLenum)(GL_CLIP_PLANE0+_clipPlaneNum),_clipPlane.ptr());
+ #else
+-    OSG_NOTICE<<"Warning: ClipPlane::apply(State&) - not supported."<<std::endl;
++
++    state.applyShaderCompositionUniform(_clipPlaneUniform.get());
++
++    //OSG_NOTICE<<"Warning: ClipPlane::apply(State&) - not supported."<<std::endl;
+ #endif
+ }
+ 
+diff --git a/src/osg/TexMat.cpp b/src/osg/TexMat.cpp
+index a869b4610..3656d84b7 100644
+--- a/src/osg/TexMat.cpp
++++ b/src/osg/TexMat.cpp
+@@ -44,6 +44,6 @@ void TexMat::apply(State& state) const
+ 
+     glMatrixMode( GL_MODELVIEW );
+ #else
+-    OSG_NOTICE<<"Warning: TexMat::apply(State&) - not supported."<<std::endl;
++  // OSG_NOTICE<<"Warning: TexMat::apply(State&) - not supported."<<std::endl;
+ #endif
+ }

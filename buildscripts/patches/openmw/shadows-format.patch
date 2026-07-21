@@ -1,0 +1,28 @@
+diff --git a/components/sceneutil/mwshadowtechnique.cpp b/components/sceneutil/mwshadowtechnique.cpp
+index 2bcdf91392..d629cc2d80 100644
+--- a/components/sceneutil/mwshadowtechnique.cpp
++++ b/components/sceneutil/mwshadowtechnique.cpp
+@@ -552,7 +552,9 @@ MWShadowTechnique::ShadowData::ShadowData(MWShadowTechnique::ViewDependentData*
+     }
+     else
+     {
+-        _texture->setInternalFormat(GL_DEPTH_COMPONENT);
++        _texture->setSourceFormat(GL_DEPTH_COMPONENT);
++        _texture->setInternalFormat(GL_DEPTH_COMPONENT24);
++        _texture->setSourceType(GL_UNSIGNED_INT);
+         _texture->setShadowComparison(true);
+         _texture->setShadowTextureMode(osg::Texture2D::LUMINANCE);
+     }
+diff --git a/components/sceneutil/shadow.cpp b/components/sceneutil/shadow.cpp
+index 0e6abe3258..7aa6a4c8fd 100644
+--- a/components/sceneutil/shadow.cpp
++++ b/components/sceneutil/shadow.cpp
+@@ -88,7 +88,7 @@ namespace SceneUtil
+             return;
+ 
+         osg::ref_ptr<osg::Image> fakeShadowMapImage = new osg::Image();
+-        fakeShadowMapImage->allocateImage(1, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT);
++        fakeShadowMapImage->allocateImage(1, 1, 1, GL_DEPTH_COMPONENT32F, GL_FLOAT);
+         *(float*)fakeShadowMapImage->data() = std::numeric_limits<float>::infinity();
+         osg::ref_ptr<osg::Texture> fakeShadowMapTexture = new osg::Texture2D(fakeShadowMapImage);
+         fakeShadowMapTexture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);

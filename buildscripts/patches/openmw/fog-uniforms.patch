@@ -1,16 +1,75 @@
+diff --git a/apps/openmw/mwrender/characterpreview.cpp b/apps/openmw/mwrender/characterpreview.cpp
+index b7f9c1783c..df2b907378 100644
+--- a/apps/openmw/mwrender/characterpreview.cpp
++++ b/apps/openmw/mwrender/characterpreview.cpp
+@@ -250,10 +250,14 @@ namespace MWRender
+ 
+         // assign large value to effectively turn off fog
+         // shaders don't respect glDisable(GL_FOG)
++/*
+         osg::ref_ptr<osg::Fog> fog(new osg::Fog);
+         fog->setStart(10000000);
+         fog->setEnd(10000000);
+         stateset->setAttributeAndModes(fog, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
++*/
++
++        stateset->addUniform(new osg::Uniform("omw_Fog_end", 0.f), osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE | osg::StateAttribute::PROTECTED);
+ 
+         // TODO: Clean up this mess of loose uniforms that shaders depend on.
+         // turn off sky blending
+diff --git a/apps/openmw/mwrender/localmap.cpp b/apps/openmw/mwrender/localmap.cpp
+index 74cfeaaad3..97d91e6694 100644
+--- a/apps/openmw/mwrender/localmap.cpp
++++ b/apps/openmw/mwrender/localmap.cpp
+@@ -737,10 +737,14 @@ namespace MWRender
+ 
+         // assign large value to effectively turn off fog
+         // shaders don't respect glDisable(GL_FOG)
++/*
+         osg::ref_ptr<osg::Fog> fog(new osg::Fog);
+         fog->setStart(10000000);
+         fog->setEnd(10000000);
+         stateset->setAttributeAndModes(fog, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
++*/
++
++        stateset->addUniform(new osg::Uniform("omw_Fog_end", 0.f), osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE | osg::StateAttribute::PROTECTED);
+ 
+         // turn of sky blending
+         stateset->addUniform(new osg::Uniform("far", 10000000.0f));
+diff --git a/apps/openmw/mwrender/water.cpp b/apps/openmw/mwrender/water.cpp
+index f3c767c4d8..c518a3209e 100644
+--- a/apps/openmw/mwrender/water.cpp
++++ b/apps/openmw/mwrender/water.cpp
+@@ -256,11 +256,15 @@ namespace MWRender
+             // No need for fog here, we are already applying fog on the water surface itself as well as underwater fog
+             // assign large value to effectively turn off fog
+             // shaders don't respect glDisable(GL_FOG)
++/*
+             osg::ref_ptr<osg::Fog> fog(new osg::Fog);
+             fog->setStart(10000000);
+             fog->setEnd(10000000);
+             camera->getOrCreateStateSet()->setAttributeAndModes(
+                 fog, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
++*/
++
++            camera->getOrCreateStateSet()->addUniform(new osg::Uniform("omw_Fog_end", 0.f), osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE | osg::StateAttribute::PROTECTED);
+ 
+             camera->addChild(mClipCullNode);
+             camera->setNodeMask(Mask_RenderToTexture);
+@@ -412,7 +416,7 @@ namespace MWRender
+         void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const override
+         {
+             static bool supported = osg::isGLExtensionOrVersionSupported(
+-                renderInfo.getState()->getContextID(), "GL_ARB_depth_clamp", 3.3f);
++                renderInfo.getState()->getContextID(), "GL_EXT_depth_clamp", 3.3f);
+             if (!supported)
+             {
+                 drawable->drawImplementation(renderInfo);
 diff --git a/components/sceneutil/stateupdater.cpp b/components/sceneutil/stateupdater.cpp
-index 1f271a7b03..f50d606db4 100644
+index 1f271a7b03..4fad280951 100644
 --- a/components/sceneutil/stateupdater.cpp
 +++ b/components/sceneutil/stateupdater.cpp
-@@ -2,6 +2,7 @@
- 
- #include <osg/Fog>
- #include <osg/PolygonMode>
-+#include <osg/Uniform>
- 
- #include "depth.hpp"
- #include "rtt.hpp"
-@@ -137,6 +138,10 @@ namespace SceneUtil
+@@ -137,6 +137,10 @@ namespace SceneUtil
          }
          else
              stateset->removeAttribute(osg::StateAttribute::POLYGONMODE);
@@ -21,7 +80,7 @@ index 1f271a7b03..f50d606db4 100644
      }
  
      void StateUpdater::apply(osg::StateSet* stateset, osg::NodeVisitor*)
-@@ -146,6 +151,10 @@ namespace SceneUtil
+@@ -146,6 +150,10 @@ namespace SceneUtil
          fog->setColor(mFogColor);
          fog->setStart(mFogStart);
          fog->setEnd(mFogEnd);
