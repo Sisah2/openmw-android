@@ -1,0 +1,57 @@
+diff --git a/src/osg/Texture.cpp b/src/osg/Texture.cpp
+index 5978009fb..452d8420c 100644
+--- a/src/osg/Texture.cpp
++++ b/src/osg/Texture.cpp
+@@ -2512,9 +2512,24 @@ void Texture::applyTexImage2D_load(State& state, GLenum target, const Image* ima
+         {
+             numMipmapLevels = 1;
+ 
++            GLenum sourceFormat = image->getPixelFormat();
++            if(sourceFormat == GL_BGRA) {
++                glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
++                glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
++                glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_RED);
++                sourceFormat = GL_RGBA;
++            }
++
++            if(sourceFormat == GL_BGR) {
++                glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
++                glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
++                glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_RED);
++                sourceFormat = GL_RGB;
++            }
++
+             glTexImage2D( target, 0, _internalFormat,
+                 inwidth, inheight, _borderWidth,
+-                (GLenum)image->getPixelFormat(),
++                sourceFormat,
+                 (GLenum)image->getDataType(),
+                 dataPtr);
+ 
+@@ -2625,9 +2640,24 @@ void Texture::applyTexImage2D_load(State& state, GLenum target, const Image* ima
+                         if (height == 0)
+                             height = 1;
+ 
++                        GLenum sourceFormat = image->getPixelFormat();
++                        if(sourceFormat == GL_BGRA) {
++                            glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
++                            glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
++                            glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_RED);
++                            sourceFormat = GL_RGBA;
++                        }
++
++                        if(sourceFormat == GL_BGR) {
++                            glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
++                            glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
++                            glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_RED);
++                            sourceFormat = GL_RGB;
++                        }
++
+                         glTexImage2D( target, k, _internalFormat,
+-                             width, height, _borderWidth,
+-                            (GLenum)image->getPixelFormat(),
++                            width, height, _borderWidth,
++                            sourceFormat,
+                             (GLenum)image->getDataType(),
+                             dataPtr + image->getMipmapOffset(k));
+ 

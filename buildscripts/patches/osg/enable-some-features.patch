@@ -1,21 +1,12 @@
 diff --git a/src/osg/GLExtensions.cpp b/src/osg/GLExtensions.cpp
-index 357796b17..f00912957 100644
+index 357796b17..82a7972dc 100644
 --- a/src/osg/GLExtensions.cpp
 +++ b/src/osg/GLExtensions.cpp
-@@ -458,7 +458,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
-     isFragmentShaderSupported = validContext && (shadersBuiltIn || osg::isGLExtensionSupported(contextID,"GL_ARB_fragment_shader"));
-     isLanguage100Supported = validContext && (shadersBuiltIn || osg::isGLExtensionSupported(contextID,"GL_ARB_shading_language_100"));
-     isGeometryShader4Supported = validContext && (osg::isGLExtensionSupported(contextID,"GL_EXT_geometry_shader4") || osg::isGLExtensionSupported(contextID,"GL_ARB_geometry_shader4"));
--    isGpuShader4Supported = validContext && osg::isGLExtensionOrVersionSupported(contextID,"GL_EXT_gpu_shader4", 3.0f);
-+    isGpuShader4Supported = validContext && osg::isGLExtensionOrVersionSupported(contextID,"GL_EXT_gpu_shader4", 3.0f);
-     areTessellationShadersSupported = validContext && (osg::isGLExtensionOrVersionSupported(contextID, "GL_ARB_tessellation_shader", 4.0f) || osg::isGLExtensionSupported(contextID,"GL_OES_tessellation_shader"));
-     isUniformBufferObjectSupported = validContext && osg::isGLExtensionOrVersionSupported(contextID,"GL_ARB_uniform_buffer_object", 3.1f);
-     isGetProgramBinarySupported = validContext && osg::isGLExtensionOrVersionSupported(contextID,"GL_ARB_get_program_binary", 4.1f);
 @@ -479,6 +479,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
  
      isClipControlSupported = validContext &&
-                              (isGLExtensionSupported(contextID,"GL_ARB_clip_control" ||
-+                             isGLExtensionSupported(contextID,"GL_EXT_clip_control" ||
+                              (isGLExtensionSupported(contextID,"GL_ARB_clip_control") ||
++                             isGLExtensionSupported(contextID,"GL_EXT_clip_control") ||
                               (glVersion >= 4.5f));
  
  
@@ -28,12 +19,34 @@ index 357796b17..f00912957 100644
  
      // EXT_geometry_shader4
      setGLExtensionFuncPtr(glProgramParameteri,  "glProgramParameteri", "glProgramParameteriEXT", validContext);
+@@ -850,7 +851,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+                                  isGLExtensionOrVersionSupported(contextID,"GL_EXT_multitexture", 1.3f));
+ 
+     isTextureFilterAnisotropicSupported = validContext && isGLExtensionSupported(contextID,"GL_EXT_texture_filter_anisotropic");
+-    isTextureSwizzleSupported = validContext && isGLExtensionSupported(contextID,"GL_ARB_texture_swizzle");
++    isTextureSwizzleSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_texture_swizzle"));
+     isTextureCompressionARBSupported = validContext && (builtInSupport || isGLExtensionOrVersionSupported(contextID,"GL_ARB_texture_compression", 1.3f));
+     isTextureCompressionS3TCSupported = validContext && (isGLExtensionSupported(contextID,"GL_EXT_texture_compression_s3tc") ||
+                                                          isGLExtensionSupported(contextID, "GL_S3_s3tc") ||
 @@ -892,7 +893,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      isGenerateMipMapSupported = validContext && (builtInSupport || isGLExtensionOrVersionSupported(contextID,"GL_SGIS_generate_mipmap", 1.4f));
      preferGenerateMipmapSGISForPowerOfTwo = (radeonHardwareDetected||fireGLHardwareDetected) ? false : true;
      isTextureMultisampledSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_texture_multisample"));
 -    isShadowSupported = validContext && (OSG_GL3_FEATURES || isGLExtensionSupported(contextID,"GL_ARB_shadow"));
-+    isShadowSupported = validContext && (OSG_GL3_FEATURES || OSG_GLES3_FEATURES|| isGLExtensionSupported(contextID,"GL_ARB_shadow"));
++    isShadowSupported = validContext && (OSG_GL3_FEATURES || OSG_GLES3_FEATURES || isGLExtensionSupported(contextID,"GL_ARB_shadow"));
      isShadowAmbientSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_shadow_ambient"));
      isClientStorageSupported = validContext && (isGLExtensionSupported(contextID,"GL_APPLE_client_storage"));
      isNonPowerOfTwoTextureMipMappedSupported = validContext && (builtInSupport || isGLExtensionSupported(contextID, "GL_OES_texture_npot") || isGLExtensionOrVersionSupported(contextID, "GL_ARB_texture_non_power_of_two", 2.0));
+@@ -919,10 +920,10 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+     isTextureLODBiasSupported  = (glVersion >= 3.0f) || isGLExtensionSupported(contextID, "GL_EXT_texture_lod_bias");
+ #else
+     isTextureMaxLevelSupported = (glVersion >= 1.2f);
+-    isTextureLODBiasSupported  = (glVersion >= 1.2f) || isGLExtensionSupported(contextID, "GL_EXT_texture_lod_bias");
++    isTextureLODBiasSupported  = false;//(glVersion >= 1.2f) || isGLExtensionSupported(contextID, "GL_EXT_texture_lod_bias");
+ #endif
+ 
+-    isTextureStorageEnabled = validContext && ((glVersion >= 4.2f) || isGLExtensionSupported(contextID, "GL_ARB_texture_storage"));
++    isTextureStorageEnabled = validContext && (OSG_GL3_FEATURES || OSG_GLES3_FEATURES || (glVersion >= 4.2f) || isGLExtensionSupported(contextID, "GL_ARB_texture_storage"));
+ 
+     if (isTextureStorageEnabled)
+     {
