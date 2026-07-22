@@ -221,8 +221,10 @@ private fun patchShadersToGLES() {
            if (it.extension == "frag") {
                // Add osg build-in uniforms
                content = addLineToHeader(content, "uniform mat4 osg_ModelViewMatrix;")
-               content = addLineToHeader(content, "uniform mat4 osg_ModelViewMatrixInverse;")
                content = addLineToHeader(content, "uniform mat3 osg_NormalMatrix;")
+
+               // slow gl_ModelViewMatrixInverse replacement
+               content = content.replace("osg_ModelViewMatrixInverse", "inverse(osg_ModelViewMatrix)")
 
                // Replace gl_Fog with custom uniforms
                content = addLineToHeader(content, "uniform float omw_Fog_start;")
