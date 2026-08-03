@@ -219,7 +219,6 @@ class FragmentGameSettingsPage(val res: Int) : PreferenceFragment(), OnSharedPre
                     findPreference("gs_shadow_computation_method").isEnabled = false
                     findPreference("gs_shadows_distance").isEnabled = false
                     findPreference("gs_shadows_fade_start").isEnabled = false
-                    findPreference("gs_shadows_pcf").isEnabled = false
                 }
             }
             else Toast.makeText(this.getActivity(), "Cant check for extensions!, shadows setting wont be applyed!", Toast.LENGTH_SHORT).show()
