@@ -1,0 +1,63 @@
+diff --git a/apps/openmw/mwrender/water.cpp b/apps/openmw/mwrender/water.cpp
+index f3c767c4d8..1ac14091ce 100644
+--- a/apps/openmw/mwrender/water.cpp
++++ b/apps/openmw/mwrender/water.cpp
+@@ -76,6 +76,14 @@ namespace MWRender
+                 if (mCullPlane->intersect(osg::BoundingSphere(osg::Vec3d(0, 0, eyePoint.z()), 0)) > 0)
+                     plane.flip();
+ 
++                osg::Vec4f vec4Plane = plane.asVec4();
++                osg::ref_ptr<osg::Uniform> cliPlaneUniform = node->getOrCreateStateSet()->getUniform("omw_ClipPlane0");
++                if (!cliPlaneUniform)
++                    node->getOrCreateStateSet()->addUniform(new osg::Uniform("omw_ClipPlane0", vec4Plane));
++                else
++                    cliPlaneUniform->set(vec4Plane);
++                //node->getOrCreateStateSet()->setMode(/*GL_CLIP_DISTANCE0_EXT*/0x3000, osg::StateAttribute::ON);
++
+                 cv->getProjectionCullingStack().back().getFrustum().add(plane);
+ 
+                 traverse(node, cv);
+@@ -241,6 +249,7 @@ namespace MWRender
+             : RTTNode(rttSize, rttSize, 0, false, 1, StereoAwareness::Aware, shouldAddMSAAIntermediateTarget())
+             , mNodeMask(Refraction::sDefaultCullMask)
+         {
++            setColorBufferInternalFormat(GL_RGBA);
+             setDepthBufferInternalFormat(GL_DEPTH24_STENCIL8);
+             mClipCullNode = new ClipCullNode;
+         }
+@@ -256,11 +265,18 @@ namespace MWRender
+             // No need for fog here, we are already applying fog on the water surface itself as well as underwater fog
+             // assign large value to effectively turn off fog
+             // shaders don't respect glDisable(GL_FOG)
++/*
+             osg::ref_ptr<osg::Fog> fog(new osg::Fog);
+             fog->setStart(10000000);
+             fog->setEnd(10000000);
+             camera->getOrCreateStateSet()->setAttributeAndModes(
+                 fog, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
++*/
++
++            camera->getOrCreateStateSet()->addUniform(new osg::Uniform("omw_Fog_end", 0.f), osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE | osg::StateAttribute::PROTECTED);
++
++            // Inform the shader that we're in a refraction
++            //camera->getOrCreateStateSet()->addUniform(new osg::Uniform("isRefraction", true));
+ 
+             camera->addChild(mClipCullNode);
+             camera->setNodeMask(Mask_RenderToTexture);
+@@ -320,6 +336,7 @@ namespace MWRender
+             : RTTNode(rttSize, rttSize, 0, false, 0, StereoAwareness::Aware, shouldAddMSAAIntermediateTarget())
+         {
+             setInterior(isInterior);
++            setColorBufferInternalFormat(GL_RGBA);
+             setDepthBufferInternalFormat(GL_DEPTH24_STENCIL8);
+             mClipCullNode = new ClipCullNode;
+         }
+@@ -412,7 +429,7 @@ namespace MWRender
+         void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const override
+         {
+             static bool supported = osg::isGLExtensionOrVersionSupported(
+-                renderInfo.getState()->getContextID(), "GL_ARB_depth_clamp", 3.3f);
++                renderInfo.getState()->getContextID(), "GL_EXT_depth_clamp", 3.3f);
+             if (!supported)
+             {
+                 drawable->drawImplementation(renderInfo);

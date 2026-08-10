@@ -1,0 +1,89 @@
+diff --git a/include/osg/GLExtensions b/include/osg/GLExtensions
+index 8f047c4ab..8d4e7e417 100644
+--- a/include/osg/GLExtensions
++++ b/include/osg/GLExtensions
+@@ -193,6 +193,8 @@ class OSG_EXPORT GLExtensions : public osg::Referenced
+         unsigned int contextID;
+         float glVersion;
+         float glslLanguageVersion;
++        bool supportsSSBO;
++        bool isDepthClampSupported;
+ 
+         bool isGlslSupported;
+         bool isShaderObjectsSupported;
+diff --git a/src/osg/GLExtensions.cpp b/src/osg/GLExtensions.cpp
+index 357796b17..6fe44a7f2 100644
+--- a/src/osg/GLExtensions.cpp
++++ b/src/osg/GLExtensions.cpp
+@@ -451,6 +451,23 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+     glVersion = validContext ? findAsciiToFloat( versionString ) : 0.0f;
+     glslLanguageVersion = 0.0f;
+ 
++    // Custered lighting support check
++    supportsSSBO = false;
++    if (validContext) {
++        GLint maxFragmentSSBOs;
++        GLint maxVertexSSBOs;
++        GLint maxComputeSSBOs;
++
++        glGetIntegerv(GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &maxFragmentSSBOs);
++        glGetIntegerv(GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &maxVertexSSBOs);
++        glGetIntegerv(GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &maxComputeSSBOs);
++
++        if (maxFragmentSSBOs >= 5 && maxVertexSSBOs >= 5 && maxComputeSSBOs >= 5)
++            supportsSSBO = true;
++    }
++
++    isDepthClampSupported = isGLExtensionSupported(contextID, "GL_EXT_depth_clamp");
++
+     bool shadersBuiltIn = OSG_GLES2_FEATURES || OSG_GLES3_FEATURES || OSG_GL3_FEATURES;
+ 
+     isShaderObjectsSupported = validContext && (shadersBuiltIn || osg::isGLExtensionSupported(contextID,"GL_ARB_shader_objects"));
+@@ -479,6 +496,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+ 
+     isClipControlSupported = validContext &&
+                              (isGLExtensionSupported(contextID,"GL_ARB_clip_control") ||
++                             isGLExtensionSupported(contextID,"GL_EXT_clip_control") ||
+                              (glVersion >= 4.5f));
+ 
+ 
+@@ -620,7 +638,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+     setGLExtensionFuncPtr(glUniformMatrix4x3fv, "glUniformMatrix4x3fv", validContext);
+ 
+     // ARB_clip_control
+-    setGLExtensionFuncPtr(glClipControl, "glClipControl", validContext);
++    setGLExtensionFuncPtr(glClipControl, "glClipControl", "glClipControlEXT", validContext);
+ 
+     // EXT_geometry_shader4
+     setGLExtensionFuncPtr(glProgramParameteri,  "glProgramParameteri", "glProgramParameteriEXT", validContext);
+@@ -850,7 +868,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+                                  isGLExtensionOrVersionSupported(contextID,"GL_EXT_multitexture", 1.3f));
+ 
+     isTextureFilterAnisotropicSupported = validContext && isGLExtensionSupported(contextID,"GL_EXT_texture_filter_anisotropic");
+-    isTextureSwizzleSupported = validContext && isGLExtensionSupported(contextID,"GL_ARB_texture_swizzle");
++    isTextureSwizzleSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_texture_swizzle"));
+     isTextureCompressionARBSupported = validContext && (builtInSupport || isGLExtensionOrVersionSupported(contextID,"GL_ARB_texture_compression", 1.3f));
+     isTextureCompressionS3TCSupported = validContext && (isGLExtensionSupported(contextID,"GL_EXT_texture_compression_s3tc") ||
+                                                          isGLExtensionSupported(contextID, "GL_S3_s3tc") ||
+@@ -892,7 +910,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+     isGenerateMipMapSupported = validContext && (builtInSupport || isGLExtensionOrVersionSupported(contextID,"GL_SGIS_generate_mipmap", 1.4f));
+     preferGenerateMipmapSGISForPowerOfTwo = (radeonHardwareDetected||fireGLHardwareDetected) ? false : true;
+     isTextureMultisampledSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_texture_multisample"));
+-    isShadowSupported = validContext && (OSG_GL3_FEATURES || isGLExtensionSupported(contextID,"GL_ARB_shadow"));
++    isShadowSupported = validContext && (OSG_GL3_FEATURES || OSG_GLES3_FEATURES || isGLExtensionSupported(contextID,"GL_ARB_shadow"));
+     isShadowAmbientSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_shadow_ambient"));
+     isClientStorageSupported = validContext && (isGLExtensionSupported(contextID,"GL_APPLE_client_storage"));
+     isNonPowerOfTwoTextureMipMappedSupported = validContext && (builtInSupport || isGLExtensionSupported(contextID, "GL_OES_texture_npot") || isGLExtensionOrVersionSupported(contextID, "GL_ARB_texture_non_power_of_two", 2.0));
+@@ -919,10 +937,10 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+     isTextureLODBiasSupported  = (glVersion >= 3.0f) || isGLExtensionSupported(contextID, "GL_EXT_texture_lod_bias");
+ #else
+     isTextureMaxLevelSupported = (glVersion >= 1.2f);
+-    isTextureLODBiasSupported  = (glVersion >= 1.2f) || isGLExtensionSupported(contextID, "GL_EXT_texture_lod_bias");
++    isTextureLODBiasSupported  = false;//(glVersion >= 1.2f) || isGLExtensionSupported(contextID, "GL_EXT_texture_lod_bias");
+ #endif
+ 
+-    isTextureStorageEnabled = validContext && ((glVersion >= 4.2f) || isGLExtensionSupported(contextID, "GL_ARB_texture_storage"));
++    isTextureStorageEnabled = validContext && (OSG_GL3_FEATURES || OSG_GLES3_FEATURES || (glVersion >= 4.2f) || isGLExtensionSupported(contextID, "GL_ARB_texture_storage"));
+ 
+     if (isTextureStorageEnabled)
+     {

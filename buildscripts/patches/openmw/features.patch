@@ -1,0 +1,50 @@
+diff --git a/apps/openmw/mwrender/ripples.cpp b/apps/openmw/mwrender/ripples.cpp
+index 549d3b5bba..8880444738 100644
+--- a/apps/openmw/mwrender/ripples.cpp
++++ b/apps/openmw/mwrender/ripples.cpp
+@@ -38,7 +38,7 @@ namespace MWRender
+         setCullingActive(false);
+ 
+         addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0, 3));
+-
++/*
+ #ifdef __APPLE__
+         // we can not trust Apple :)
+         mUseCompute = false;
+@@ -48,6 +48,8 @@ namespace MWRender
+         mUseCompute = exts.glVersion >= minimumGLVersionRequiredForCompute
+             && exts.glslLanguageVersion >= minimumGLVersionRequiredForCompute;
+ #endif
++*/
++        mUseCompute = true;
+ 
+         for (size_t i = 0; i < mState.size(); ++i)
+         {
+diff --git a/components/sceneutil/lightmanager.cpp b/components/sceneutil/lightmanager.cpp
+index b57c95e3ba..82fe36898a 100644
+--- a/components/sceneutil/lightmanager.cpp
++++ b/components/sceneutil/lightmanager.cpp
+@@ -364,7 +364,7 @@ namespace SceneUtil
+         //  1. GL_ARB_shader_storage_buffer_object
+         //  2. GL_ARB_shading_language_420pack
+         // However, this is not the case in practice and is known to be broken on at least Mesa drivers.
+-        bool supportsSSBO = exts && static_cast<int>(exts->glslLanguageVersion * 100) >= 430;
++        bool supportsSSBO = exts && exts->supportsSSBO;
+ 
+         mSupportsClustered = supportsSSBO;
+ 
+diff --git a/components/sceneutil/mwshadowtechnique.cpp b/components/sceneutil/mwshadowtechnique.cpp
+index 2bcdf91392..86ad143efb 100644
+--- a/components/sceneutil/mwshadowtechnique.cpp
++++ b/components/sceneutil/mwshadowtechnique.cpp
+@@ -923,8 +923,9 @@ void SceneUtil::MWShadowTechnique::setupCastingShader(Shader::ShaderManager & sh
+ {
+     // This can't be part of the constructor as OSG mandates that there be a trivial constructor available
+ 
+-    osg::ref_ptr<osg::Shader> castingVertexShader = shaderManager.getShader("shadowcasting.vert");
+     std::string useGPUShader4 = SceneUtil::getGLExtensions().isGpuShader4Supported ? "1" : "0";
++    std::string useDepthClamp = SceneUtil::getGLExtensions().isDepthClampSupported ? "1" : "0";
++    osg::ref_ptr<osg::Shader> castingVertexShader = shaderManager.getShader("shadowcasting.vert", { {"useDepthClamp", useDepthClamp} });
+     for (int alphaFunc = GL_NEVER; alphaFunc <= GL_ALWAYS; ++alphaFunc)
+     {
+         auto& program = _castingPrograms[alphaFunc - GL_NEVER];

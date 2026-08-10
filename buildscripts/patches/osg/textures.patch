@@ -1,0 +1,161 @@
+diff --git a/src/osg/Texture.cpp b/src/osg/Texture.cpp
+index 5978009fb..d693100ed 100644
+--- a/src/osg/Texture.cpp
++++ b/src/osg/Texture.cpp
+@@ -2532,7 +2547,11 @@ void Texture::applyTexImage2D_load(State& state, GLenum target, const Image* ima
+                 dataPtr);
+         }
+ 
+-        mipmapAfterTexImage(state, mipmapResult);
++        // Dont use mipmap as it cant be generated
++        if (compressed_image)
++            glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, 0);
++        else
++            mipmapAfterTexImage(state, mipmapResult);
+     }
+     else
+     {
+diff --git a/src/osg/Texture2D.cpp b/src/osg/Texture2D.cpp
+index 452b97f09..558c0ebdc 100644
+--- a/src/osg/Texture2D.cpp
++++ b/src/osg/Texture2D.cpp
+@@ -19,6 +19,30 @@
+ 
+ using namespace osg;
+ 
++namespace
++{
++    // WebGL2/GLES3: glTexImage2D's source 'format' argument must be an unsized *base*
++    // format (GL_RGBA, GL_RGB, GL_RED, ...). For an image-less RTT texture OSG passes the
++    // (possibly sized) _internalFormat as the source format, which WebGL2 rejects
++    // (e.g. GL_RGBA8 is not a valid source format) -> texture stays undefined and its FBO
++    // is incomplete (0x8cd6). Map a sized/base internal format to a valid base source format.
++    GLenum baseSourceFormatES(GLenum internalFormat)
++    {
++        // Only the sized *color* formats used for image-less RTTs need remapping; depth/float
++        // RTTs set _sourceFormat/_sourceType explicitly so they never reach here. Base formats
++        // (GL_RGBA/GL_RGB/...) are already valid source formats and pass through unchanged.
++        switch (internalFormat)
++        {
++            case GL_RGBA8: case GL_SRGB8_ALPHA8:
++                return GL_RGBA;
++            case GL_RGB8: case GL_SRGB8:
++                return GL_RGB;
++            default:
++                return internalFormat;
++        }
++    }
++}
++
+ Texture2D::Texture2D():
+             _textureWidth(0),
+             _textureHeight(0),
+@@ -315,12 +339,13 @@ void Texture2D::apply(State& state) const
+          else
+          {
+              GLenum internalFormat = _sourceFormat ? _sourceFormat : _internalFormat;
++             GLenum sourceFormat = _sourceFormat ? _sourceFormat : baseSourceFormatES(_internalFormat);
+              textureObject = generateAndAssignTextureObject(contextID, GL_TEXTURE_2D, _numMipmapLevels, internalFormat, _textureWidth, _textureHeight, 1, _borderWidth);
+              textureObject->bind();
+              applyTexParameters(GL_TEXTURE_2D, state);
+              glTexImage2D( GL_TEXTURE_2D, 0, _internalFormat,
+                       _textureWidth, _textureHeight, _borderWidth,
+-                      internalFormat,
++                      sourceFormat,
+                       _sourceType ? _sourceType : GL_UNSIGNED_BYTE,
+                       0);
+         }
+@@ -507,7 +532,7 @@ void Texture2D::allocateMipmap(State& state) const
+ 
+             glTexImage2D( GL_TEXTURE_2D, k, _internalFormat,
+                      width, height, _borderWidth,
+-                     _sourceFormat ? _sourceFormat : _internalFormat,
++                     _sourceFormat ? _sourceFormat : baseSourceFormatES(_internalFormat),
+                      _sourceType ? _sourceType : GL_UNSIGNED_BYTE, NULL);
+ 
+             width >>= 1;
+diff --git a/src/osg/FrameBufferObject.cpp b/src/osg/FrameBufferObject.cpp
+index c3988e067..50b40b68d 100644
+--- a/src/osg/FrameBufferObject.cpp
++++ b/src/osg/FrameBufferObject.cpp
+@@ -126,6 +126,19 @@ GLuint RenderBuffer::getObjectID(unsigned int contextID, const GLExtensions* ext
+         // bind and configure
+         ext->glBindRenderbuffer(GL_RENDERBUFFER_EXT, objectID);
+ 
++        // WebGL2 rejects UNSIZED renderbuffer internal formats (GL_INVALID_ENUM); the
++        // renderbuffer then stays 0x0 and every draw into its FBO fails with
++        // "Framebuffer is incomplete: Attachment has zero size". Promote to sized formats.
++        switch (_internalFormat)
++        {
++            case GL_RGB: const_cast<RenderBuffer*>(this)->_internalFormat = GL_RGB8; break;
++            case GL_RGBA: const_cast<RenderBuffer*>(this)->_internalFormat = GL_RGBA8; break;
++            case GL_DEPTH_COMPONENT: const_cast<RenderBuffer*>(this)->_internalFormat = GL_DEPTH_COMPONENT24; break;
++            case 0x84F9 /*GL_DEPTH_STENCIL*/: const_cast<RenderBuffer*>(this)->_internalFormat = 0x88F0 /*GL_DEPTH24_STENCIL8*/; break;
++            case 0x1901 /*GL_STENCIL_INDEX*/: const_cast<RenderBuffer*>(this)->_internalFormat = 0x8D48 /*GL_STENCIL_INDEX8*/; break;
++            default: break;
++        }
++
+         // framebuffer_multisample_coverage specification requires that coverage
+         // samples must be >= color samples.
+         if (_samples < _colorSamples)
+diff --git a/src/osg/Texture3D.cpp b/src/osg/Texture3D.cpp
+index 75cb3b38e..bf0425419 100644
+--- a/src/osg/Texture3D.cpp
++++ b/src/osg/Texture3D.cpp
+@@ -385,6 +385,29 @@ void Texture3D::applyTexImage3D(GLenum target, Image* image, State& state, GLsiz
+     bool compressed = isCompressedInternalFormat(_internalFormat);
+     bool compressed_image = isCompressedInternalFormat((GLenum)image->getPixelFormat());
+ 
++    GLenum sourceFormat = image->getPixelFormat();
++    if(image->getPixelFormat() == GL_LUMINANCE)
++    {
++        sourceFormat = GL_RED;
++        _internalFormat = GL_R8;
++    }
++
++    if(image->getPixelFormat() == GL_BGRA)
++    {
++        sourceFormat = GL_RGBA;
++        glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
++        glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
++        glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_RED);
++    }
++
++    if(image->getPixelFormat() == GL_BGR)
++    {
++        sourceFormat = GL_RGB;
++        glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
++        glTexParameteri(target, GL_TEXTURE_SWIZZLE_G, GL_GREEN);
++        glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, GL_RED);
++    }
++
+     if (compressed)
+     {
+         //OSG_WARN<<"Warning::cannot currently use compressed format with 3D textures."<<std::endl;
+@@ -421,7 +444,7 @@ void Texture3D::applyTexImage3D(GLenum target, Image* image, State& state, GLsiz
+             extensions->glTexImage3D( target, 0, _internalFormat,
+                                       inwidth, inheight, indepth,
+                                       _borderWidth,
+-                                      (GLenum)image->getPixelFormat(),
++                                      /*(GLenum)image->getPixelFormat()*/sourceFormat,
+                                       (GLenum)image->getDataType(),
+                                       image->data() );
+         }
+@@ -452,7 +475,7 @@ void Texture3D::applyTexImage3D(GLenum target, Image* image, State& state, GLsiz
+             gluBuild3DMipmaps( extensions->glTexImage3D,
+                                target, _internalFormat,
+                                image->s(),image->t(),image->r(),
+-                               (GLenum)image->getPixelFormat(), (GLenum)image->getDataType(),
++                               /*(GLenum)image->getPixelFormat()*/sourceFormat, (GLenum)image->getDataType(),
+                                image->data() );
+ 
+         }
+@@ -476,7 +499,7 @@ void Texture3D::applyTexImage3D(GLenum target, Image* image, State& state, GLsiz
+ 
+                 extensions->glTexImage3D( target, k, _internalFormat,
+                                           width, height, depth, _borderWidth,
+-                                          (GLenum)image->getPixelFormat(),
++                                          /*(GLenum)image->getPixelFormat()*/sourceFormat,
+                                           (GLenum)image->getDataType(),
+                                           image->getMipmapData(k));
+ 

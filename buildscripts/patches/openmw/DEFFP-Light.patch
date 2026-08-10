@@ -1,0 +1,598 @@
+diff --git a/apps/opencs/view/render/scenewidget.cpp b/apps/opencs/view/render/scenewidget.cpp
+index 071127d6160b719d13694bb85ceebc2fbe328cdc..af8ce8fc43a30069bc2c58cbb9fc37d13c53498b 100644
+--- a/apps/opencs/view/render/scenewidget.cpp
++++ b/apps/opencs/view/render/scenewidget.cpp
+@@ -21,7 +21,6 @@
+ #include <osg/Geometry>
+ #include <osg/GraphicsContext>
+ #include <osg/Group>
+-#include <osg/Light>
+ #include <osg/Material>
+ #include <osg/Matrix>
+ #include <osg/PrimitiveSet>
+@@ -149,7 +148,7 @@ namespace CSVRender
+             = new SceneUtil::LightManager(SceneUtil::LightSettings{}, resourceSystem.get());
+         lightMgr->setLightingMask(Mask_Lighting);
+ 
+-        mSunLight = new osg::Light;
++        mSunLight = new SceneUtil::Light;
+         mSunLight->setDiffuse(osg::Vec4f(0, 0, 0, 1));
+         mSunLight->setAmbient(osg::Vec4f(0, 0, 0, 1));
+         mSunLight->setSpecular(osg::Vec4f(0, 0, 0, 0));
+diff --git a/apps/opencs/view/render/scenewidget.hpp b/apps/opencs/view/render/scenewidget.hpp
+index 5a7408621660110b9bcd6a9ef72bdf420042db01..a45fe4b4d73bd71b7efa1fd9c29adb35c9a7daf5 100644
+--- a/apps/opencs/view/render/scenewidget.hpp
++++ b/apps/opencs/view/render/scenewidget.hpp
+@@ -33,7 +33,6 @@ namespace osg
+     class Group;
+     class Camera;
+     class Geometry;
+-    class Light;
+ }
+ 
+ namespace osg
+@@ -57,6 +56,7 @@ namespace SceneUtil
+     class PerViewUniformStateUpdater;
+     class SharedUniformStateUpdater;
+     class StateUpdater;
++    class Light;
+ }
+ 
+ namespace CSVRender
+@@ -86,7 +86,7 @@ namespace CSVRender
+         CompositeOsgRenderer* mRenderer;
+         osg::ref_ptr<osgViewer::View> mView;
+         osg::ref_ptr<osg::Group> mRootNode;
+-        osg::ref_ptr<osg::Light> mSunLight;
++        osg::ref_ptr<SceneUtil::Light> mSunLight;
+ 
+         std::shared_ptr<Resource::ResourceSystem> mResourceSystem;
+ 
+diff --git a/apps/openmw/mwrender/animation.cpp b/apps/openmw/mwrender/animation.cpp
+index f1987f00c89ce2ce9c6e25d58cfc12fcc28c7228..56dd19b8cdfa7c5d408ad0681eb34db14fb73dfa 100644
+--- a/apps/openmw/mwrender/animation.cpp
++++ b/apps/openmw/mwrender/animation.cpp
+@@ -1923,7 +1923,7 @@ namespace MWRender
+                     mGlowLight = nullptr;
+                 }
+ 
+-                osg::ref_ptr<osg::Light> light(new osg::Light);
++                osg::ref_ptr<SceneUtil::Light> light(new SceneUtil::Light);
+                 light->setDiffuse(osg::Vec4f(0, 0, 0, 0));
+                 light->setSpecular(osg::Vec4f(0, 0, 0, 0));
+                 light->setAmbient(osg::Vec4f(1.5f, 1.5f, 1.5f, 1.f));
+diff --git a/apps/openmw/mwrender/characterpreview.cpp b/apps/openmw/mwrender/characterpreview.cpp
+index b7f9c1783cc255977da13f8a9f842d279182f565..16df5193211e01b86f6b70394f64d06a25069704 100644
+--- a/apps/openmw/mwrender/characterpreview.cpp
++++ b/apps/openmw/mwrender/characterpreview.cpp
+@@ -275,7 +275,7 @@ namespace MWRender
+         dummyTexture->setShadowCompareFunc(osg::Texture::ShadowCompareFunc::ALWAYS);
+         stateset->setTextureAttributeAndModes(7, dummyTexture, osg::StateAttribute::ON);
+ 
+-        osg::ref_ptr<osg::Light> light = new osg::Light;
++        osg::ref_ptr<SceneUtil::Light> light = new SceneUtil::Light;
+         float diffuseR = Fallback::Map::getFloat("Inventory_DirectionalDiffuseR");
+         float diffuseG = Fallback::Map::getFloat("Inventory_DirectionalDiffuseG");
+         float diffuseB = Fallback::Map::getFloat("Inventory_DirectionalDiffuseB");
+diff --git a/apps/openmw/mwrender/localmap.cpp b/apps/openmw/mwrender/localmap.cpp
+index 74cfeaaad3dddae6cdc701831f26ce364568649e..ac56bc75ce23f2b78b32a89fdabc86d7cb22aad1 100644
+--- a/apps/openmw/mwrender/localmap.cpp
++++ b/apps/openmw/mwrender/localmap.cpp
+@@ -4,7 +4,6 @@
+ 
+ #include <osg/ComputeBoundsVisitor>
+ #include <osg/Fog>
+-#include <osg/LightSource>
+ #include <osg/PolygonMode>
+ #include <osg/Texture2D>
+ 
+@@ -747,12 +746,11 @@ namespace MWRender
+         stateset->addUniform(new osg::Uniform("skyBlendingStart", 8000000.0f));
+         stateset->addUniform(new osg::Uniform("screenRes", osg::Vec2f{ 1, 1 }));
+ 
+-        osg::ref_ptr<osg::Light> light = new osg::Light;
++        osg::ref_ptr<SceneUtil::Light> light = new SceneUtil::Light;
+         light->setPosition(osg::Vec4(-0.3f, -0.3f, 0.7f, 0.f));
+         light->setDiffuse(osg::Vec4(0.7f, 0.7f, 0.7f, 1.f));
+         light->setAmbient(osg::Vec4(0.3f, 0.3f, 0.3f, 1.f));
+         light->setSpecular(osg::Vec4(0, 0, 0, 0));
+-        light->setLightNum(0);
+         light->setConstantAttenuation(1.f);
+         light->setLinearAttenuation(0.f);
+         light->setQuadraticAttenuation(0.f);
+diff --git a/apps/openmw/mwrender/renderingmanager.cpp b/apps/openmw/mwrender/renderingmanager.cpp
+index 56782ac55fdedf2a8d23c36463dac55a176cff56..34c2e8d4ee322b304f220b8e793060e58beb79de 100644
+--- a/apps/openmw/mwrender/renderingmanager.cpp
++++ b/apps/openmw/mwrender/renderingmanager.cpp
+@@ -5,7 +5,6 @@
+ #include <osg/ClipControl>
+ #include <osg/ComputeBoundsVisitor>
+ #include <osg/Group>
+-#include <osg/Light>
+ #include <osg/Material>
+ #include <osg/Matrix>
+ #include <osg/UserDataContainer>
+@@ -335,16 +334,12 @@ namespace MWRender
+ 
+         mViewer->setLightingMode(osgViewer::View::NO_LIGHT);
+ 
+-        osg::ref_ptr<osg::LightSource> source = new osg::LightSource;
+-        source->setNodeMask(Mask_Lighting);
+-        mSunLight = new osg::Light;
+-        source->setLight(mSunLight);
++        mSunLight = new SceneUtil::Light;
+         mSunLight->setDiffuse(osg::Vec4f(0, 0, 0, 1));
+         mSunLight->setAmbient(osg::Vec4f(0, 0, 0, 1));
+         mSunLight->setSpecular(osg::Vec4f(0, 0, 0, 0));
+         mSunLight->setConstantAttenuation(1.f);
+         sceneRoot->setSunlight(mSunLight);
+-        sceneRoot->addChild(source);
+ 
+         sceneRoot->getOrCreateStateSet()->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
+         sceneRoot->getOrCreateStateSet()->setMode(GL_NORMALIZE, osg::StateAttribute::ON);
+@@ -561,6 +556,11 @@ namespace MWRender
+         mPostProcessor->getStateUpdater()->setSunVis(sunVis);
+     }
+ 
++    const osg::Vec4f& RenderingManager::getSunLightPosition() const
++    {
++        return mSunLight->getPosition();
++    }
++
+     void RenderingManager::setSunDirection(const osg::Vec3f& direction)
+     {
+         osg::Vec3f position = -direction;
+diff --git a/apps/openmw/mwrender/renderingmanager.hpp b/apps/openmw/mwrender/renderingmanager.hpp
+index c3e624dbb696ea0f7d46fc1f40fdcf17778673eb..c54c1eb279f7b3a5efc212837ff69c53dcd5439b 100644
+--- a/apps/openmw/mwrender/renderingmanager.hpp
++++ b/apps/openmw/mwrender/renderingmanager.hpp
+@@ -8,7 +8,6 @@
+ #include <components/settings/settings.hpp>
+ #include <components/vfs/pathutil.hpp>
+ 
+-#include <osg/Light>
+ #include <osg/ref_ptr>
+ 
+ #include <osgUtil/IncrementalCompileOperation>
+@@ -66,6 +65,7 @@ namespace SceneUtil
+     class PerViewUniformStateUpdater;
+     class SharedUniformStateUpdater;
+     class StateUpdater;
++    class Light;
+ }
+ 
+ namespace DetourNavigator
+@@ -139,7 +139,7 @@ namespace MWRender
+         int skyGetSecundaPhase() const;
+         void skySetMoonColour(bool red);
+ 
+-        const osg::Vec4f& getSunLightPosition() const { return mSunLight->getPosition(); }
++        const osg::Vec4f& getSunLightPosition() const;
+         void setSunDirection(const osg::Vec3f& direction);
+         void setSunColour(const osg::Vec4f& diffuse, const osg::Vec4f& specular, float sunVis);
+         void setNight(bool isNight) { mNight = isNight; }
+@@ -320,7 +320,7 @@ namespace MWRender
+ 
+         osg::ref_ptr<SceneUtil::WorkQueue> mWorkQueue;
+ 
+-        osg::ref_ptr<osg::Light> mSunLight;
++        osg::ref_ptr<SceneUtil::Light> mSunLight;
+ 
+         DetourNavigator::Navigator& mNavigator;
+         std::unique_ptr<NavMesh> mNavMesh;
+diff --git a/apps/openmw/mwworld/projectilemanager.cpp b/apps/openmw/mwworld/projectilemanager.cpp
+index 55c82824c108f1fd8abc62260f23b8e1e891ddef..1a1574afe5ee0e0d2d3dbc4a38d4142b979628f7 100644
+--- a/apps/openmw/mwworld/projectilemanager.cpp
++++ b/apps/openmw/mwworld/projectilemanager.cpp
+@@ -254,7 +254,7 @@ namespace MWWorld
+ 
+         if (createLight)
+         {
+-            osg::ref_ptr<osg::Light> projectileLight(new osg::Light);
++            osg::ref_ptr<SceneUtil::Light> projectileLight(new SceneUtil::Light);
+             projectileLight->setAmbient(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+             projectileLight->setDiffuse(lightDiffuseColor);
+             projectileLight->setSpecular(osg::Vec4(0.0f, 0.0f, 0.0f, 0.0f));
+diff --git a/components/sceneutil/lightcontroller.cpp b/components/sceneutil/lightcontroller.cpp
+index 18b45805719705be8d748cd946ba77a2a8aa6fba..c08d37725c201b650afbbfbbe186ca6e979b050c 100644
+--- a/components/sceneutil/lightcontroller.cpp
++++ b/components/sceneutil/lightcontroller.cpp
+@@ -36,7 +36,7 @@ namespace SceneUtil
+         // if (time == mLastTime)
+         //    return;
+ 
+-        osg::Light* light = node->getLight(nv->getTraversalNumber());
++        SceneUtil::Light* light = node->getLight(nv->getTraversalNumber());
+ 
+         if (mType == LT_Normal)
+         {
+diff --git a/components/sceneutil/lightmanager.cpp b/components/sceneutil/lightmanager.cpp
+index 3b922c343a2e2dd06d1966e973c2344808e2897b..4052d4ffe432be2379ea74acb7e16261656887a0 100644
+--- a/components/sceneutil/lightmanager.cpp
++++ b/components/sceneutil/lightmanager.cpp
+@@ -58,7 +58,7 @@ namespace SceneUtil
+ {
+     static int sLightId = 0;
+ 
+-    void configureStateSetSunOverride(const osg::Light* light, osg::StateSet* stateset, int mode)
++    void configureStateSetSunOverride(const Light* light, osg::StateSet* stateset, int mode)
+     {
+         stateset->addUniform(new osg::Uniform("sun.position", light->getPosition()), mode);
+         stateset->addUniform(new osg::Uniform("sun.diffuse", light->getDiffuse()), mode);
+@@ -516,12 +516,12 @@ namespace SceneUtil
+         mLights.push_back(l);
+     }
+ 
+-    void LightManager::setSunlight(osg::ref_ptr<osg::Light> sun)
++    void LightManager::setSunlight(osg::ref_ptr<Light> sun)
+     {
+         mSun = sun;
+     }
+ 
+-    osg::ref_ptr<osg::Light> LightManager::getSunlight()
++    osg::ref_ptr<Light> LightManager::getSunlight()
+     {
+         return mSun;
+     }
+@@ -661,7 +661,7 @@ namespace SceneUtil
+         mId = sLightId++;
+ 
+         for (size_t i = 0; i < mLight.size(); ++i)
+-            mLight[i] = new osg::Light(*copy.mLight[i].get(), copyop);
++            mLight[i] = new Light(*copy.mLight[i].get(), copyop);
+     }
+ 
+     void LightListCallback::operator()(osg::Node* node, osgUtil::CullVisitor* cv)
+diff --git a/components/sceneutil/lightmanager.hpp b/components/sceneutil/lightmanager.hpp
+index f669ff2926837f0c94207f6e20a22854101e137b..8f76f50dc49ad558506b4f0faf4208b87a797a71 100644
+--- a/components/sceneutil/lightmanager.hpp
++++ b/components/sceneutil/lightmanager.hpp
+@@ -10,7 +10,6 @@
+ #include <osg/BufferTemplate>
+ #include <osg/DispatchCompute>
+ #include <osg/Group>
+-#include <osg/Light>
+ #include <osg/NodeVisitor>
+ #include <osg/observer_ptr>
+ 
+@@ -24,6 +23,48 @@ namespace SceneUtil
+     template <class T>
+     using DoubleBuffer = std::array<T, 2>;
+ 
++    class Light : public osg::Referenced
++    {
++    public:
++        Light() = default;
++
++        Light(const Light& copy, const osg::CopyOp& copyop)
++            : mSpecular(copy.mSpecular)
++            , mDiffuse(copy.mDiffuse)
++            , mAmbient(copy.mAmbient)
++            , mPosition(copy.mPosition)
++            , mConstantAttenuation(copy.mConstantAttenuation)
++            , mLinearAttenuation(copy.mLinearAttenuation)
++            , mQuadraticAttenuation(copy.mQuadraticAttenuation)
++        {
++        }
++
++        const osg::Vec4f& getSpecular() const { return mSpecular; }
++        const osg::Vec4f& getDiffuse() const { return mDiffuse; }
++        const osg::Vec4f& getAmbient() const { return mAmbient; }
++        const osg::Vec4f& getPosition() const { return mPosition; }
++        float getLinearAttenuation() const { return mLinearAttenuation; }
++        float getConstantAttenuation() const { return mConstantAttenuation; }
++        float getQuadraticAttenuation() const { return mQuadraticAttenuation; }
++
++        void setSpecular(const osg::Vec4f& specular) { mSpecular = specular; }
++        void setDiffuse(const osg::Vec4f& diffuse) { mDiffuse = diffuse; }
++        void setAmbient(const osg::Vec4f& ambient) { mAmbient = ambient; }
++        void setPosition(const osg::Vec4f& position) { mPosition = position; }
++        void setLinearAttenuation(float att) { mLinearAttenuation = att; }
++        void setConstantAttenuation(float att) { mConstantAttenuation = att; }
++        void setQuadraticAttenuation(float att) { mQuadraticAttenuation = att; }
++
++    private:
++        osg::Vec4f mSpecular;
++        osg::Vec4f mDiffuse;
++        osg::Vec4f mAmbient;
++        osg::Vec4f mPosition;
++        float mConstantAttenuation = 1.f;
++        float mLinearAttenuation = 0.f;
++        float mQuadraticAttenuation = 0.f;
++    };
++
+     class PPLightBuffer
+     {
+     public:
+@@ -56,7 +97,7 @@ namespace SceneUtil
+ 
+         void clear(size_t frame) { mIndex[frame % 2] = 0; }
+ 
+-        void setLight(size_t frame, const osg::Light* light, float radius)
++        void setLight(size_t frame, const Light* light, float radius)
+         {
+             size_t frameId = frame % 2;
+             int i = mIndex[frameId];
+@@ -96,12 +137,12 @@ namespace SceneUtil
+     ///     be one LightManager as the root of the scene graph.
+     /// @note One needs to attach LightListCallback's to the scene to have objects receive lighting from LightSources.
+     ///     See the documentation of LightListCallback for more information.
+-    /// @note The position of the contained osg::Light is automatically updated based on the LightSource's world
++    /// @note The position of the contained Light is automatically updated based on the LightSource's world
+     /// position.
+     class LightSource : public osg::Node
+     {
+-        // double buffered osg::Light's, since one of them may be in use by the draw thread at any given time
+-        DoubleBuffer<osg::ref_ptr<osg::Light>> mLight;
++        // double buffered, since one of them may be in use by the draw thread at any given time
++        DoubleBuffer<osg::ref_ptr<Light>> mLight;
+ 
+         // LightSource will affect objects within this radius
+         float mRadius;
+@@ -134,19 +175,19 @@ namespace SceneUtil
+ 
+         bool getEmpty() const { return mEmpty; }
+ 
+-        /// Get the osg::Light safe for modification in the given frame.
++        /// Get the Light safe for modification in the given frame.
+         /// @par May be used externally to animate the light's color/attenuation properties,
+         /// and is used internally to synchronize the light's position with the position of the LightSource.
+-        osg::Light* getLight(size_t frame) { return mLight[frame % 2]; }
++        Light* getLight(size_t frame) { return mLight[frame % 2]; }
+ 
+-        /// @warning It is recommended not to replace an existing osg::Light, because there might still be
++        /// @warning It is recommended not to replace an existing Light, because there might still be
+         /// references to it in the light StateSet cache that are associated with this LightSource's ID.
+         /// These references will stay valid due to ref_ptr but will point to the old object.
+         /// @warning Do not modify the \a light after you've called this function.
+-        void setLight(osg::Light* light)
++        void setLight(Light* light)
+         {
+             mLight[0] = light;
+-            mLight[1] = new osg::Light(*light);
++            mLight[1] = new Light(*light);
+         }
+ 
+         /// Get the unique ID for this light source.
+@@ -217,8 +258,8 @@ namespace SceneUtil
+         osg::ref_ptr<osg::StateSet> getLightListStateSet(
+             const LightList& lightList, size_t frameNum, const osg::RefMatrix* viewMatrix);
+ 
+-        void setSunlight(osg::ref_ptr<osg::Light> sun);
+-        osg::ref_ptr<osg::Light> getSunlight();
++        void setSunlight(osg::ref_ptr<Light> sun);
++        osg::ref_ptr<Light> getSunlight();
+ 
+         bool getClusteredLighting() const;
+ 
+@@ -265,7 +306,7 @@ namespace SceneUtil
+ 
+         size_t mLightingMask;
+ 
+-        osg::ref_ptr<osg::Light> mSun;
++        osg::ref_ptr<Light> mSun;
+ 
+         bool mClusteredLighting;
+ 
+@@ -361,7 +402,7 @@ namespace SceneUtil
+         std::set<SceneUtil::LightSource*> mIgnoredLightSources;
+     };
+ 
+-    void configureStateSetSunOverride(const osg::Light* light, osg::StateSet* stateset,
++    void configureStateSetSunOverride(const Light* light, osg::StateSet* stateset,
+         int mode = osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+ 
+     void configureSunAmbientOverride(const osg::Vec4f& ambient, osg::StateSet* stateset);
+diff --git a/components/sceneutil/lightutil.cpp b/components/sceneutil/lightutil.cpp
+index 2904acd00a2918e761661388fdac3ae1e906d4ad..6330e6e7da95eefdaada795ac10dcb810f02f7d7 100644
+--- a/components/sceneutil/lightutil.cpp
++++ b/components/sceneutil/lightutil.cpp
+@@ -1,7 +1,6 @@
+ #include "lightutil.hpp"
+ 
+ #include <osg/Group>
+-#include <osg/Light>
+ 
+ #include <osgParticle/ParticleSystem>
+ 
+@@ -43,7 +42,7 @@ namespace
+ namespace SceneUtil
+ {
+ 
+-    void configureLight(osg::Light* light, float radius, bool isExterior)
++    void configureLight(SceneUtil::Light* light, float radius, bool isExterior)
+     {
+         float quadraticAttenuation = 0.f;
+         float linearAttenuation = 0.f;
+@@ -116,7 +115,7 @@ namespace SceneUtil
+         const SceneUtil::LightCommon& esmLight, unsigned int lightMask, bool isExterior, const osg::Vec4f& ambient)
+     {
+         osg::ref_ptr<SceneUtil::LightSource> lightSource(new SceneUtil::LightSource);
+-        osg::ref_ptr<osg::Light> light(new osg::Light);
++        osg::ref_ptr<SceneUtil::Light> light(new SceneUtil::Light);
+         lightSource->setNodeMask(lightMask);
+ 
+         // The minimum scene light radius is 16 in Morrowind
+diff --git a/components/sceneutil/lightutil.hpp b/components/sceneutil/lightutil.hpp
+index 5dcbfa3c563fa002ff2d2800f46441588931bd65..a8f4976300a86ca9f22251c6cf4233eb7d7705dd 100644
+--- a/components/sceneutil/lightutil.hpp
++++ b/components/sceneutil/lightutil.hpp
+@@ -17,13 +17,14 @@ namespace ESM
+ 
+ namespace SceneUtil
+ {
++    class Light;
+     class LightSource;
+     struct LightCommon;
+ 
+-    /// @brief Set up global attenuation settings for an osg::Light.
++    /// @brief Set up global attenuation settings for a Light.
+     /// @param radius The radius of the light source.
+     /// @param isExterior Is the light outside? May be used for deciding which attenuation settings to use.
+-    void configureLight(osg::Light* light, float radius, bool isExterior);
++    void configureLight(Light* light, float radius, bool isExterior);
+ 
+     /// @brief Convert an ESM::Light to a SceneUtil::LightSource, and add it to a sub graph.
+     /// @note If the sub graph contains a node named "AttachLight" (case insensitive), then the light is added to that.
+diff --git a/components/sceneutil/mwshadowtechnique.cpp b/components/sceneutil/mwshadowtechnique.cpp
+index 2bcdf913928d8f5d2112cf3dd9698c61a39165b9..d6b9bc37e3d1ec56c54bc9e8c8e5178dfbb4f59d 100644
+--- a/components/sceneutil/mwshadowtechnique.cpp
++++ b/components/sceneutil/mwshadowtechnique.cpp
+@@ -31,6 +31,7 @@
+ 
+ #include "glextensions.hpp"
+ #include "shadowsbin.hpp"
++#include "lightmanager.hpp"
+ 
+ // NOLINTBEGIN(readability-identifier-naming)
+ 
+@@ -485,7 +486,7 @@ MWShadowTechnique::LightData::LightData(MWShadowTechnique::ViewDependentData* vd
+ {
+ }
+ 
+-void MWShadowTechnique::LightData::setLightData(osg::RefMatrix* lm, const osg::Light* l, const osg::Matrixd& modelViewMatrix)
++void MWShadowTechnique::LightData::setLightData(osg::RefMatrix* lm, const Light* l, const osg::Matrixd& modelViewMatrix)
+ {
+     lightMatrix = lm;
+     light = l;
+@@ -507,6 +508,7 @@ void MWShadowTechnique::LightData::setLightData(osg::RefMatrix* lm, const osg::L
+             OSG_INFO<<"   new LightDir ="<<lightDir<<std::endl;
+         }
+     }
++#if 0
+     else
+     {
+         OSG_INFO<<"   Positional light, lightPos="<<lightPos<<std::endl;
+@@ -524,6 +526,7 @@ void MWShadowTechnique::LightData::setLightData(osg::RefMatrix* lm, const osg::L
+         }
+         lightPos3.set(lightPos.x()/lightPos.w(), lightPos.y()/lightPos.w(), lightPos.z()/lightPos.w());
+     }
++#endif
+ }
+ 
+ ///////////////////////////////////////////////////////////////////////////////////////////////
+@@ -1585,40 +1588,36 @@ bool MWShadowTechnique::selectActiveLights(osgUtil::CullVisitor* cv, ViewDepende
+ 
+     osg::Matrixd modelViewMatrix = *(cv->getModelViewMatrix());
+ 
+-    osgUtil::PositionalStateContainer::AttrMatrixList& aml =
+-        rs->getPositionalStateContainer()->getAttrMatrixList();
+-
+-
+-    const ShadowSettings* settings = getShadowedScene()->getShadowSettings();
+-
+-    for(osgUtil::PositionalStateContainer::AttrMatrixList::reverse_iterator itr = aml.rbegin();
+-        itr != aml.rend();
+-        ++itr)
++    struct FindFirstLightManager : public osg::NodeVisitor
+     {
+-        const osg::Light* light = dynamic_cast<const osg::Light*>(itr->first.get());
+-        if (light && light->getLightNum() >= 0)
++        FindFirstLightManager()
++            : osg::NodeVisitor(TRAVERSE_ALL_CHILDREN)
+         {
+-            // is LightNum matched to that defined in settings
+-            if (settings && settings->getLightNum()>=0 && light->getLightNum()!=settings->getLightNum()) continue;
+-
+-            LightDataList::iterator pll_itr = pll.begin();
+-            for(; pll_itr != pll.end(); ++pll_itr)
+-            {
+-                if ((*pll_itr)->light->getLightNum()==light->getLightNum()) break;
+-            }
++            setNodeMaskOverride(~0u);
++        }
+ 
+-            if (pll_itr==pll.end())
+-            {
+-                OSG_INFO<<"Light num "<<light->getLightNum()<<std::endl;
+-                LightData* ld = new LightData(vdd);
+-                ld->setLightData(itr->second.get(), light, modelViewMatrix);
+-                pll.push_back(ld);
+-            }
+-            else
++        void apply(osg::Group& node) override
++        {
++            if (auto* lm = dynamic_cast<LightManager*>(&node))
+             {
+-                OSG_INFO<<"Light num "<<light->getLightNum()<<" already used, ignore light"<<std::endl;
++                mLightManager = lm;
++                mLocalToWorld = new osg::RefMatrix(osg::computeLocalToWorld(getNodePath()));
++                return;
+             }
++            traverse(node);
+         }
++        LightManager* mLightManager = nullptr;
++        osg::ref_ptr<osg::RefMatrix> mLocalToWorld;
++    };
++
++    FindFirstLightManager lightManagerFinder;
++
++    _shadowedScene->accept(lightManagerFinder);
++
++    if (lightManagerFinder.mLightManager && lightManagerFinder.mLightManager->getSunlight()) {
++        LightData* ld = new LightData(vdd);
++        ld->setLightData(lightManagerFinder.mLocalToWorld, lightManagerFinder.mLightManager->getSunlight(), modelViewMatrix);
++        pll.push_back(ld);
+     }
+ 
+     return !pll.empty();
+@@ -1999,7 +1998,11 @@ bool MWShadowTechnique::computeShadowCameraSettings(Frustum& frustum, LightData&
+         double minRatio = 0.0001;
+         double zMin=zMax*minRatio;
+ 
++#if 0
+         double fov = positionedLight.light->getSpotCutoff() * 2.0;
++#else
++        double fov = 180.0;
++#endif
+         if(fov < 180.0)   // spotlight
+         {
+             projectionMatrix.makePerspective(fov, 1.0, zMin, zMax);
+diff --git a/components/sceneutil/mwshadowtechnique.hpp b/components/sceneutil/mwshadowtechnique.hpp
+index a2e811b95eb6406e579788a4a6f308c641f0ae99..8195b23b60bbb6e92257d29862125d0027de25cb 100644
+--- a/components/sceneutil/mwshadowtechnique.hpp
++++ b/components/sceneutil/mwshadowtechnique.hpp
+@@ -27,7 +27,6 @@
+ #include <osg/Camera>
+ #include <osg/Material>
+ #include <osg/MatrixTransform>
+-#include <osg/LightSource>
+ #include <osg/PolygonOffset>
+ 
+ #include <osgShadow/ShadowTechnique>
+@@ -38,6 +37,8 @@
+ 
+ namespace SceneUtil {
+ 
++    class Light;
++
+     /** ViewDependentShadowMap provides an base implementation of view dependent shadow mapping techniques.*/
+     class MWShadowTechnique : public osgShadow::ShadowTechnique
+     {
+@@ -168,12 +169,12 @@ namespace SceneUtil {
+         {
+             LightData(ViewDependentData* vdd);
+ 
+-            virtual void setLightData(osg::RefMatrix* lm, const osg::Light* l, const osg::Matrixd& modelViewMatrix);
++            virtual void setLightData(osg::RefMatrix* lm, const Light* l, const osg::Matrixd& modelViewMatrix);
+ 
+             ViewDependentData*                  _viewDependentData;
+ 
+             osg::ref_ptr<osg::RefMatrix>        lightMatrix;
+-            osg::ref_ptr<const osg::Light>      light;
++            osg::ref_ptr<const Light>           light;
+ 
+             osg::Vec4d                          lightPos;
+             osg::Vec3d                          lightPos3;
+diff --git a/components/sceneutil/shadow.cpp b/components/sceneutil/shadow.cpp
+index 0e6abe325862b97c71e5872c300535c47939a75d..d55196b8056e5c45f5a8e97d82ac8d4e82bce78f 100644
+--- a/components/sceneutil/shadow.cpp
++++ b/components/sceneutil/shadow.cpp
+@@ -36,7 +36,6 @@ namespace SceneUtil
+ 
+         mShadowTechnique->enableShadows();
+ 
+-        mShadowSettings->setLightNum(0);
+         mShadowSettings->setReceivesShadowTraversalMask(~0u);
+ 
+         const int numberOfShadowMapsPerLight = settings.mNumberOfShadowMaps;

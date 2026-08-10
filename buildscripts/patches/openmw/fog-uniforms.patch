@@ -1,0 +1,65 @@
+diff --git a/apps/openmw/mwrender/characterpreview.cpp b/apps/openmw/mwrender/characterpreview.cpp
+index b7f9c1783c..df2b907378 100644
+--- a/apps/openmw/mwrender/characterpreview.cpp
++++ b/apps/openmw/mwrender/characterpreview.cpp
+@@ -250,10 +250,14 @@ namespace MWRender
+ 
+         // assign large value to effectively turn off fog
+         // shaders don't respect glDisable(GL_FOG)
++/*
+         osg::ref_ptr<osg::Fog> fog(new osg::Fog);
+         fog->setStart(10000000);
+         fog->setEnd(10000000);
+         stateset->setAttributeAndModes(fog, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
++*/
++
++        stateset->addUniform(new osg::Uniform("omw_Fog_end", 0.f), osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE | osg::StateAttribute::PROTECTED);
+ 
+         // TODO: Clean up this mess of loose uniforms that shaders depend on.
+         // turn off sky blending
+diff --git a/apps/openmw/mwrender/localmap.cpp b/apps/openmw/mwrender/localmap.cpp
+index 74cfeaaad3..97d91e6694 100644
+--- a/apps/openmw/mwrender/localmap.cpp
++++ b/apps/openmw/mwrender/localmap.cpp
+@@ -737,10 +737,14 @@ namespace MWRender
+ 
+         // assign large value to effectively turn off fog
+         // shaders don't respect glDisable(GL_FOG)
++/*
+         osg::ref_ptr<osg::Fog> fog(new osg::Fog);
+         fog->setStart(10000000);
+         fog->setEnd(10000000);
+         stateset->setAttributeAndModes(fog, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
++*/
++
++        stateset->addUniform(new osg::Uniform("omw_Fog_end", 0.f), osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE | osg::StateAttribute::PROTECTED);
+ 
+         // turn of sky blending
+         stateset->addUniform(new osg::Uniform("far", 10000000.0f));
+
+diff --git a/components/sceneutil/stateupdater.cpp b/components/sceneutil/stateupdater.cpp
+index 1f271a7b03..4fad280951 100644
+--- a/components/sceneutil/stateupdater.cpp
++++ b/components/sceneutil/stateupdater.cpp
+@@ -137,6 +137,10 @@ namespace SceneUtil
+         }
+         else
+             stateset->removeAttribute(osg::StateAttribute::POLYGONMODE);
++
++        stateset->addUniform(new osg::Uniform("omw_Fog_start", 0.f));
++        stateset->addUniform(new osg::Uniform("omw_Fog_end", 0.f));
++        stateset->addUniform(new osg::Uniform("omw_Fog_color", osg::Vec4f(0.f, 0.f, 0.f, 1.f)));
+     }
+ 
+     void StateUpdater::apply(osg::StateSet* stateset, osg::NodeVisitor*)
+@@ -146,6 +150,10 @@ namespace SceneUtil
+         fog->setColor(mFogColor);
+         fog->setStart(mFogStart);
+         fog->setEnd(mFogEnd);
++
++        stateset->getUniform("omw_Fog_start")->set(mFogStart);
++        stateset->getUniform("omw_Fog_end")->set(mFogEnd);
++        stateset->getUniform("omw_Fog_color")->set(mFogColor);
+     }
+ 
+     void StateUpdater::setAmbientColor(const osg::Vec4f& col)
