@@ -539,7 +539,6 @@ class MainActivity : AppCompatActivity() {
 
         // force some settings for now
         writeSetting("Shadows", "enable indoor shadows", "false")
-        writeSetting("Shadows", "number of shadow maps", "1")
 
 	// Animations
 	writeSetting("Game", "player movement ignores animation", if(prefs.getBoolean("gs_player_movement_ignores_animation", false)) "true" else "false")

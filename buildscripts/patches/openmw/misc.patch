@@ -62,11 +62,95 @@ index 082b3a2536..47f90d2a5a 100644
              // OSG might not set the right origin for DDS
              if (ext == "dds")
                  image->setOrigin(osg::Image::TOP_LEFT);
+diff --git a/files/settings-default.cfg b/files/settings-default.cfg
+index a9d15a1c79..2123c40759 100644
+--- a/files/settings-default.cfg
++++ b/files/settings-default.cfg
+@@ -1020,7 +1020,7 @@ wait for all jobs on exit = false
+ enable shadows = false
+ 
+ # How many shadow maps to use - more of these means each shadow map texel covers less area, producing better looking shadows, but may decrease performance.
+-number of shadow maps = 3
++number of shadow maps = 1
+ 
+ # The distance from the camera at which shadows fade away completely. Set to 0 to make the distance infinite.
+ maximum shadow map distance = 8192
+diff --git a/files/shaders/compatibility/groundcover.frag b/files/shaders/compatibility/groundcover.frag
+index 5d0fadabfb..a65593d078 100644
+--- a/files/shaders/compatibility/groundcover.frag
++++ b/files/shaders/compatibility/groundcover.frag
+@@ -46,8 +46,13 @@ varying vec3 passNormal;
+ 
+ centroid varying vec4 passColor;
+ 
++varying float clip;
++
+ void main()
+ {
++    if (clip < 0.0)
++        discard;
++
+     Material material = getMaterial();
+ 
+ #if @diffuseMap
+diff --git a/files/shaders/compatibility/groundcover.vert b/files/shaders/compatibility/groundcover.vert
+index 4f26a7638f..a928862b12 100644
+--- a/files/shaders/compatibility/groundcover.vert
++++ b/files/shaders/compatibility/groundcover.vert
+@@ -50,6 +50,10 @@ uniform vec3 playerPos;
+ 
+ centroid varying vec4 passColor;
+ 
++varying float clip;
++uniform vec4 omw_ClipPlane0;
++uniform bool isReflection;
++
+ #if @groundcoverStompMode == 0
+ #else
+     #define STOMP 1
+@@ -141,7 +145,17 @@ void main(void)
+     worldPos.xy += groundcoverDisplacement(worldPos.xyz, gl_Vertex.z);
+     vec4 viewPos = osg_ViewMatrix * worldPos;
+ 
+-    gl_ClipVertex = viewPos;
++#ifdef GL_EXT_clip_cull_distance
++    if (isReflection) gl_ClipDistance[0] = dot(viewPos, omw_ClipPlane0);
++/*
++#if @radialFog
++    gl_CullDistance[0] = (length(viewPos.xyz) > far) ? -1.0 : 1.0;
++#endif
++*/
++#else
++    if (isReflection) clip = dot(viewPos, omw_ClipPlane0);
++#endif
++
+     euclideanDepth = length(viewPos.xyz);
+ 
+     if (length(gl_ModelViewMatrix * vec4(position, 1.0)) > @groundcoverFadeEnd)
+diff --git a/files/shaders/compatibility/objects.frag b/files/shaders/compatibility/objects.frag
+index 97581d6b62..43ed89b09a 100644
+--- a/files/shaders/compatibility/objects.frag
++++ b/files/shaders/compatibility/objects.frag
+@@ -112,8 +112,14 @@ uniform sampler2D orthoDepthMap;
+ varying vec3 orthoDepthMapCoord;
+ #endif
+ 
++
++varying float clip;
++
+ void main()
+ {
++    if (clip < 0.0)
++        discard;
++
+ #if @particleOcclusion
+     applyOcclusionDiscard(orthoDepthMapCoord, texture2D(orthoDepthMap, orthoDepthMapCoord.xy * 0.5 + 0.5).r);
+ #endif
 diff --git a/files/shaders/compatibility/objects.vert b/files/shaders/compatibility/objects.vert
-index ff4cc68d7a..56a559e1e0 100644
+index ff4cc68d7a..ae57a62c30 100644
 --- a/files/shaders/compatibility/objects.vert
 +++ b/files/shaders/compatibility/objects.vert
-@@ -87,6 +87,12 @@ uniform vec2 screenRes;
+@@ -87,6 +87,16 @@ uniform vec2 screenRes;
  
  centroid varying vec4 passColor;
  
@@ -76,21 +160,29 @@ index ff4cc68d7a..56a559e1e0 100644
 +#endif
 +#endif
 +
++varying float clip;
++uniform vec4 omw_ClipPlane0;
++uniform bool isReflection;
++
  void main(void)
  {
      Material material = getMaterial();
-@@ -97,9 +103,15 @@ void main(void)
+@@ -97,9 +107,18 @@ void main(void)
  #endif
  
      gl_Position = modelToClip(gl_Vertex);
 -
      vec4 viewPos = modelToView(gl_Vertex);
+-    gl_ClipVertex = viewPos;
 +
++    clip = 0.0;
 +#ifdef GL_EXT_clip_cull_distance
-     gl_ClipVertex = viewPos;
++    if (isReflection) gl_ClipDistance[0] = dot(viewPos, omw_ClipPlane0);
 +#if @radialFog
 +    gl_CullDistance[0] = (length(viewPos.xyz) > far) ? -1.0 : 1.0;
 +#endif
++#else
++    if (isReflection) clip = dot(viewPos, omw_ClipPlane0);
 +#endif
 +
      passColor = gl_Color;
@@ -116,11 +208,29 @@ index 7f5658a36c..d9aadd7070 100644
  #include "fog.glsl"
  
  varying vec2 diffuseMapUV;
+diff --git a/files/shaders/compatibility/terrain.frag b/files/shaders/compatibility/terrain.frag
+index 1411c8c958..9cf9f079ce 100644
+--- a/files/shaders/compatibility/terrain.frag
++++ b/files/shaders/compatibility/terrain.frag
+@@ -50,8 +50,13 @@ uniform mat4 texMat1;
+ 
+ centroid varying vec4 passColor;
+ 
++varying float clip;
++
+ void main()
+ {
++    if (clip < 0.0)
++        discard;
++
+     Material material = getMaterial();
+     vec2 adjustedUV = (texMat0 * vec4(uv, 0.0, 1.0)).xy;
+ 
 diff --git a/files/shaders/compatibility/terrain.vert b/files/shaders/compatibility/terrain.vert
-index 7f5c17c52f..e5bd8cda37 100644
+index 7f5c17c52f..1b6569d729 100644
 --- a/files/shaders/compatibility/terrain.vert
 +++ b/files/shaders/compatibility/terrain.vert
-@@ -30,6 +30,12 @@ varying vec3 passNormal;
+@@ -30,6 +30,16 @@ varying vec3 passNormal;
  
  centroid varying vec4 passColor;
  
@@ -130,28 +240,35 @@ index 7f5c17c52f..e5bd8cda37 100644
 +#endif
 +#endif
 +
++varying float clip;
++uniform vec4 omw_ClipPlane0;
++uniform bool isReflection;
++
  void main(void)
  {
      Material material = getMaterial();
-@@ -37,8 +43,15 @@ void main(void)
+@@ -37,8 +47,18 @@ void main(void)
      gl_Position = modelToClip(gl_Vertex);
  
      vec4 viewPos = modelToView(gl_Vertex);
 -    gl_ClipVertex = viewPos;
      euclideanDepth = length(viewPos.xyz);
 +
++    clip = 0.0;
 +#ifdef GL_EXT_clip_cull_distance
-+    gl_ClipVertex = viewPos;
++    if (isReflection) gl_ClipDistance[0] = dot(viewPos, omw_ClipPlane0);
 +#if @radialFog
-+    gl_CullDistance[0] = (euclideanDepth > far) ? -1.0 : 1.0;
++    gl_CullDistance[0] = (length(viewPos.xyz) > far) ? -1.0 : 1.0;
 +#endif
++#else
++    if (isReflection) clip = dot(viewPos, omw_ClipPlane0);
 +#endif
 +
      linearDepth = getLinearDepth(gl_Position.z, viewPos.z);
  
      passColor = gl_Color;
 diff --git a/files/shaders/compatibility/water.vert b/files/shaders/compatibility/water.vert
-index a67f412a07..5bec1b3cda 100644
+index a67f412a07..512b6615c1 100644
 --- a/files/shaders/compatibility/water.vert
 +++ b/files/shaders/compatibility/water.vert
 @@ -14,16 +14,27 @@ uniform vec3 playerPos;
@@ -173,7 +290,7 @@ index a67f412a07..5bec1b3cda 100644
 +
 +#ifdef GL_EXT_clip_cull_distance
 +#if @radialFog
-+    gl_CullDistance[0] = (length(viewPos.xyz) > far) ? -1.0 : 1.0;
++    //gl_CullDistance[0] = (length(viewPos.xyz) > far) ? -1.0 : 1.0;
 +#endif
 +#endif
  

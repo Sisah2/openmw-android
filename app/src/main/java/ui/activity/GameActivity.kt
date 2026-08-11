@@ -170,6 +170,7 @@ private fun patchShadersToGLES() {
            content = content.replace("gl_", "osg_")
            content = content.replace("osg_Position", "gl_Position")
            content = content.replace("osg_FragCoord", "gl_FragCoord")
+           content = content.replace("osg_ClipDistance", "gl_ClipDistance")
            content = content.replace("osg_CullDistance", "gl_CullDistance")
 
            // Remove default values from uniforms (not supported on es)
@@ -201,22 +202,20 @@ private fun patchShadersToGLES() {
                // Add some shadows stuff
                content = addLineToHeader(content, "#define shadow2DProj custom_shadow2DProj")
                content = addLineToHeader(content, "vec4 custom_shadow2DProj(sampler2DShadow sampler, vec4 uv) { return vec4(textureProj(sampler, uv)); }")
-
-               // Fix normalMaps compile error
-               content = content.replace("passTangent = osg_MultiTexCoord7.xyzw;", "passTangent = vec4(osg_MultiTexCoord7.xyz, 1.0);")
            }
            else if (it.extension == "vert") {
+
                // clipplane
-
-                   content = content.replace("#version 320 es\n", "#version 320 es\n#extension GL_EXT_clip_cull_distance : enable\n")
-
+               content = content.replace("#version 320 es\n", "#version 320 es\n#extension GL_EXT_clip_cull_distance : enable\n")
+               content = content.replace("osg_ClipVertex = viewPos;\n", "")
+/*
                if (content.contains("osg_ClipVertex")) {
-                  // content = content.replace("#version 320 es\n", "#version 320 es\n#extension GL_EXT_clip_cull_distance : enable\n")
+                   content = content.replace("#version 320 es\n", "#version 320 es\n#extension GL_EXT_clip_cull_distance : enable\n")
                    content = content.replace("osg_ClipVertex = viewPos;\n", "if (isReflection) gl_ClipDistance[0] = dot(osg_ModelViewMatrix * osg_Vertex, omw_ClipPlane0);\n")
                    content = addLineToHeader(content, "uniform vec4 omw_ClipPlane0;")
                    content = addLineToHeader(content, "uniform bool isReflection;")
                }
-
+*/
                if (it.name.contains("terrain_composite")) {
                    content = content.replace("osg_ModelViewMatrix * ", "")
                }
@@ -245,6 +244,10 @@ private fun patchShadersToGLES() {
                // Add some defines
                content = addLineToHeader(content, "#define attribute in")
                content = addLineToHeader(content, "#define varying out")
+
+               // Fix normalMaps compile error
+               content = content.replace("passTangent = osg_MultiTexCoord7.xyzw;", "passTangent = vec4(osg_MultiTexCoord7.xyz, 1.0);")
+
            }
            else if (it.extension == "comp") {
                content = content.replace("#version 430 core", "#version 320 es\n#extension GL_EXT_shader_implicit_conversions : enable\nprecision highp float;\nprecision highp int;\nprecision highp image2D;\n\n//HEADER_END\n")
@@ -256,8 +259,6 @@ private fun patchShadersToGLES() {
                content = content.replace("ivec2(gl_GlobalInvocationID.xy + offset);", "ivec2(vec2(gl_GlobalInvocationID.xy) + offset);")
            }
            else if (it.extension == "glsl") {
-               content = content.replace("vec4 applyFogAtDist(vec4 color, float euclideanDist, float linearDist, float far)\n{", "uniform bool isReflection;\nvec4 applyFogAtDist(vec4 color, float euclideanDist, float linearDist, float far)\n{\nif (omw_Fog_end == 0.0) return color;")
-
                content = content.replace("sampler2DShadow", "highp sampler2DShadow")
                content = content.replace("textureSize2D(diffuseMap, 0);", "vec2(textureSize2D(diffuseMap, 0));")
 
@@ -306,6 +307,7 @@ class GameActivity : SDLActivity() {
             e.printStackTrace()
         }
 
+/*
         if (!prefs!!.getBoolean("pref_use_spirv_shader_conv", true))
             Os.setenv("LIBGL_SIMPLE_SHADERCONV", "1", true)
 
@@ -317,14 +319,11 @@ class GameActivity : SDLActivity() {
             Os.setenv("SDL_VIDEO_GL_DRIVER", "libGLESv2_angle.so", true)
             Os.setenv("SDL_VIDEO_EGL_DRIVER", "libEGL_angle.so", true)
         }
-
+*/
         Os.setenv("OSG_VERTEX_BUFFER_HINT", "VBO", true)
-        Os.setenv("OSG_GL_TEXTURE_STORAGE", "OFF", true)
+        //Os.setenv("OSG_GL_TEXTURE_STORAGE", "OFF", true)
         Os.setenv("OSG_TEXT_SHADER_TECHNIQUE", "ALL", true)
 
-        //Os.setenv("OPENMW_USER_FILE_STORAGE", Constants.USER_FILE_STORAGE + "/", true)
-        //Os.setenv("OSG_NOTIFY_LEVEL", "FATAL", true) //hide osg errors for now, gl4es bug.
-        
         val envline: String = PreferenceManager.getDefaultSharedPreferences(this).getString("envLine", "").toString()
         if (envline.length > 0) {
             val envs: List<String> = envline.split(" ", "\n")
