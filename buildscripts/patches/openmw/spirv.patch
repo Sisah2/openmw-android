@@ -553,8 +553,8 @@ index 00000000000..70af75211c9
 +
 +        errc = 0;
 +
-+        essl.insert(16, "#extension GL_OES_standard_derivatives : enable\nprecision highp float;\nprecision highp int;\n");
-+        essl = removeLayoutBinding(essl);
++        essl.insert(16, "#extension GL_OES_standard_derivatives : enable\n#extension GL_EXT_clip_cull_distance : enable\nprecision highp float;\nprecision highp int;\nprecision mediump sampler2D;\nprecision mediump sampler3D;\nprecision mediump sampler2DShadow;\nprecision mediump sampler2DArray;\nprecision mediump image2D;\n");
++        //essl = removeLayoutBinding(essl);
 +
 +        return essl;
 +    }
@@ -586,4 +586,53 @@ index 00000000000..04b6752221f
 +}
 +
 +#endif
+diff --git a/components/shader/shadermanager.cpp b/components/shader/shadermanager.cpp
+index 130c2dccd3..dbd79145dd 100644
+--- a/components/shader/shadermanager.cpp
++++ b/components/shader/shadermanager.cpp
+@@ -22,6 +22,7 @@
+ #include <components/misc/strings/conversion.hpp>
+ #include <components/sceneutil/clipplane.hpp>
+ #include <components/settings/settings.hpp>
++#include <components/shader/shaderconverter.hpp>
+ 
+ namespace
+ {
+@@ -45,6 +46,17 @@ namespace
+         throw std::runtime_error("unrecognized shader template name: " + templateName);
+     }
+ 
++    void applySpirvConversion(std::string& source, osg::Shader::Type type)
++    {
++        if (getenv("OPENMW_SPIRV_SHADERCONV") != nullptr)
++        {
++            //Log(Debug::Error) << "source before \n" << source << "\n\n";
++            Misc::StringUtils::replaceAll(source, "#version 320 es", "#version 460");
++            source = Shader::ShaderConverter::convertGLSLtoGLES(source, type, 320);
++            //Log(Debug::Error) << "source after \n" << source << "\n\n";
++        }
++    }
++
+     std::string_view getRootPrefix(std::string_view path)
+     {
+         if (path.starts_with("lib"))
+@@ -560,6 +572,8 @@ namespace Shader
+                 return nullptr;
+             }
+ 
++            applySpirvConversion(shaderSource, type ? *type : getShaderType(templateName));
++
+             osg::ref_ptr<osg::Shader> shader(new osg::Shader(type ? *type : getShaderType(templateName)));
+             shader->setShaderSource(shaderSource);
+             // Assign a unique prefix to allow the SharedStateManager to compare shaders efficiently.
+@@ -652,6 +666,9 @@ namespace Shader
+                 // we would when creating the shader. If we put a nullptr in the shader map, we just lose the ability to
+                 // put a working one in later.
+                 continue;
++
++            applySpirvConversion(shaderSource, shader->getType());
++
+             shader->setShaderSource(shaderSource);
+ 
+             getLinkedShaders(shader, linkedShaderNames, defines);
 

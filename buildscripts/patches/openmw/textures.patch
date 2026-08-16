@@ -1,16 +1,3 @@
-diff --git a/apps/openmw/mwrender/localmap.cpp b/apps/openmw/mwrender/localmap.cpp
-index 74cfeaaad3..9dfc10d0e4 100644
---- a/apps/openmw/mwrender/localmap.cpp
-+++ b/apps/openmw/mwrender/localmap.cpp
-@@ -700,6 +700,8 @@ namespace MWRender
-         mViewMatrix.makeLookAt(osg::Vec3d(x, y, zmax + 5), osg::Vec3d(x, y, zmin), upVector);
- 
-         setUpdateCallback(new CameraLocalUpdateCallback);
-+
-+        setColorBufferInternalFormat(GL_RGBA);
-         setDepthBufferInternalFormat(GL_DEPTH24_STENCIL8);
-     }
- 
 diff --git a/apps/openmw/mwrender/precipitationocclusion.cpp b/apps/openmw/mwrender/precipitationocclusion.cpp
 index 31712410b8..80f837e159 100644
 --- a/apps/openmw/mwrender/precipitationocclusion.cpp
@@ -25,18 +12,6 @@ index 31712410b8..80f837e159 100644
 +        mDepthTexture->setFilter(osg::Texture::MAG_FILTER, osg::Texture::NEAREST);
          mDepthTexture->setBorderColor(
              SceneUtil::AutoDepth::isReversed() ? osg::Vec4(0, 0, 0, 0) : osg::Vec4(1, 1, 1, 1));
- 
-diff --git a/apps/openmw/mwrender/sky.cpp b/apps/openmw/mwrender/sky.cpp
-index b705fb9b94..a042d5fef0 100644
---- a/apps/openmw/mwrender/sky.cpp
-+++ b/apps/openmw/mwrender/sky.cpp
-@@ -210,6 +210,7 @@ namespace
-                 MWRender::shouldAddMSAAIntermediateTarget())
-             , mEarlyRenderBinRoot(earlyRenderBinRoot)
-         {
-+            setColorBufferInternalFormat(GL_RGBA);
-             setDepthBufferInternalFormat(GL_DEPTH24_STENCIL8);
-         }
  
 diff --git a/components/sceneutil/mwshadowtechnique.cpp b/components/sceneutil/mwshadowtechnique.cpp
 index 2bcdf91392..7d66416abb 100644
@@ -154,31 +129,6 @@ index 1787163bab..0ebf45afef 100644
          if (ext->glDisablei)
              mNormalsSupported = true;
          else
-@@ -451,7 +447,7 @@ namespace MWRender
-             Stereo::setMultiviewCompatibleTextureSize(texture, width, height);
-             texture->setSourceFormat(GL_RGBA);
-             texture->setSourceType(GL_UNSIGNED_BYTE);
--            texture->setInternalFormat(GL_RGBA);
-+            texture->setInternalFormat(GL_RGBA8);
-             texture->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture::LINEAR);
-             texture->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture::LINEAR);
-             texture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
-@@ -460,13 +456,13 @@ namespace MWRender
-             Stereo::setMultiviewCompatibleTextureSize(texture, width, height);
-             texture->dirtyTextureObject();
-         }
--
-+/*
-         textures[Tex_Normal]->setSourceFormat(GL_RGB);
-         textures[Tex_Normal]->setInternalFormat(GL_RGB);
- 
-         textures[Tex_Distortion]->setSourceFormat(GL_RGB);
-         textures[Tex_Distortion]->setInternalFormat(GL_RGB);
--
-+*/
-         Stereo::setMultiviewCompatibleTextureSize(textures[Tex_Distortion], static_cast<int>(width * DistortionRatio),
-             static_cast<int>(height * DistortionRatio));
-         textures[Tex_Distortion]->dirtyTextureObject();
 @@ -475,6 +471,9 @@ namespace MWRender
              tex->setSourceFormat(GL_DEPTH_STENCIL_EXT);
              tex->setSourceType(SceneUtil::AutoDepth::depthSourceType());
@@ -229,19 +179,6 @@ index f974ea5ad7..d5967c1b2f 100644
              buffer.mipmappedSceneLuminanceTex->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
              buffer.mipmappedSceneLuminanceTex->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
              buffer.mipmappedSceneLuminanceTex->setFilter(
-diff --git a/components/terrain/chunkmanager.cpp b/components/terrain/chunkmanager.cpp
-index 9f414eac55..379a8c3fc2 100644
---- a/components/terrain/chunkmanager.cpp
-+++ b/components/terrain/chunkmanager.cpp
-@@ -108,7 +108,7 @@ namespace Terrain
-         osg::ref_ptr<osg::Texture2D> texture = new osg::Texture2D;
-         texture->setTextureWidth(mCompositeMapSize);
-         texture->setTextureHeight(mCompositeMapSize);
--        texture->setInternalFormat(GL_RGB);
-+        texture->setInternalFormat(GL_RGBA8);
-         texture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
-         texture->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
-         mSceneManager->applyFilterSettings(texture);
 diff --git a/components/resource/imagemanager.cpp b/components/resource/imagemanager.cpp
 index 082b3a2536..47f90d2a5a 100644
 --- a/components/resource/imagemanager.cpp

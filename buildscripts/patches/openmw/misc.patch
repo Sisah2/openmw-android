@@ -11,57 +11,6 @@ index ade0faafac..278da9c435 100644
          osg::ref_ptr<SceneUtil::Light> light = new SceneUtil::Light;
          light->setPosition(osg::Vec4(-0.3f, -0.3f, 0.7f, 0.f));
          light->setDiffuse(osg::Vec4(0.7f, 0.7f, 0.7f, 1.f));
-diff --git a/components/resource/imagemanager.cpp b/components/resource/imagemanager.cpp
-index 082b3a2536..47f90d2a5a 100644
---- a/components/resource/imagemanager.cpp
-+++ b/components/resource/imagemanager.cpp
-@@ -184,6 +184,46 @@ namespace Resource
-                 image = newImage;
-             }
- 
-+            // WebGL2/GLES3 does not accept GL_BGRA / GL_BGR as a glTexImage2D source
-+            // 'format' (they are desktop-GL only). OSG's DDS reader loads Morrowind's
-+            // uncompressed A8R8G8B8 / R8G8B8 GUI textures with pixelFormat GL_BGRA/GL_BGR,
-+            // so the upload fails with GL_INVALID_ENUM and the texture samples as black
-+            // (this is why menus/HUD render as black boxes). Rewrite to RGBA/RGB here.
-+            {
-+                const GLenum pf = image->getPixelFormat();
-+                if (pf == GL_BGRA || pf == GL_BGR)
-+                {
-+                    if (image->getDataType() == GL_UNSIGNED_BYTE)
-+                    {
-+                        // 8-bit data: must physically swap R<->B channels.
-+                        const int comps = (pf == GL_BGRA) ? 4 : 3;
-+                        const GLenum newFmt = (pf == GL_BGRA) ? GL_RGBA : GL_RGB;
-+                        osg::ref_ptr<osg::Image> rgba = new osg::Image;
-+                        rgba->setFileName(image->getFileName());
-+                        rgba->setOrigin(image->getOrigin());
-+                        rgba->allocateImage(image->s(), image->t(), image->r(), newFmt, GL_UNSIGNED_BYTE);
-+                        const unsigned char* src = image->data();
-+                        unsigned char* dst = rgba->data();
-+                        const size_t px = size_t(image->s()) * image->t() * image->r();
-+                        for (size_t i = 0; i < px; ++i)
-+                        {
-+                            dst[i * comps + 0] = src[i * comps + 2]; // R <- B
-+                            dst[i * comps + 1] = src[i * comps + 1]; // G
-+                            dst[i * comps + 2] = src[i * comps + 0]; // B <- R
-+                            if (comps == 4)
-+                                dst[i * comps + 3] = src[i * comps + 3]; // A
-+                        }
-+                        image = rgba;
-+                    }
-+                    else
-+                    {
-+                        // Packed *_REV types already carry correct channel order for RGBA;
-+                        // just relabel so WebGL accepts the enum.
-+                        image->setPixelFormat((pf == GL_BGRA) ? GL_RGBA : GL_RGB);
-+                    }
-+                }
-+            }
-+
-             // OSG might not set the right origin for DDS
-             if (ext == "dds")
-                 image->setOrigin(osg::Image::TOP_LEFT);
 diff --git a/files/settings-default.cfg b/files/settings-default.cfg
 index a9d15a1c79..2123c40759 100644
 --- a/files/settings-default.cfg
@@ -75,119 +24,6 @@ index a9d15a1c79..2123c40759 100644
  
  # The distance from the camera at which shadows fade away completely. Set to 0 to make the distance infinite.
  maximum shadow map distance = 8192
-diff --git a/files/shaders/compatibility/groundcover.frag b/files/shaders/compatibility/groundcover.frag
-index 5d0fadabfb..a65593d078 100644
---- a/files/shaders/compatibility/groundcover.frag
-+++ b/files/shaders/compatibility/groundcover.frag
-@@ -46,8 +46,13 @@ varying vec3 passNormal;
- 
- centroid varying vec4 passColor;
- 
-+varying float clip;
-+
- void main()
- {
-+    if (clip < 0.0)
-+        discard;
-+
-     Material material = getMaterial();
- 
- #if @diffuseMap
-diff --git a/files/shaders/compatibility/groundcover.vert b/files/shaders/compatibility/groundcover.vert
-index 4f26a7638f..a928862b12 100644
---- a/files/shaders/compatibility/groundcover.vert
-+++ b/files/shaders/compatibility/groundcover.vert
-@@ -50,6 +50,10 @@ uniform vec3 playerPos;
- 
- centroid varying vec4 passColor;
- 
-+varying float clip;
-+uniform vec4 omw_ClipPlane0;
-+uniform bool isReflection;
-+
- #if @groundcoverStompMode == 0
- #else
-     #define STOMP 1
-@@ -141,7 +145,17 @@ void main(void)
-     worldPos.xy += groundcoverDisplacement(worldPos.xyz, gl_Vertex.z);
-     vec4 viewPos = osg_ViewMatrix * worldPos;
- 
--    gl_ClipVertex = viewPos;
-+#ifdef GL_EXT_clip_cull_distance
-+    if (isReflection) gl_ClipDistance[0] = dot(viewPos, omw_ClipPlane0);
-+/*
-+#if @radialFog
-+    gl_CullDistance[0] = (length(viewPos.xyz) > far) ? -1.0 : 1.0;
-+#endif
-+*/
-+#else
-+    if (isReflection) clip = dot(viewPos, omw_ClipPlane0);
-+#endif
-+
-     euclideanDepth = length(viewPos.xyz);
- 
-     if (length(gl_ModelViewMatrix * vec4(position, 1.0)) > @groundcoverFadeEnd)
-diff --git a/files/shaders/compatibility/objects.frag b/files/shaders/compatibility/objects.frag
-index 97581d6b62..43ed89b09a 100644
---- a/files/shaders/compatibility/objects.frag
-+++ b/files/shaders/compatibility/objects.frag
-@@ -112,8 +112,14 @@ uniform sampler2D orthoDepthMap;
- varying vec3 orthoDepthMapCoord;
- #endif
- 
-+
-+varying float clip;
-+
- void main()
- {
-+    if (clip < 0.0)
-+        discard;
-+
- #if @particleOcclusion
-     applyOcclusionDiscard(orthoDepthMapCoord, texture2D(orthoDepthMap, orthoDepthMapCoord.xy * 0.5 + 0.5).r);
- #endif
-diff --git a/files/shaders/compatibility/objects.vert b/files/shaders/compatibility/objects.vert
-index ff4cc68d7a..ae57a62c30 100644
---- a/files/shaders/compatibility/objects.vert
-+++ b/files/shaders/compatibility/objects.vert
-@@ -87,6 +87,16 @@ uniform vec2 screenRes;
- 
- centroid varying vec4 passColor;
- 
-+#ifdef GL_EXT_clip_cull_distance
-+#if @radialFog
-+    uniform float far;
-+#endif
-+#endif
-+
-+varying float clip;
-+uniform vec4 omw_ClipPlane0;
-+uniform bool isReflection;
-+
- void main(void)
- {
-     Material material = getMaterial();
-@@ -97,9 +107,18 @@ void main(void)
- #endif
- 
-     gl_Position = modelToClip(gl_Vertex);
--
-     vec4 viewPos = modelToView(gl_Vertex);
--    gl_ClipVertex = viewPos;
-+
-+    clip = 0.0;
-+#ifdef GL_EXT_clip_cull_distance
-+    if (isReflection) gl_ClipDistance[0] = dot(viewPos, omw_ClipPlane0);
-+#if @radialFog
-+    gl_CullDistance[0] = (length(viewPos.xyz) > far) ? -1.0 : 1.0;
-+#endif
-+#else
-+    if (isReflection) clip = dot(viewPos, omw_ClipPlane0);
-+#endif
-+
-     passColor = gl_Color;
-     passViewPos = viewPos.xyz;
-     passNormal = gl_Normal.xyz;
 diff --git a/files/shaders/compatibility/sky.frag b/files/shaders/compatibility/sky.frag
 index 7f5658a36c..d9aadd7070 100644
 --- a/files/shaders/compatibility/sky.frag
@@ -208,99 +44,70 @@ index 7f5658a36c..d9aadd7070 100644
  #include "fog.glsl"
  
  varying vec2 diffuseMapUV;
-diff --git a/files/shaders/compatibility/terrain.frag b/files/shaders/compatibility/terrain.frag
-index 1411c8c958..9cf9f079ce 100644
---- a/files/shaders/compatibility/terrain.frag
-+++ b/files/shaders/compatibility/terrain.frag
-@@ -50,8 +50,13 @@ uniform mat4 texMat1;
+diff --git a/apps/openmw/mwsound/ffmpegdecoder.cpp b/apps/openmw/mwsound/ffmpegdecoder.cpp
+index 406bd47d66..ade613f13b 100644
+--- a/apps/openmw/mwsound/ffmpegdecoder.cpp
++++ b/apps/openmw/mwsound/ffmpegdecoder.cpp
+@@ -294,7 +294,7 @@ namespace MWSound
+         }
  
- centroid varying vec4 passColor;
+         // avformat_open_input frees the user supplied AVFormatContext on failure
+-        if (avformat_open_input(&ctx, name, fmt, nullptr) != 0)
++        if (avformat_open_input(&ctx, name, /*fmt*/nullptr, nullptr) != 0)
+             return false;
  
-+varying float clip;
-+
- void main()
- {
-+    if (clip < 0.0)
-+        discard;
-+
-     Material material = getMaterial();
-     vec2 adjustedUV = (texMat0 * vec4(uv, 0.0, 1.0)).xy;
+         formatCtx.reset(std::exchange(ctx, nullptr));
+diff --git a/components/fx/technique.cpp b/components/fx/technique.cpp
+index 308593daeb..bac25ddfa9 100644
+--- a/components/fx/technique.cpp
++++ b/components/fx/technique.cpp
+@@ -9,7 +9,7 @@
+ #include <osg/Texture2D>
+ #include <osg/Texture3D>
  
-diff --git a/files/shaders/compatibility/terrain.vert b/files/shaders/compatibility/terrain.vert
-index 7f5c17c52f..1b6569d729 100644
---- a/files/shaders/compatibility/terrain.vert
-+++ b/files/shaders/compatibility/terrain.vert
-@@ -30,6 +30,16 @@ varying vec3 passNormal;
+-#include <SDL_opengl_glext.h>
++#include <SDL_opengles2_gl2ext.h>
  
- centroid varying vec4 passColor;
+ #include <components/debug/debuglog.hpp>
+ #include <components/files/conversion.hpp>
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fc366de5b2..f94e7e8494 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -295,6 +295,7 @@ set(USED_OSG_PLUGINS
+     osgdb_bmp
+     osgdb_dae
+     osgdb_dds
++    osgdb_ktx
+     osgdb_freetype
+     osgdb_jpeg
+     osgdb_osg
+diff --git a/files/shaders/lib/core/clip.glsl b/files/shaders/lib/core/clip.glsl
+index 126771ef17..5b4827b7a0 100644
+--- a/files/shaders/lib/core/clip.glsl
++++ b/files/shaders/lib/core/clip.glsl
+@@ -14,7 +14,7 @@ void applyClipPlanes(vec4 pos)
+ #ifdef GL_EXT_clip_cull_distance
+         if (isReflection) gl_ClipDistance[@clipPlaneIndex] = dot(clipPlane@clipPlaneIndex, pos);
+ #else
+-        clip = dot(clipPlane@clipPlaneIndex, pos);
++        if (isReflection) clip = dot(clipPlane@clipPlaneIndex, pos);
+ #endif
  
-+#ifdef GL_EXT_clip_cull_distance
-+#if @radialFog
-+    uniform float far;
-+#endif
-+#endif
-+
-+varying float clip;
-+uniform vec4 omw_ClipPlane0;
-+uniform bool isReflection;
-+
- void main(void)
- {
-     Material material = getMaterial();
-@@ -37,8 +47,18 @@ void main(void)
-     gl_Position = modelToClip(gl_Vertex);
+     @endforeach
+diff --git a/apps/openmw/mwrender/water.cpp b/apps/openmw/mwrender/water.cpp
+index 584cd09d03..12e0000d92 100644
+--- a/apps/openmw/mwrender/water.cpp
++++ b/apps/openmw/mwrender/water.cpp
+@@ -85,7 +85,7 @@ namespace MWRender
+                 if (true)
+                 {
+                     stateset = new osg::StateSet;
+-                    SceneUtil::setClipPlane(*stateset, 0, osg::Plane(plane.getNormal(), 0).asVec4());
++                    SceneUtil::setClipPlane(*stateset, 0, plane.asVec4());
+                 }
  
-     vec4 viewPos = modelToView(gl_Vertex);
--    gl_ClipVertex = viewPos;
-     euclideanDepth = length(viewPos.xyz);
-+
-+    clip = 0.0;
-+#ifdef GL_EXT_clip_cull_distance
-+    if (isReflection) gl_ClipDistance[0] = dot(viewPos, omw_ClipPlane0);
-+#if @radialFog
-+    gl_CullDistance[0] = (length(viewPos.xyz) > far) ? -1.0 : 1.0;
-+#endif
-+#else
-+    if (isReflection) clip = dot(viewPos, omw_ClipPlane0);
-+#endif
-+
-     linearDepth = getLinearDepth(gl_Position.z, viewPos.z);
- 
-     passColor = gl_Color;
-diff --git a/files/shaders/compatibility/water.vert b/files/shaders/compatibility/water.vert
-index a67f412a07..512b6615c1 100644
---- a/files/shaders/compatibility/water.vert
-+++ b/files/shaders/compatibility/water.vert
-@@ -14,16 +14,27 @@ uniform vec3 playerPos;
- varying vec3 worldPos;
- varying vec2 rippleMapUV;
- 
-+#ifdef GL_EXT_clip_cull_distance
-+#if @radialFog
-+    uniform float far;
-+#endif
-+#endif
-+
- void main(void)
- {
-     gl_Position = modelToClip(gl_Vertex);
--
-     position = gl_Vertex;
-+    vec4 viewPos = modelToView(gl_Vertex);
-+
-+#ifdef GL_EXT_clip_cull_distance
-+#if @radialFog
-+    //gl_CullDistance[0] = (length(viewPos.xyz) > far) ? -1.0 : 1.0;
-+#endif
-+#endif
- 
-     worldPos = position.xyz + nodePosition.xyz;
-     rippleMapUV = (worldPos.xy - playerPos.xy + (@rippleMapSize * @rippleMapWorldScale / 2.0)) / @rippleMapSize / @rippleMapWorldScale;
- 
--    vec4 viewPos = modelToView(gl_Vertex);
-     linearDepth = getLinearDepth(gl_Position.z, viewPos.z);
- 
-     setupShadowCoords(viewPos, normalize((gl_NormalMatrix * gl_Normal).xyz));
+                 if (stateset)
 diff --git a/files/shaders/core/lighting/cluster.comp b/files/shaders/core/lighting/cluster.comp
 old mode 100644
 new mode 100755
@@ -419,18 +226,16 @@ index 43772b2df1..41dafe917f
  }
 +
 +#pragma GLES
-diff --git a/files/shaders/lib/light/bindings.glsl b/files/shaders/lib/light/bindings.glsl
-index 93d3c4df02..f8456e1cff 100644
---- a/files/shaders/lib/light/bindings.glsl
-+++ b/files/shaders/lib/light/bindings.glsl
-@@ -26,8 +26,10 @@ layout(std430, binding = 4) restrict buffer lightIndexListSSBO {
-     uint lightIndexList[];
- };
+diff --git a/files/shaders/core/ripples_blobber.comp b/files/shaders/core/ripples_blobber.comp
+index 235f58a5ba..81e849b2f4 100644
+--- a/files/shaders/core/ripples_blobber.comp
++++ b/files/shaders/core/ripples_blobber.comp
+@@ -16,7 +16,7 @@ uniform vec2 offset;
  
-+#ifdef COMPUTE
- layout(std430, binding = 5) restrict buffer lightIndexCounterSSBO {
-     uint globalLightIndexCount;
- };
-+#endif
+ void main()
+ {
+-    ivec2 texel = ivec2(gl_GlobalInvocationID.xy + offset);
++    ivec2 texel = ivec2(gl_GlobalInvocationID.xy + uvec2(offset));
  
- uniform DirectionalLight sun;
+     vec4 color = imageLoad(imageIn, texel);
+     float wavesizeMultiplier = getTemporalWaveSizeMultiplier(osg_SimulationTime);
