@@ -16,7 +16,7 @@ index 549d3b5bba..8880444738 100644
              && exts.glslLanguageVersion >= minimumGLVersionRequiredForCompute;
  #endif
 +*/
-+        mUseCompute = exts && exts->isComputeShaderRipplesSupported;
++        mUseCompute = SceneUtil::getGLExtensions().isComputeShaderRipplesSupported;
  
          for (size_t i = 0; i < mState.size(); ++i)
          {
