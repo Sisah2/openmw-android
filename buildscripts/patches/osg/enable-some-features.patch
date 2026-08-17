@@ -40,7 +40,7 @@ index 357796b17..585ae0354 100644
 +    if (validContext) {
 +        GLint maxComputeWorkGroupsInvocations;
 +
-+        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &maxComputeWorkGroupsInvocations);
++        glGetIntegerv(/*GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS*/0x90EB, &maxComputeWorkGroupsInvocations);
 +
 +        if (maxComputeWorkGroupsInvocations >= 256)
 +            isComputeShaderRipplesSupported = true;
