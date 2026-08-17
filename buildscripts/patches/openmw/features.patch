@@ -16,7 +16,7 @@ index 549d3b5bba..8880444738 100644
              && exts.glslLanguageVersion >= minimumGLVersionRequiredForCompute;
  #endif
 +*/
-+        mUseCompute = true;
++        mUseCompute = exts && exts->isComputeShaderRipplesSupported;
  
          for (size_t i = 0; i < mState.size(); ++i)
          {
@@ -29,7 +29,7 @@ index b57c95e3ba..82fe36898a 100644
          //  2. GL_ARB_shading_language_420pack
          // However, this is not the case in practice and is known to be broken on at least Mesa drivers.
 -        bool supportsSSBO = exts && static_cast<int>(exts->glslLanguageVersion * 100) >= 430;
-+        bool supportsSSBO = exts && exts->supportsSSBO;
++        bool supportsSSBO = exts && exts->isClusteredLightingSupported;
  
          mSupportsClustered = supportsSSBO;
  
