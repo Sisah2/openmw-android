@@ -151,7 +151,11 @@ index b7a19b4d521..873b4992b82 100644
          if (obj)
              return osg::ref_ptr<osg::Image>(static_cast<osg::Image*>(obj.get()));
          else
-@@ -95,21 +99,21 @@ namespace Resource
+diff --git a/components/resource/imagemanager.cpp b/components/resource/imagemanager.cpp
+index 917bf487bd..69dd75273a 100644
+--- a/components/resource/imagemanager.cpp
++++ b/components/resource/imagemanager.cpp
+@@ -92,16 +92,16 @@ namespace Resource
              Files::IStreamPtr stream;
              try
              {
@@ -166,8 +170,12 @@ index b7a19b4d521..873b4992b82 100644
                  return mWarningImage;
              }
  
--            const std::string ext(Misc::getFileExtension(path.value()));
-+            const std::string ext(Misc::getFileExtension(resolvedPath.value()));
+-            std::string ext(Misc::getFileExtension(path.value()));
++            std::string ext(Misc::getFileExtension(resolvedPath.value()));
+ 
+             // Non-standard, but Morrowind supports this
+             if (ext == "targa")
+@@ -110,8 +110,8 @@ namespace Resource
              osgDB::ReaderWriter* reader = osgDB::Registry::instance()->getReaderWriterForExtension(ext);
              if (!reader)
              {

@@ -1,3 +1,16 @@
+diff --git a/components/fx/technique.cpp b/components/fx/technique.cpp
+index 308593daeb..bac25ddfa9 100644
+--- a/components/fx/technique.cpp
++++ b/components/fx/technique.cpp
+@@ -9,7 +9,7 @@
+ #include <osg/Texture2D>
+ #include <osg/Texture3D>
+ 
+-#include <SDL_opengl_glext.h>
++#include <SDL_opengles2_gl2ext.h>
+ 
+ #include <components/debug/debuglog.hpp>
+ #include <components/files/conversion.hpp>
 diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postprocessor.cpp
 index 1787163bab..a048a713fb 100644
 --- a/apps/openmw/mwrender/postprocessor.cpp

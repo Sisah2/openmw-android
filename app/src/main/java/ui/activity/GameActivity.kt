@@ -235,7 +235,6 @@ private fun patchShadersToGLES() {
            }
            else if (it.extension == "vert") {
 
-               content = content.replace("osg_ClipVertex = viewPos;\n", "")
                if (it.name.contains("terrain_composite")) {
                    content = content.replace("osg_ModelViewMatrix * ", "")
                }
@@ -250,14 +249,16 @@ private fun patchShadersToGLES() {
                content = addLineToHeader(content, "in vec4 osg_Vertex;")
                content = addLineToHeader(content, "in vec3 osg_Normal;")
                content = addLineToHeader(content, "in vec4 osg_Color;")
-               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord0;")
-               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord1;")
-               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord2;")
-               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord3;")
-               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord4;")
-               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord5;")
-               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord6;")
-               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord7;")
+               content = addLineToHeader(content, "in vec4 osg_MultiTexCoord0;")
+               content = addLineToHeader(content, "in vec4 osg_MultiTexCoord1;")
+               content = addLineToHeader(content, "in vec4 osg_MultiTexCoord2;")
+               if (!it.name.contains("groundcover")) {
+                   content = addLineToHeader(content, "in vec4 osg_MultiTexCoord3;")
+                   content = addLineToHeader(content, "in vec4 osg_MultiTexCoord4;")
+               }
+               content = addLineToHeader(content, "in vec4 osg_MultiTexCoord5;")
+               content = addLineToHeader(content, "in vec4 osg_MultiTexCoord6;")
+               content = addLineToHeader(content, "in vec4 osg_MultiTexCoord7;")
 
                content = addLineToHeader(content, "uniform mat4 osg_ModelViewProjectionMatrix;")
                content = addLineToHeader(content, "uniform mat4 osg_ModelViewMatrix;")
@@ -266,9 +267,6 @@ private fun patchShadersToGLES() {
                // Add some defines
                content = addLineToHeader(content, "#define attribute in")
                content = addLineToHeader(content, "#define varying out")
-
-               // Fix normalMaps compile error
-               content = content.replace("passTangent = osg_MultiTexCoord7.xyzw;", "passTangent = vec4(osg_MultiTexCoord7.xyz, 1.0);")
 
            }
 
@@ -342,7 +340,6 @@ class GameActivity : SDLActivity() {
         patchShadersLinking()
         patchShadersToGLES()
 
-        //System.loadLibrary("glad")
         System.loadLibrary("openmw")
     }
 

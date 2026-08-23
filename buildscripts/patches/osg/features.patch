@@ -14,10 +14,23 @@ index 8f047c4ab..e073e2641 100644
          bool isShaderObjectsSupported;
          bool isVertexShaderSupported;
 diff --git a/src/osg/GLExtensions.cpp b/src/osg/GLExtensions.cpp
-index 357796b17..585ae0354 100644
+index 357796b17..c3b9bc206 100644
 --- a/src/osg/GLExtensions.cpp
 +++ b/src/osg/GLExtensions.cpp
-@@ -451,6 +451,33 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -336,7 +336,11 @@ OSG_INIT_SINGLETON_PROXY(GLExtensionDisableStringInitializationProxy, osg::getGL
+         #elif defined(OSG_GLES2_AVAILABLE)
+             static void *handle = dlopen("libGLESv2.so", RTLD_NOW);
+         #elif defined(OSG_GLES3_AVAILABLE)
+-            static void *handle = dlopen("libGLESv3.so", RTLD_NOW);
++            static void *handle;
++            if (getenv("OSG_USE_ANGLE") == nullptr)
++                handle = dlopen("libGLESv3.so", RTLD_NOW);
++            else
++                handle = dlopen("libGLESv2_angle.so", RTLD_NOW);
+         #elif defined(OSG_GL1_AVAILABLE)
+             static void *handle = dlopen("libGL.so", RTLD_NOW);
+         #endif
+@@ -451,6 +455,33 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      glVersion = validContext ? findAsciiToFloat( versionString ) : 0.0f;
      glslLanguageVersion = 0.0f;
  
@@ -51,7 +64,7 @@ index 357796b17..585ae0354 100644
      bool shadersBuiltIn = OSG_GLES2_FEATURES || OSG_GLES3_FEATURES || OSG_GL3_FEATURES;
  
      isShaderObjectsSupported = validContext && (shadersBuiltIn || osg::isGLExtensionSupported(contextID,"GL_ARB_shader_objects"));
-@@ -479,6 +506,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -479,6 +510,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
  
      isClipControlSupported = validContext &&
                               (isGLExtensionSupported(contextID,"GL_ARB_clip_control") ||
@@ -59,7 +72,7 @@ index 357796b17..585ae0354 100644
                               (glVersion >= 4.5f));
  
  
-@@ -620,7 +648,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -620,7 +652,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      setGLExtensionFuncPtr(glUniformMatrix4x3fv, "glUniformMatrix4x3fv", validContext);
  
      // ARB_clip_control
@@ -68,7 +81,7 @@ index 357796b17..585ae0354 100644
  
      // EXT_geometry_shader4
      setGLExtensionFuncPtr(glProgramParameteri,  "glProgramParameteri", "glProgramParameteriEXT", validContext);
-@@ -850,7 +878,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -850,13 +882,16 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
                                   isGLExtensionOrVersionSupported(contextID,"GL_EXT_multitexture", 1.3f));
  
      isTextureFilterAnisotropicSupported = validContext && isGLExtensionSupported(contextID,"GL_EXT_texture_filter_anisotropic");
@@ -77,7 +90,16 @@ index 357796b17..585ae0354 100644
      isTextureCompressionARBSupported = validContext && (builtInSupport || isGLExtensionOrVersionSupported(contextID,"GL_ARB_texture_compression", 1.3f));
      isTextureCompressionS3TCSupported = validContext && (isGLExtensionSupported(contextID,"GL_EXT_texture_compression_s3tc") ||
                                                           isGLExtensionSupported(contextID, "GL_S3_s3tc") ||
-@@ -892,7 +920,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+                                                          isGLExtensionSupported(contextID, "WEBGL_compressed_texture_s3tc") ||
+                                                          isGLExtensionSupported(contextID, "MOZ_WEBGL_compressed_texture_s3tc") ||
+                                                          isGLExtensionSupported(contextID, "WEBKIT_WEBGL_compressed_texture_s3tc") ||
++                                                         (isGLExtensionSupported(contextID, "GL_EXT_texture_compression_dxt1") &&
++                                                          isGLExtensionSupported(contextID, "GL_ANGLE_texture_compression_dxt3") &&
++                                                          isGLExtensionSupported(contextID, "GL_ANGLE_texture_compression_dxt5")) ||
+                                                          isGLExtensionSupported(contextID, "WEBGL_compressed_texture_s3tc_srgb") /* TODO: separate flag */);
+     isTextureCompressionPVRTC2BPPSupported = validContext && (isGLExtensionSupported(contextID,"GL_IMG_texture_compression_pvrtc") ||
+                                                               isGLExtensionSupported(contextID, "WEBGL_compressed_texture_pvrtc"));
+@@ -892,7 +927,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      isGenerateMipMapSupported = validContext && (builtInSupport || isGLExtensionOrVersionSupported(contextID,"GL_SGIS_generate_mipmap", 1.4f));
      preferGenerateMipmapSGISForPowerOfTwo = (radeonHardwareDetected||fireGLHardwareDetected) ? false : true;
      isTextureMultisampledSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_texture_multisample"));
@@ -86,7 +108,7 @@ index 357796b17..585ae0354 100644
      isShadowAmbientSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_shadow_ambient"));
      isClientStorageSupported = validContext && (isGLExtensionSupported(contextID,"GL_APPLE_client_storage"));
      isNonPowerOfTwoTextureMipMappedSupported = validContext && (builtInSupport || isGLExtensionSupported(contextID, "GL_OES_texture_npot") || isGLExtensionOrVersionSupported(contextID, "GL_ARB_texture_non_power_of_two", 2.0));
-@@ -919,10 +947,10 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -919,10 +954,10 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      isTextureLODBiasSupported  = (glVersion >= 3.0f) || isGLExtensionSupported(contextID, "GL_EXT_texture_lod_bias");
  #else
      isTextureMaxLevelSupported = (glVersion >= 1.2f);

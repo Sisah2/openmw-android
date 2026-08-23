@@ -537,9 +537,6 @@ class MainActivity : AppCompatActivity() {
 	writeSetting("Shadows", "maximum shadow map distance", prefs.getString("gs_shadows_distance", "8192").toString())
 	writeSetting("Shadows", "shadow fade start", prefs.getString("gs_shadows_fade_start", "0.9").toString())
 
-        // force some settings for now
-        writeSetting("Shadows", "enable indoor shadows", "false")
-
 	// Animations
 	writeSetting("Game", "player movement ignores animation", if(prefs.getBoolean("gs_player_movement_ignores_animation", false)) "true" else "false")
 	writeSetting("Game", "use magic item animations", if(prefs.getBoolean("gs_use_magic_item_animation", false)) "true" else "false")

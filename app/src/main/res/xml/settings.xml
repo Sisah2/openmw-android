@@ -108,14 +108,14 @@
         <CheckBoxPreference
             android:key="pref_use_spirv_shader_conv"
             android:title="@string/pref_use_spirv_shader_conv"
-            android:summary="Force spirv-cross shader compiler for all glsl versions."
-            android:defaultValue="true"/>
+            android:summary="Force spirv-cross shader compiler for core shaders."
+            android:defaultValue="false"/>
 
         <CheckBoxPreference
             android:key="pref_use_angle"
             android:title="@string/pref_use_angle"
             android:summary="Use ANGLE as OpenGL ES driver."
-            android:defaultValue="false"/>
+            android:defaultValue="true"/>
 
     </PreferenceCategory>
 
