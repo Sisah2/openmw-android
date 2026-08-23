@@ -522,28 +522,23 @@ class MainActivity : AppCompatActivity() {
 	writeSetting("Post Processing", "transparent postpass", if(prefs.getBoolean("gs_transparent_postpass", false)) "true" else "false")
 
 	// Visuals Shadows
-        if((File(Constants.USER_FILE_STORAGE + "/launcher/extensions.log").exists() &&
-           File(Constants.USER_FILE_STORAGE + "/launcher/extensions.log").readText().contains("GL_EXT_depth_clamp")) || prefs.getBoolean("pref_use_angle", false) == true) {
+        writeSetting("Shadows", "enable shadows",
+        if(prefs.getBoolean("gs_object_shadows", false) || prefs.getBoolean("gs_terrain_shadows", false) ||
+             prefs.getBoolean("gs_actor_shadows", false) || prefs.getBoolean("gs_player_shadows", false))
+             "true" else "false")
 
-            writeSetting("Shadows", "enable shadows",
-            if(prefs.getBoolean("gs_object_shadows", false) || prefs.getBoolean("gs_terrain_shadows", false) ||
-                 prefs.getBoolean("gs_actor_shadows", false) || prefs.getBoolean("gs_player_shadows", false))
-                 "true" else "false")
+	writeSetting("Shadows", "object shadows", if(prefs.getBoolean("gs_object_shadows", false)) "true" else "false")
+	writeSetting("Shadows", "terrain shadows", if(prefs.getBoolean("gs_terrain_shadows", false)) "true" else "false")
+	writeSetting("Shadows", "actor shadows", if(prefs.getBoolean("gs_actor_shadows", false)) "true" else "false")
+	writeSetting("Shadows", "player shadows", if(prefs.getBoolean("gs_player_shadows", false)) "true" else "false")
+	writeSetting("Shadows", "enable indoor shadows", if(prefs.getBoolean("gs_indoor_shadows", true)) "true" else "false")
+	writeSetting("Shadows", "shadow map resolution", prefs.getString("gs_shadow_map_resolution", "1024").toString())
+	writeSetting("Shadows", "compute scene bounds", prefs.getString("gs_shadow_computation_method", "bounds").toString())
+	writeSetting("Shadows", "maximum shadow map distance", prefs.getString("gs_shadows_distance", "8192").toString())
+	writeSetting("Shadows", "shadow fade start", prefs.getString("gs_shadows_fade_start", "0.9").toString())
 
-	    writeSetting("Shadows", "object shadows", if(prefs.getBoolean("gs_object_shadows", false)) "true" else "false")
-	    writeSetting("Shadows", "terrain shadows", if(prefs.getBoolean("gs_terrain_shadows", false)) "true" else "false")
-	    writeSetting("Shadows", "actor shadows", if(prefs.getBoolean("gs_actor_shadows", false)) "true" else "false")
-	    writeSetting("Shadows", "player shadows", if(prefs.getBoolean("gs_player_shadows", false)) "true" else "false")
-	    writeSetting("Shadows", "indoor shadows", if(prefs.getBoolean("gs_indoor_shadows", true)) "true" else "false")
-	    writeSetting("Shadows", "shadow map resolution", prefs.getString("gs_shadow_map_resolution", "1024").toString())
-	    writeSetting("Shadows", "compute scene bounds", prefs.getString("gs_shadow_computation_method", "bounds").toString())
-	    writeSetting("Shadows", "maximum shadow map distance", prefs.getString("gs_shadows_distance", "8192").toString())
-	    writeSetting("Shadows", "shadow fade start", prefs.getString("gs_shadows_fade_start", "0.9").toString())
-        }
-        else
-        {
-            writeSetting("Shadows", "enable shadows", "false")
-        }
+        // force some settings for now
+        writeSetting("Shadows", "enable indoor shadows", "false")
 
 	// Animations
 	writeSetting("Game", "player movement ignores animation", if(prefs.getBoolean("gs_player_movement_ignores_animation", false)) "true" else "false")

@@ -1,15 +1,3 @@
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 58786ed9b6..b7036453c0 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -298,6 +298,7 @@ set(USED_OSG_PLUGINS
-     osgdb_bmp
-     osgdb_dae
-     osgdb_dds
-+    osgdb_ktx
-     osgdb_freetype
-     osgdb_jpeg
-     osgdb_osg
 diff --git a/apps/openmw/engine.cpp b/apps/openmw/engine.cpp
 index 8d8a0bc7b9..abe143fa03 100644
 --- a/apps/openmw/engine.cpp

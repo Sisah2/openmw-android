@@ -37,7 +37,7 @@
             android:dialogTitle="Shadow Map Resolution"
             android:entries="@array/gs_shadow_map_resolution_entries"
             android:entryValues="@array/gs_shadow_map_resolution_values"
-            android:defaultValue="1024" />
+            android:defaultValue="4096" />
 
         <ListPreference
             android:key="gs_shadow_computation_method"

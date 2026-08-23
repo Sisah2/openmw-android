@@ -1,0 +1,31 @@
+diff --git a/components/sdlutil/sdlgraphicswindow.cpp b/components/sdlutil/sdlgraphicswindow.cpp
+index 9ff0545930..0219e55953 100644
+--- a/components/sdlutil/sdlgraphicswindow.cpp
++++ b/components/sdlutil/sdlgraphicswindow.cpp
+@@ -1,7 +1,11 @@
++#include <glad/gles2.h>
++
+ #include "sdlgraphicswindow.hpp"
+ 
+ #include <SDL_video.h>
+ 
++#include <components/debug/debuglog.hpp>
++
+ #ifdef OPENMW_GL4ES_MANUAL_INIT
+ #include "gl4esinit.h"
+ #endif
+@@ -131,6 +135,14 @@ namespace SDLUtil
+             return;
+         }
+ 
++        //int version = gladLoaderLoadGLES2();
++        int version = gladLoadGLES2((GLADloadfunc)SDL_GL_GetProcAddress);
++        if (!version) {
++            Log(Debug::Error) << "Failed to initialize GLAD\n";
++        }
++        //else
++            //Log(Debug::Error) << "Initialized GLAD " << version << "\n";
++
+ #ifdef OPENMW_GL4ES_MANUAL_INIT
+         openmw_gl4es_init(mWindow);
+ #endif

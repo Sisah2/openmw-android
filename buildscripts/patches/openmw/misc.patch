@@ -1,0 +1,241 @@
+diff --git a/apps/openmw/mwrender/localmap.cpp b/apps/openmw/mwrender/localmap.cpp
+index ade0faafac..278da9c435 100644
+--- a/apps/openmw/mwrender/localmap.cpp
++++ b/apps/openmw/mwrender/localmap.cpp
+@@ -742,6 +742,8 @@ namespace MWRender
+         stateset->addUniform(new osg::Uniform("skyBlendingStart", 8000000.0f));
+         stateset->addUniform(new osg::Uniform("screenRes", osg::Vec2f{ 1, 1 }));
+ 
++        stateset->addUniform(new osg::Uniform("isReflection", false), osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
++
+         osg::ref_ptr<SceneUtil::Light> light = new SceneUtil::Light;
+         light->setPosition(osg::Vec4(-0.3f, -0.3f, 0.7f, 0.f));
+         light->setDiffuse(osg::Vec4(0.7f, 0.7f, 0.7f, 1.f));
+diff --git a/files/settings-default.cfg b/files/settings-default.cfg
+index a9d15a1c79..2123c40759 100644
+--- a/files/settings-default.cfg
++++ b/files/settings-default.cfg
+@@ -1020,7 +1020,7 @@ wait for all jobs on exit = false
+ enable shadows = false
+ 
+ # How many shadow maps to use - more of these means each shadow map texel covers less area, producing better looking shadows, but may decrease performance.
+-number of shadow maps = 3
++number of shadow maps = 1
+ 
+ # The distance from the camera at which shadows fade away completely. Set to 0 to make the distance infinite.
+ maximum shadow map distance = 8192
+diff --git a/files/shaders/compatibility/sky.frag b/files/shaders/compatibility/sky.frag
+index 7f5658a36c..d9aadd7070 100644
+--- a/files/shaders/compatibility/sky.frag
++++ b/files/shaders/compatibility/sky.frag
+@@ -11,6 +11,15 @@ uniform vec4 moonBlend;         // PASS_MOON
+ uniform vec4 atmosphereFade;    // PASS_MOON
+ uniform vec4 diffuseColor;
+ 
++#if @skyBlending
++uniform sampler2D sky;
++
++vec3 sampleSkyColor(vec2 uv)
++{
++    return texture2D(sky, uv).xyz;
++}
++#endif
++
+ #include "fog.glsl"
+ 
+ varying vec2 diffuseMapUV;
+diff --git a/apps/openmw/mwsound/ffmpegdecoder.cpp b/apps/openmw/mwsound/ffmpegdecoder.cpp
+index 406bd47d66..ade613f13b 100644
+--- a/apps/openmw/mwsound/ffmpegdecoder.cpp
++++ b/apps/openmw/mwsound/ffmpegdecoder.cpp
+@@ -294,7 +294,7 @@ namespace MWSound
+         }
+ 
+         // avformat_open_input frees the user supplied AVFormatContext on failure
+-        if (avformat_open_input(&ctx, name, fmt, nullptr) != 0)
++        if (avformat_open_input(&ctx, name, /*fmt*/nullptr, nullptr) != 0)
+             return false;
+ 
+         formatCtx.reset(std::exchange(ctx, nullptr));
+diff --git a/components/fx/technique.cpp b/components/fx/technique.cpp
+index 308593daeb..bac25ddfa9 100644
+--- a/components/fx/technique.cpp
++++ b/components/fx/technique.cpp
+@@ -9,7 +9,7 @@
+ #include <osg/Texture2D>
+ #include <osg/Texture3D>
+ 
+-#include <SDL_opengl_glext.h>
++#include <SDL_opengles2_gl2ext.h>
+ 
+ #include <components/debug/debuglog.hpp>
+ #include <components/files/conversion.hpp>
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fc366de5b2..f94e7e8494 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -295,6 +295,7 @@ set(USED_OSG_PLUGINS
+     osgdb_bmp
+     osgdb_dae
+     osgdb_dds
++    osgdb_ktx
+     osgdb_freetype
+     osgdb_jpeg
+     osgdb_osg
+diff --git a/files/shaders/lib/core/clip.glsl b/files/shaders/lib/core/clip.glsl
+index 126771ef17..5b4827b7a0 100644
+--- a/files/shaders/lib/core/clip.glsl
++++ b/files/shaders/lib/core/clip.glsl
+@@ -14,7 +14,7 @@ void applyClipPlanes(vec4 pos)
+ #ifdef GL_EXT_clip_cull_distance
+         if (isReflection) gl_ClipDistance[@clipPlaneIndex] = dot(clipPlane@clipPlaneIndex, pos);
+ #else
+-        clip = dot(clipPlane@clipPlaneIndex, pos);
++        if (isReflection) clip = dot(clipPlane@clipPlaneIndex, pos);
+ #endif
+ 
+     @endforeach
+diff --git a/apps/openmw/mwrender/water.cpp b/apps/openmw/mwrender/water.cpp
+index 584cd09d03..12e0000d92 100644
+--- a/apps/openmw/mwrender/water.cpp
++++ b/apps/openmw/mwrender/water.cpp
+@@ -85,7 +85,7 @@ namespace MWRender
+                 if (true)
+                 {
+                     stateset = new osg::StateSet;
+-                    SceneUtil::setClipPlane(*stateset, 0, osg::Plane(plane.getNormal(), 0).asVec4());
++                    SceneUtil::setClipPlane(*stateset, 0, plane.asVec4());
+                 }
+ 
+                 if (stateset)
+diff --git a/files/shaders/core/lighting/cluster.comp b/files/shaders/core/lighting/cluster.comp
+old mode 100644
+new mode 100755
+index 2ef435b483..6e948835bf
+--- a/files/shaders/core/lighting/cluster.comp
++++ b/files/shaders/core/lighting/cluster.comp
+@@ -1,4 +1,11 @@
+-#version 430 core
++#version 320 es
++precision highp float;
++precision highp int;
++precision highp image2D;
++
++//HEADER_END
++
++#define COMPUTE 1
+ 
+ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+ 
+@@ -30,16 +37,16 @@ vec3 screenToView(vec2 screenCoord)
+ void main()
+ {
+     uint tileIndex = gl_WorkGroupID.x + (gl_WorkGroupID.y * uint(gridSize.x)) + (gl_WorkGroupID.z * uint(gridSize.x) * uint(gridSize.y));
+-    vec2 tileSize = screenRes / ivec2(gridSize.xy);
++    vec2 tileSize = vec2(ivec2(screenRes) / ivec2(gridSize.xy));
+ 
+-    vec2 minTile_screenspace = gl_WorkGroupID.xy * tileSize;
+-    vec2 maxTile_screenspace = (gl_WorkGroupID.xy + 1) * tileSize;
++    vec2 minTile_screenspace = vec2(gl_WorkGroupID.xy) * tileSize;
++    vec2 maxTile_screenspace = vec2(gl_WorkGroupID.xy + uint(1)) * tileSize;
+ 
+     vec3 minTile = screenToView(minTile_screenspace);
+     vec3 maxTile = screenToView(maxTile_screenspace);
+ 
+-    float planeNear = near * pow(clusterFar / near, gl_WorkGroupID.z / gridSize.z);
+-    float planeFar = near * pow(clusterFar / near, (gl_WorkGroupID.z + 1) / gridSize.z);
++    float planeNear = near * pow(clusterFar / near, float(gl_WorkGroupID.z) / gridSize.z);
++    float planeFar = near * pow(clusterFar / near, float(gl_WorkGroupID.z + uint(1)) / gridSize.z);
+ 
+     vec3 minPointNear = lineIntersectionWithZPlane(vec3(0, 0, 0), minTile, planeNear);
+     vec3 minPointFar = lineIntersectionWithZPlane(vec3(0, 0, 0), minTile, planeFar);
+@@ -49,3 +56,5 @@ void main()
+     clusters[tileIndex].minPoint = vec4(min(minPointNear, minPointFar), 0.0);
+     clusters[tileIndex].maxPoint = vec4(max(maxPointNear, maxPointFar), 0.0);
+ }
++
++#pragma GLES
+diff --git a/files/shaders/core/lighting/cull.comp b/files/shaders/core/lighting/cull.comp
+old mode 100644
+new mode 100755
+index 43772b2df1..41dafe917f
+--- a/files/shaders/core/lighting/cull.comp
++++ b/files/shaders/core/lighting/cull.comp
+@@ -1,4 +1,11 @@
+-#version 430 core
++#version 320 es
++precision highp float;
++precision highp int;
++precision highp image2D;
++
++//HEADER_END
++
++#define COMPUTE 1
+ 
+ layout(local_size_x = @workGroupSize, local_size_y = 1, local_size_z = 1) in;
+ 
+@@ -29,16 +36,16 @@ bool testSphereAABB(int i, Cluster cluster)
+ 
+ void main()
+ {
+-    if (gl_LocalInvocationIndex == 0) {
+-        g_Count = 0;
++    if (gl_LocalInvocationIndex == 0u) {
++        g_Count = 0u;
+         g_cluster = clusters[gl_WorkGroupID.x];
+     }
+ 
+     barrier();
+ 
+-    uint index = 0;
++    uint index = 0u;
+ 
+-    for (uint i = gl_LocalInvocationIndex; i < pointLight.length(); i += @workGroupSize) {
++    for (uint i = gl_LocalInvocationIndex; i < uint(pointLight.length()); i += uint(@workGroupSize)) {
+         PointLight light = pointLight[i];
+ 
+         vec3 center = light.position.xyz;
+@@ -48,9 +55,9 @@ void main()
+         vec3 aabbMax = g_cluster.maxPoint.xyz;
+ 
+         if (sphereAABBIntersection(center, radius, aabbMin, aabbMax)) {
+-            index = atomicAdd(g_Count, 1);
++            index = atomicAdd(g_Count, 1u);
+ 
+-            if (index >= @maxLightsPerCluster) break;
++            if (index >= uint(@maxLightsPerCluster)) break;
+ 
+             g_List[index] = i;
+         }
+@@ -58,14 +65,16 @@ void main()
+ 
+     barrier();
+ 
+-    if (gl_LocalInvocationIndex == 0) {
++    if (gl_LocalInvocationIndex == 0u) {
+         g_Offset = atomicAdd(globalLightIndexCount, g_Count);
+         lightGrid[gl_WorkGroupID.x] = LightGrid(g_Offset, g_Count);
+     }
+ 
+     barrier();
+ 
+-    for (uint i = gl_LocalInvocationIndex; i < g_Count; i += @workGroupSize) {
++    for (uint i = gl_LocalInvocationIndex; i < g_Count; i += uint(@workGroupSize)) {
+         lightIndexList[g_Offset + i] = g_List[i];
+     }
+ }
++
++#pragma GLES
+diff --git a/files/shaders/core/ripples_blobber.comp b/files/shaders/core/ripples_blobber.comp
+index 235f58a5ba..81e849b2f4 100644
+--- a/files/shaders/core/ripples_blobber.comp
++++ b/files/shaders/core/ripples_blobber.comp
+@@ -16,7 +16,7 @@ uniform vec2 offset;
+ 
+ void main()
+ {
+-    ivec2 texel = ivec2(gl_GlobalInvocationID.xy + offset);
++    ivec2 texel = ivec2(gl_GlobalInvocationID.xy + uvec2(offset));
+ 
+     vec4 color = imageLoad(imageIn, texel);
+     float wavesizeMultiplier = getTemporalWaveSizeMultiplier(osg_SimulationTime);

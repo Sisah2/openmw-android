@@ -1,0 +1,638 @@
+From fc53fedc0252116948752ece487553d0e299887d Mon Sep 17 00:00:00 2001
+From: sisah <jirielbunda@seznam.cz>
+Date: Sun, 2 Aug 2026 15:43:33 -0400
+Subject: [PATCH] spirv shaderconv
+
+---
+ CMakeLists.txt                         |   8 +-
+ apps/openmw/CMakeLists.txt             |   8 +-
+ apps/openmw/mwrender/postprocessor.cpp |   4 +-
+ cmake/FindSPIRV-Cross.cmake            |  31 +++
+ cmake/glslang-config.cmake             |  36 ++++
+ cmake/spirv-cross-config.cmake         |  31 +++
+ components/CMakeLists.txt              |   4 +-
+ components/fx/pass.cpp                 |  21 +-
+ components/fx/technique.cpp            |   9 +-
+ components/shader/shaderconverter.cpp  | 264 +++++++++++++++++++++++++
+ components/shader/shaderconverter.hpp  |  21 ++
+ 11 files changed, 427 insertions(+), 10 deletions(-)
+ create mode 100755 cmake/FindSPIRV-Cross.cmake
+ create mode 100755 cmake/glslang-config.cmake
+ create mode 100755 cmake/spirv-cross-config.cmake
+ create mode 100755 components/shader/shaderconverter.cpp
+ create mode 100755 components/shader/shaderconverter.hpp
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index d643015fa52..b22aedda149 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -273,6 +273,11 @@ endif()
+ 
+ find_package(LZ4 REQUIRED)
+ 
++if (ANDROID)
++    find_package(glslang REQUIRED)
++    find_package(SPIRV-Cross REQUIRED)
++endif()
++
+ if (USE_QT)
+     find_package(QT REQUIRED COMPONENTS Core NAMES Qt6)
+     find_package(Qt6 COMPONENTS Core Widgets Network OpenGL OpenGLWidgets LinguistTools Svg REQUIRED)
+diff --git a/apps/openmw/CMakeLists.txt b/apps/openmw/CMakeLists.txt
+index c7e224d353c..95b74f478f9 100644
+--- a/apps/openmw/CMakeLists.txt
++++ b/apps/openmw/CMakeLists.txt
+@@ -218,7 +222,9 @@ if (MSVC AND PRECOMPILE_HEADERS_WITH_MSVC)
+ endif()
+ 
+ if (ANDROID)
+-    target_link_libraries(openmw-lib EGL android log z)
++    target_link_libraries(
++            openmw-lib EGL android log z glslang::glslang glslang::SPIRV spirv-cross-c
++    )
+ endif (ANDROID)
+ 
+ if (USE_SYSTEM_TINYXML)
+diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postprocessor.cpp
+index 1787163babc..937af4bc17a 100644
+--- a/apps/openmw/mwrender/postprocessor.cpp
++++ b/apps/openmw/mwrender/postprocessor.cpp
+@@ -571,14 +571,14 @@ namespace MWRender
+         {
+             if (!technique->isValid())
+                 continue;
+-
++/*
+             if (technique->getGLSLVersion() > mGLSLVersion)
+             {
+                 Log(Debug::Warning) << "Technique " << technique->getName() << " requires GLSL version "
+                                     << technique->getGLSLVersion() << " which is unsupported by your hardware.";
+                 continue;
+             }
+-
++*/
+             Fx::DispatchNode node;
+ 
+             node.mFlags = technique->getFlags();
+diff --git a/cmake/FindSPIRV-Cross.cmake b/cmake/FindSPIRV-Cross.cmake
+new file mode 100755
+index 00000000000..6a7fe1f2216
+--- /dev/null
++++ b/cmake/FindSPIRV-Cross.cmake
+@@ -0,0 +1,31 @@
++if(TARGET spirv-cross-c)
++    return()
++endif()
++
++# Define core components
++add_library(spirv-cross-core STATIC IMPORTED)
++set_target_properties(spirv-cross-core PROPERTIES
++        IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libspirv-cross-core.a"
++)
++
++add_library(spirv-cross-glsl STATIC IMPORTED)
++set_target_properties(spirv-cross-glsl PROPERTIES
++        IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libspirv-cross-glsl.a"
++        INTERFACE_LINK_LIBRARIES "spirv-cross-core"
++)
++
++add_library(spirv-cross-reflect STATIC IMPORTED)
++set_target_properties(spirv-cross-reflect PROPERTIES
++        IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libspirv-cross-reflect.a"
++)
++
++# Define C wrapper
++add_library(spirv-cross-c STATIC IMPORTED)
++set_target_properties(spirv-cross-c PROPERTIES
++        IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libspirv-cross-c.a"
++        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/include/spirv_cross"
++        INTERFACE_LINK_LIBRARIES "spirv-cross-glsl;spirv-cross-core;spirv-cross-reflect"
++)
++
++# Provide the case-sensitive alias if needed
++add_library(SPIRV-Cross::spirv-cross-c ALIAS spirv-cross-c)
+diff --git a/cmake/glslang-config.cmake b/cmake/glslang-config.cmake
+new file mode 100755
+index 00000000000..478556a5474
+--- /dev/null
++++ b/cmake/glslang-config.cmake
+@@ -0,0 +1,36 @@
++if(TARGET glslang::glslang)
++    return()
++endif()
++
++# Define low-level components
++add_library(glslang::OSDependent STATIC IMPORTED)
++set_target_properties(glslang::OSDependent PROPERTIES
++    IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libOSDependent.a"
++)
++
++add_library(glslang::GenericCodeGen STATIC IMPORTED)
++set_target_properties(glslang::GenericCodeGen PROPERTIES
++    IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libGenericCodeGen.a"
++)
++
++add_library(glslang::MachineIndependent STATIC IMPORTED)
++set_target_properties(glslang::MachineIndependent PROPERTIES
++    IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libMachineIndependent.a"
++    INTERFACE_LINK_LIBRARIES "glslang::OSDependent;glslang::GenericCodeGen"
++)
++
++# Define main glslang library
++add_library(glslang::glslang STATIC IMPORTED)
++set_target_properties(glslang::glslang PROPERTIES
++    IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libglslang.a"
++    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/include"
++    INTERFACE_LINK_LIBRARIES "glslang::MachineIndependent"
++)
++
++# Define SPIRV component
++add_library(glslang::SPIRV STATIC IMPORTED)
++set_target_properties(glslang::SPIRV PROPERTIES
++    IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libSPIRV.a"
++    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/include"
++    INTERFACE_LINK_LIBRARIES "glslang::glslang"
++)
+diff --git a/cmake/spirv-cross-config.cmake b/cmake/spirv-cross-config.cmake
+new file mode 100755
+index 00000000000..40375402994
+--- /dev/null
++++ b/cmake/spirv-cross-config.cmake
+@@ -0,0 +1,31 @@
++if(TARGET spirv-cross-c)
++    return()
++endif()
++
++# Define core components
++add_library(spirv-cross-core STATIC IMPORTED)
++set_target_properties(spirv-cross-core PROPERTIES
++    IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libspirv-cross-core.a"
++)
++
++add_library(spirv-cross-glsl STATIC IMPORTED)
++set_target_properties(spirv-cross-glsl PROPERTIES
++    IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libspirv-cross-glsl.a"
++    INTERFACE_LINK_LIBRARIES "spirv-cross-core"
++)
++
++add_library(spirv-cross-reflect STATIC IMPORTED)
++set_target_properties(spirv-cross-reflect PROPERTIES
++    IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libspirv-cross-reflect.a"
++)
++
++# Define C wrapper
++add_library(spirv-cross-c STATIC IMPORTED)
++set_target_properties(spirv-cross-c PROPERTIES
++    IMPORTED_LOCATION "${CMAKE_INSTALL_PREFIX}/lib/libspirv-cross-c.a"
++    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/include/spirv_cross"
++    INTERFACE_LINK_LIBRARIES "spirv-cross-glsl;spirv-cross-core;spirv-cross-reflect"
++)
++
++# Provide the case-sensitive alias if needed
++add_library(SPIRV-Cross::spirv-cross-c ALIAS spirv-cross-c)
+diff --git a/components/CMakeLists.txt b/components/CMakeLists.txt
+index 7e153728aa7..39cc6277033 100644
+--- a/components/CMakeLists.txt
++++ b/components/CMakeLists.txt
+@@ -133,7 +133,7 @@ add_component_dir (resource
+     )
+ 
+ add_component_dir (shader
+-    shadermanager shadervisitor removedalphafunc
++    shadermanager shadervisitor removedalphafunc shaderconverter
+     )
+ 
+ add_component_dir (sceneutil
+diff --git a/components/fx/pass.cpp b/components/fx/pass.cpp
+index eceffa188f7..5c7e36c28b6 100644
+--- a/components/fx/pass.cpp
++++ b/components/fx/pass.cpp
+@@ -16,6 +16,7 @@
+ #include <components/settings/values.hpp>
+ #include <components/stereo/multiview.hpp>
+ #include <components/version/version.hpp>
++#include <components/shader/shaderconverter.hpp>
+ 
+ #include "stateupdater.hpp"
+ #include "technique.hpp"
+@@ -65,6 +66,9 @@ namespace Fx
+         std::string header = R"GLSL(
+ #version @version @profile
+ @extensions
++precision highp float;
++precision highp int;
++precision lowp sampler2D;
+ 
+ @uboStruct
+ 
+@@ -85,6 +89,7 @@ namespace Fx
+ #define omw_Texture3D @texture3D
+ #define omw_Vertex @vertex
+ #define omw_FragColor @fragColor
++#define texture2D texture
+ 
+ @fragBinding
+ 
+@@ -365,8 +370,20 @@ float omw_EstimateFogCoverageFromUV(vec2 uv)
+                 mVertex = new osg::Shader(
+                     osg::Shader::VERTEX, Stereo::getMultiview() ? s_DefaultVertexMultiview : s_DefaultVertex);
+ 
+-            mVertex->setShaderSource(getPassHeader(technique, preamble).append(mVertex->getShaderSource()));
+-            mFragment->setShaderSource(getPassHeader(technique, preamble, true).append(mFragment->getShaderSource()));
++            std::string vertexSource = getPassHeader(technique, preamble).append(mVertex->getShaderSource());
++            std::string fragmentSource = getPassHeader(technique, preamble, true).append(mFragment->getShaderSource());
++
++            //OSG_NOTICE <<"Vertex shader "<<mName<<" before conversion"<<std::endl<<vertexSource<<std::endl<<std::endl;
++            //OSG_NOTICE <<"Fragment shader "<<mName<<" before conversion"<<std::endl<<fragmentSource<<std::endl<<std::endl;
++
++            vertexSource = Shader::ShaderConverter::convertGLSLtoGLES(vertexSource, osg::Shader::VERTEX, 320);
++            fragmentSource = Shader::ShaderConverter::convertGLSLtoGLES(fragmentSource, osg::Shader::FRAGMENT, 320);
++
++            //OSG_NOTICE <<"Vertex shader "<<mName<<" after conversion"<<std::endl<<vertexSource<<std::endl<<std::endl;
++            //OSG_NOTICE <<"Fragment shader "<<mName<<" after conversion"<<std::endl<<fragmentSource<<std::endl<<std::endl;
++
++            mVertex->setShaderSource(vertexSource);
++            mFragment->setShaderSource(fragmentSource);
+ 
+             mVertex->setName(mName);
+             mFragment->setName(mName);
+diff --git a/components/fx/technique.cpp b/components/fx/technique.cpp
+index 945a3cf1b1b..5199973521b 100644
+--- a/components/fx/technique.cpp
++++ b/components/fx/technique.cpp
+@@ -84,7 +84,7 @@ namespace Fx
+         mDescription = {};
+         mVersion = {};
+         mGLSLExtensions.clear();
+-        mGLSLVersion = (mUBO || Stereo::getMultiview()) ? 330 : 120;
++        mGLSLVersion = 330;//(mUBO || Stereo::getMultiview()) ? 330 : 120;
+         mGLSLProfile.clear();
+         mDynamic = false;
+     }
+@@ -159,6 +159,8 @@ namespace Fx
+                     mGLSLExtensions.insert("GL_EXT_texture_array");
+                 }
+ 
++                //mGLSLExtensions.insert("GL_EXT_shader_non_constant_global_initializers");
++
+                 it->second->compile(*this, mShared);
+ 
+                 if (!it->second->mTarget.empty())
+@@ -241,7 +243,10 @@ namespace Fx
+             else if (key == "author")
+                 mAuthor = parseString();
+             else if (key == "glsl_version")
++            {
+                 mGLSLVersion = std::max(mGLSLVersion, parseInteger());
++                mGLSLVersion = 330;
++            }
+             else if (key == "flags")
+                 mFlags = parseFlags();
+             else if (key == "hdr")
+diff --git a/components/shader/shaderconverter.cpp b/components/shader/shaderconverter.cpp
+new file mode 100755
+index 00000000000..70af75211c9
+--- /dev/null
++++ b/components/shader/shaderconverter.cpp
+@@ -0,0 +1,264 @@
++#include "shaderconverter.hpp"
++
++#include <glslang/Public/ShaderLang.h>
++#include <glslang/SPIRV/GlslangToSpv.h>
++#include <spirv_cross/spirv_cross_c.h>
++
++#include <components/debug/debuglog.hpp>
++#include <regex>
++#include <sstream>
++#include <iostream>
++
++namespace
++{
++    TBuiltInResource InitResources() {
++        TBuiltInResource Resources{};
++        Resources.maxLights = 32;
++        Resources.maxClipPlanes = 6;
++        Resources.maxTextureUnits = 32;
++        Resources.maxTextureCoords = 32;
++        Resources.maxVertexAttribs = 64;
++        Resources.maxVertexUniformComponents = 4096;
++        Resources.maxVaryingFloats = 64;
++        Resources.maxVertexTextureImageUnits = 32;
++        Resources.maxCombinedTextureImageUnits = 80;
++        Resources.maxTextureImageUnits = 32;
++        Resources.maxFragmentUniformComponents = 4096;
++        Resources.maxDrawBuffers = 32;
++        Resources.maxVertexUniformVectors = 128;
++        Resources.maxVaryingVectors = 8;
++        Resources.maxFragmentUniformVectors = 16;
++        Resources.maxVertexOutputVectors = 16;
++        Resources.maxFragmentInputVectors = 15;
++        Resources.minProgramTexelOffset = -8;
++        Resources.maxProgramTexelOffset = 7;
++        Resources.maxClipDistances = 8;
++        Resources.maxComputeWorkGroupCountX = 65535;
++        Resources.maxComputeWorkGroupCountY = 65535;
++        Resources.maxComputeWorkGroupCountZ = 65535;
++        Resources.maxComputeWorkGroupSizeX = 1024;
++        Resources.maxComputeWorkGroupSizeY = 1024;
++        Resources.maxComputeWorkGroupSizeZ = 64;
++        Resources.maxComputeUniformComponents = 1024;
++        Resources.maxComputeTextureImageUnits = 16;
++        Resources.maxComputeImageUniforms = 8;
++        Resources.maxComputeAtomicCounters = 8;
++        Resources.maxComputeAtomicCounterBuffers = 1;
++        Resources.maxVaryingComponents = 60;
++        Resources.maxVertexOutputComponents = 64;
++        Resources.maxGeometryInputComponents = 64;
++        Resources.maxGeometryOutputComponents = 128;
++        Resources.maxFragmentInputComponents = 128;
++        Resources.maxImageUnits = 8;
++        Resources.maxCombinedImageUnitsAndFragmentOutputs = 8;
++        Resources.maxCombinedShaderOutputResources = 8;
++        Resources.maxImageSamples = 0;
++        Resources.maxVertexImageUniforms = 0;
++        Resources.maxTessControlImageUniforms = 0;
++        Resources.maxTessEvaluationImageUniforms = 0;
++        Resources.maxGeometryImageUniforms = 0;
++        Resources.maxFragmentImageUniforms = 8;
++        Resources.maxCombinedImageUniforms = 8;
++        Resources.maxGeometryTextureImageUnits = 16;
++        Resources.maxGeometryOutputVertices = 256;
++        Resources.maxGeometryTotalOutputComponents = 1024;
++        Resources.maxGeometryUniformComponents = 1024;
++        Resources.maxGeometryVaryingComponents = 64;
++        Resources.maxTessControlInputComponents = 128;
++        Resources.maxTessControlOutputComponents = 128;
++        Resources.maxTessControlTextureImageUnits = 16;
++        Resources.maxTessControlUniformComponents = 1024;
++        Resources.maxTessControlTotalOutputComponents = 4096;
++        Resources.maxTessEvaluationInputComponents = 128;
++        Resources.maxTessEvaluationOutputComponents = 128;
++        Resources.maxTessEvaluationTextureImageUnits = 16;
++        Resources.maxTessEvaluationUniformComponents = 1024;
++        Resources.maxTessPatchComponents = 120;
++        Resources.maxPatchVertices = 32;
++        Resources.maxTessGenLevel = 64;
++        Resources.maxViewports = 16;
++        Resources.maxVertexAtomicCounters = 0;
++        Resources.maxTessControlAtomicCounters = 0;
++        Resources.maxTessEvaluationAtomicCounters = 0;
++        Resources.maxGeometryAtomicCounters = 0;
++        Resources.maxFragmentAtomicCounters = 8;
++        Resources.maxCombinedAtomicCounters = 8;
++        Resources.maxAtomicCounterBindings = 1;
++        Resources.maxVertexAtomicCounterBuffers = 0;
++        Resources.maxTessControlAtomicCounterBuffers = 0;
++        Resources.maxTessEvaluationAtomicCounterBuffers = 0;
++        Resources.maxGeometryAtomicCounterBuffers = 0;
++        Resources.maxFragmentAtomicCounterBuffers = 1;
++        Resources.maxCombinedAtomicCounterBuffers = 1;
++        Resources.maxAtomicCounterBufferSize = 16384;
++        Resources.maxTransformFeedbackBuffers = 4;
++        Resources.maxTransformFeedbackInterleavedComponents = 64;
++        Resources.maxCullDistances = 8;
++        Resources.maxCombinedClipAndCullDistances = 8;
++        Resources.maxSamples = 4;
++        Resources.maxMeshOutputVerticesNV = 256;
++        Resources.maxMeshOutputPrimitivesNV = 512;
++        Resources.maxMeshWorkGroupSizeX_NV = 32;
++        Resources.maxMeshWorkGroupSizeY_NV = 1;
++        Resources.maxMeshWorkGroupSizeZ_NV = 1;
++        Resources.maxTaskWorkGroupSizeX_NV = 32;
++        Resources.maxTaskWorkGroupSizeY_NV = 1;
++        Resources.maxTaskWorkGroupSizeZ_NV = 1;
++        Resources.maxMeshViewCountNV = 4;
++        Resources.limits.nonInductiveForLoops = true;
++        Resources.limits.whileLoops = true;
++        Resources.limits.doWhileLoops = true;
++        Resources.limits.generalUniformIndexing = true;
++        Resources.limits.generalAttributeMatrixVectorIndexing = true;
++        Resources.limits.generalVaryingIndexing = true;
++        Resources.limits.generalSamplerIndexing = true;
++        Resources.limits.generalVariableIndexing = true;
++        Resources.limits.generalConstantMatrixVectorIndexing = true;
++        return Resources;
++    }
++
++    int getGLSLVersion(const std::string& code) {
++        static std::regex version_pattern(R"r(#version\s+(\d{3}))r");
++        std::smatch match;
++        if (std::regex_search(code, match, version_pattern)) {
++            return std::stoi(match[1].str());
++        }
++        return 120; // Default to 120 if not found
++    }
++}
++
++namespace Shader
++{
++    static bool glslang_inited = false;
++
++std::string removeLayoutBinding(const std::string& glslCode) {
++    static std::regex bindingRegex(R"(layout\s*\(\s*binding\s*=\s*\d+\s*\)\s*)");
++    std::string result = std::regex_replace(glslCode, bindingRegex, "");
++    static std::regex bindingRegex2(R"(layout\s*\(\s*binding\s*=\s*\d+\s*,)");
++    result = std::regex_replace(result, bindingRegex2, "layout(");
++    return result;
++}
++
++    std::string ShaderConverter::convertGLSLtoGLES(const std::string& glslSource, osg::Shader::Type type, unsigned int glesVersion)
++    {
++        if (!glslang_inited) {
++            glslang::InitializeProcess();
++            glslang_inited = true;
++        }
++
++        int glslVersion = getGLSLVersion(glslSource);
++        int errc = 0;
++
++        std::vector<unsigned int> spirv = glslToSpirv(type, glslVersion, glslSource.c_str(), errc);
++        if (errc != 0 || spirv.empty())
++        {
++            Log(Debug::Error) << "Failed to convert GLSL to SPIR-V";
++            return glslSource; // Return original source on failure
++        }
++
++        std::string essl = spirvToEssl(spirv, glesVersion, errc);
++        if (errc != 0 || essl.empty())
++        {
++            Log(Debug::Error) << "Failed to convert SPIR-V to ESSL";
++            return glslSource;
++        }
++
++        return essl;
++    }
++
++    std::vector<unsigned int> ShaderConverter::glslToSpirv(osg::Shader::Type type, int glslVersion, const char* shaderSrc, int& errc)
++    {
++        EShLanguage shader_language;
++        switch (type) {
++            case osg::Shader::VERTEX: shader_language = EShLangVertex; break;
++            case osg::Shader::FRAGMENT: shader_language = EShLangFragment; break;
++            case osg::Shader::GEOMETRY: shader_language = EShLangGeometry; break;
++            case osg::Shader::COMPUTE: shader_language = EShLangCompute; break;
++            case osg::Shader::TESSCONTROL: shader_language = EShLangTessControl; break;
++            case osg::Shader::TESSEVALUATION: shader_language = EShLangTessEvaluation; break;
++            default:
++                errc = -1;
++                return {};
++        }
++
++        glslang::TShader shader(shader_language);
++        shader.setStrings(&shaderSrc, 1);
++
++        shader.setEnvInput(glslang::EShSourceGlsl, shader_language, glslang::EShClientOpenGL, glslVersion);
++        shader.setEnvClient(glslang::EShClientOpenGL, glslang::EShTargetOpenGL_450);
++        shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
++        shader.setAutoMapLocations(true);
++        shader.setAutoMapBindings(true);
++
++        TBuiltInResource resources = InitResources();
++
++        if (!shader.parse(&resources, glslVersion, true, EShMsgDefault)) {
++            Log(Debug::Error) << "glslang parse error: " << shader.getInfoLog();
++            errc = -1;
++            return {};
++        }
++
++        glslang::TProgram program;
++        program.addShader(&shader);
++
++        if (!program.link(EShMsgDefault)) {
++            Log(Debug::Error) << "glslang link error: " << program.getInfoLog();
++            errc = -1;
++            return {};
++        }
++
++        std::vector<unsigned int> spirv_code;
++        glslang::SpvOptions spvOptions;
++        spvOptions.disableOptimizer = false;
++        glslang::GlslangToSpv(*program.getIntermediate(shader_language), spirv_code, &spvOptions);
++        errc = 0;
++        return spirv_code;
++    }
++
++    std::string ShaderConverter::spirvToEssl(const std::vector<unsigned int>& spirv, unsigned int esslVersion, int& errc)
++    {
++        spvc_context context = nullptr;
++        spvc_parsed_ir ir = nullptr;
++        spvc_compiler compiler_glsl = nullptr;
++        spvc_compiler_options options = nullptr;
++        const char* result = nullptr;
++
++        spvc_context_create(&context);
++        if (!context) {
++            errc = -1;
++            return "";
++        }
++
++        spvc_context_parse_spirv(context, spirv.data(), spirv.size(), &ir);
++        spvc_context_create_compiler(context, SPVC_BACKEND_GLSL, ir, SPVC_CAPTURE_MODE_TAKE_OWNERSHIP, &compiler_glsl);
++
++        if (!compiler_glsl) {
++            spvc_context_destroy(context);
++            errc = -1;
++            return "";
++        }
++
++        spvc_compiler_create_compiler_options(compiler_glsl, &options);																															
++        spvc_compiler_options_set_uint(options, SPVC_COMPILER_OPTION_GLSL_VERSION, esslVersion >= 300 ? esslVersion : 300);
++        spvc_compiler_options_set_bool(options, SPVC_COMPILER_OPTION_GLSL_ES, SPVC_TRUE);
++        spvc_compiler_install_compiler_options(compiler_glsl, options);
++
++        spvc_compiler_compile(compiler_glsl, &result);
++
++        if (!result) {
++            spvc_context_destroy(context);
++            errc = -1;
++            return "";
++        }
++
++        std::string essl = result;
++        spvc_context_destroy(context);
++
++        errc = 0;
++
++        essl.insert(16, "#extension GL_OES_standard_derivatives : enable\n#extension GL_EXT_clip_cull_distance : enable\nprecision highp float;\nprecision highp int;\nprecision mediump sampler2D;\nprecision mediump sampler3D;\nprecision mediump sampler2DShadow;\nprecision mediump sampler2DArray;\nprecision mediump image2D;\n");
++        //essl = removeLayoutBinding(essl);
++
++        return essl;
++    }
++}
+diff --git a/components/shader/shaderconverter.hpp b/components/shader/shaderconverter.hpp
+new file mode 100755
+index 00000000000..04b6752221f
+--- /dev/null
++++ b/components/shader/shaderconverter.hpp
+@@ -0,0 +1,21 @@
++#ifndef OPENMW_COMPONENTS_SHADER_CONVERTER_H
++#define OPENMW_COMPONENTS_SHADER_CONVERTER_H
++
++#include <string>
++#include <vector>
++#include <osg/Shader>
++
++namespace Shader
++{
++    class ShaderConverter
++    {
++    public:
++        static std::string convertGLSLtoGLES(const std::string& glslSource, osg::Shader::Type type, unsigned int glesVersion = 320);
++
++    private:
++        static std::vector<unsigned int> glslToSpirv(osg::Shader::Type type, int glslVersion, const char* shaderSrc, int& errc);
++        static std::string spirvToEssl(const std::vector<unsigned int>& spirv, unsigned int esslVersion, int& errc);
++    };
++}
++
++#endif
+diff --git a/components/shader/shadermanager.cpp b/components/shader/shadermanager.cpp
+index 130c2dccd3..dbd79145dd 100644
+--- a/components/shader/shadermanager.cpp
++++ b/components/shader/shadermanager.cpp
+@@ -22,6 +22,7 @@
+ #include <components/misc/strings/conversion.hpp>
+ #include <components/sceneutil/clipplane.hpp>
+ #include <components/settings/settings.hpp>
++#include <components/shader/shaderconverter.hpp>
+ 
+ namespace
+ {
+@@ -45,6 +46,17 @@ namespace
+         throw std::runtime_error("unrecognized shader template name: " + templateName);
+     }
+ 
++    void applySpirvConversion(std::string& source, osg::Shader::Type type)
++    {
++        if (getenv("OPENMW_SPIRV_SHADERCONV") != nullptr)
++        {
++            //Log(Debug::Error) << "source before \n" << source << "\n\n";
++            Misc::StringUtils::replaceAll(source, "#version 320 es", "#version 460");
++            source = Shader::ShaderConverter::convertGLSLtoGLES(source, type, 320);
++            //Log(Debug::Error) << "source after \n" << source << "\n\n";
++        }
++    }
++
+     std::string_view getRootPrefix(std::string_view path)
+     {
+         if (path.starts_with("lib"))
+@@ -560,6 +572,8 @@ namespace Shader
+                 return nullptr;
+             }
+ 
++            applySpirvConversion(shaderSource, type ? *type : getShaderType(templateName));
++
+             osg::ref_ptr<osg::Shader> shader(new osg::Shader(type ? *type : getShaderType(templateName)));
+             shader->setShaderSource(shaderSource);
+             // Assign a unique prefix to allow the SharedStateManager to compare shaders efficiently.
+@@ -652,6 +666,9 @@ namespace Shader
+                 // we would when creating the shader. If we put a nullptr in the shader map, we just lose the ability to
+                 // put a working one in later.
+                 continue;
++
++            applySpirvConversion(shaderSource, shader->getType());
++
+             shader->setShaderSource(shaderSource);
+ 
+             getLinkedShaders(shader, linkedShaderNames, defines);
+

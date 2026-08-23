@@ -69,33 +69,34 @@ enum class MouseMode {
     }
 }
 
-private fun patchShaders() {
-
+private fun patchShadersLinking() {
     val vertex = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/vertex.h.glsl")
     var content = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/vertex.glsl").readText()
     if (!vertex.readText().contains("#pragma CONVERTED")) {
-        content = content.replace("#version 120", "vec4 modelToView(vec4 pos);\n#pragma import_defines(CLAMP_LIGHTING, CLASSIC_FALLOFF, MAX_LIGHTS, CLUSTERED_LIGHTING, PARTICLE_POINT_LIGHTING)")
-        content = content.replace("#extension", "//")
+        content = content.replace("#version 120" ,"vec4 modelToView(vec4 pos);")
         content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
-        content = content.replace("lib/core/vertex.h.glsl", "lib/core/lighting_vertex_impl.glsl")
+        content = content.replace("lib/core/vertex.h.glsl" + '"', "lib/core/lighting_vertex_impl.glsl" + '"' + "\n#include " + '"' + "lib/material/struct.glsl" + '"' + "\n#include " + '"' + "lib/core/clip.glsl" + '"')
         vertex.writeText(content + "\n#pragma CONVERTED\n")
     }
 
     val fragment = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/fragment.h.glsl")
     if (!fragment.readText().contains("#pragma CONVERTED")) {
         content = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/fragment.glsl").readText()
-        content = content.replace("#version 120", "#pragma import_defines(CLAMP_LIGHTING, CLASSIC_FALLOFF, MAX_LIGHTS, CLUSTERED_LIGHTING)")
-        content = content.replace("#extension", "//")
-        content = content.replace("lib/core/fragment.h.glsl", "lib/core/lighting_fragment_impl.glsl")
+        content = content.replace("#version 120" ,"")
+        content = content.replace("lib/core/fragment.h.glsl" + '"', "lib/core/lighting_fragment_impl.glsl" + '"' + "\n#include " + '"' + "lib/material/struct.glsl" + '"')
         fragment.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
+    val clip = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/clip.glsl")
+    content = clip.readText()
+    if (!clip.readText().contains("#pragma CONVERTED")) {
+        content = content.replace("#version 330 core" ,"")
+        clip.writeText(content + "\n#pragma CONVERTED\n")
     }
 
     val objectsFrag = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/objects.frag")
     content = objectsFrag.readText()
     if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#version 120", "#version 120\n#pragma import_defines(FORCE_PPL, WRITE_NORMALS)")
-        content = content.replace("#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)", "#if defined(FORCE_PPL)\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || FORCE_PPL)\n#else\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)\n#endif")
-        content = content.replace("#if !defined(FORCE_OPAQUE) && !@disableNormals", "#if !defined(FORCE_OPAQUE) && defined(WRITE_NORMALS) && WRITE_NORMALS")
         content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
         content = content.replace("uniform float near;" ,"//uniform float near;")
         objectsFrag.writeText(content + "\n#pragma CONVERTED\n")
@@ -104,8 +105,6 @@ private fun patchShaders() {
     val objectsVert = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/objects.vert")
     content = objectsVert.readText()
     if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#version 120","#version 120\n#pragma import_defines(FORCE_PPL)\n")
-        content = content.replace("#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)", "#if defined(FORCE_PPL)\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || FORCE_PPL)\n#else\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)\n#endif")
         content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
         objectsVert.writeText(content + "\n#pragma CONVERTED\n")
     }
@@ -113,28 +112,16 @@ private fun patchShaders() {
     val terrainFrag = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/terrain.frag")
     content = terrainFrag.readText()
     if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#version 120","#version 120\n#pragma import_defines(WRITE_NORMALS, FORCE_PPL)\n")
-        content = content.replace("#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)", "#if defined(FORCE_PPL)\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || FORCE_PPL)\n#else\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)\n#endif")
-        content = content.replace("#if !@disableNormals && @writeNormals", "#if defined(WRITE_NORMALS) && WRITE_NORMALS && @writeNormals")
         content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
         content = content.replace("uniform float near;" ,"//uniform float near;")
         terrainFrag.writeText(content + "\n#pragma CONVERTED\n")
     }
 
-    val terrainVert = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/terrain.vert")
-    content = terrainVert.readText()
-    if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#version 120","#version 120\n#pragma import_defines(FORCE_PPL)\n")
-        content = content.replace("#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)", "#if defined(FORCE_PPL)\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || FORCE_PPL)\n#else\n#define PER_PIXEL_LIGHTING (@normalMap || @specularMap || @forcePPL)\n#endif")
-        terrainVert.writeText(content + "\n#pragma CONVERTED\n")
-    }
-
     val groundcoverFrag = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/groundcover.frag")
     content = groundcoverFrag.readText()
     if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#version 120","#version 120\n#pragma import_defines(WRITE_NORMALS)\n")
-        content = content.replace("#if !@disableNormals", "#if defined(WRITE_NORMALS) && WRITE_NORMALS")
         content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
+        content = content.replace("uniform float near;" ,"//uniform float near;")
         groundcoverFrag.writeText(content + "\n#pragma CONVERTED\n")
     }
 
@@ -148,52 +135,17 @@ private fun patchShaders() {
     val waterFrag = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/water.frag")
     content = waterFrag.readText()
     if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#version 120","#version 120\n#pragma import_defines(WRITE_NORMALS)\n")
-        content = content.replace("#if !@disableNormals", "#if defined(WRITE_NORMALS) && WRITE_NORMALS")
         content = content.replace("uniform vec2 screenRes;" ,"//uniform vec2 screenRes;")
         content = content.replace("uniform float near;" ,"//uniform float near;")
         content = content.replace("uniform DirectionalLight sun;" ,"//uniform DirectionalLight sun;")
         waterFrag.writeText(content + "\n#pragma CONVERTED\n")
     }
 
-
-    val lighting_frag_impl = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/lighting_fragment_impl.glsl")
-    content = lighting_frag_impl.readText()
-    if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#if @lightingMethodClustered", "#if defined(CLUSTERED_LIGHTING) && CLUSTERED_LIGHTING")
-        lighting_frag_impl.writeText(content + "\n#pragma CONVERTED\n")
-    }
-
-    val lighting_vert_impl = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/core/lighting_vertex_impl.glsl")
-    content = lighting_vert_impl.readText()
-    if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#if @lightingMethodClustered", "#if defined(CLUSTERED_LIGHTING) && CLUSTERED_LIGHTING")
-        content = content.replace("!@particlePointLighting", "defined(PARTICLE_POINT_LIGHTING) && !PARTICLE_POINT_LIGHTING")
-        lighting_vert_impl.writeText(content + "\n#pragma CONVERTED\n")
-    }
-
     val lightutil = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/util.glsl")
     content = lightutil.readText()
     if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#if @lightingMethodClustered", "#if defined(CLUSTERED_LIGHTING) && CLUSTERED_LIGHTING")
-        content = content.replace("!@classicFalloff || @lightingMethodClustered", "(defined(CLASSIC_FALLOFF) && !CLASSIC_FALLOFF) || (defined(CLUSTERED_LIGHTING) && CLUSTERED_LIGHTING)")
-        content = content.replace("!@classicFalloff", "defined(CLASSIC_FALLOFF) && !CLASSIC_FALLOFF && defined(CLUSTERED_LIGHTING) && !CLUSTERED_LIGHTING")
         content = content.replace("* int(gridSize.z)) /", "* gridSize.z) /")
         lightutil.writeText(content + "\n#pragma CONVERTED\n")
-    }
-
-    val bindings_legacy = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/bindings-legacy.glsl")
-    content = bindings_legacy.readText()
-    if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("uniform mat4 LightBuffer[@maxLights];", "#if defined(MAX_LIGHTS)\nuniform mat4 LightBuffer[MAX_LIGHTS];\n#else\nmat4 LightBuffer[1];\n#endif")
-        bindings_legacy.writeText(content + "\n#pragma CONVERTED\n")
-    }
-
-    val clamp = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/light/clamp.glsl")
-    content = clamp.readText()
-    if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#if @clamp", "#if defined(CLAMP_LIGHTING) && CLAMP_LIGHTING")
-        clamp.writeText(content + "\n#pragma CONVERTED\n")
     }
 
     val fog = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/fog.glsl")
@@ -203,27 +155,127 @@ private fun patchShaders() {
         fog.writeText(content + "\n#pragma CONVERTED\n")
     }
 
-    val alpha = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/material/alpha.glsl")
-    content = alpha.readText()
-    if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("textureSize2D(diffuseMap, 0);", "vec2(256.0);")
-        alpha.writeText(content + "\n#pragma CONVERTED\n")
-    }
+}
 
-    val parallax = File(Constants.USER_FILE_STORAGE + "/resources/shaders/lib/material/parallax.glsl")
-    content = parallax.readText()
-    if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("mat3 inverse(", "mat3 inverse2(")
-        content = content.replace("struct DirectionalLight", "/*struct DirectionalLight")
-        content = content.replace("uniform DirectionalLight sun;", "uniform DirectionalLight sun;*/")
-        parallax.writeText(content + "\n#pragma CONVERTED\n")
-    }
 
-    val shadows = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/shadows_fragment.glsl")
-    content = shadows.readText()
-    if (!content.contains("#pragma CONVERTED")) {
-        content = content.replace("#define SHADOWS @shadows_enabled", "#pragma import_defines(DISABLE_SHADOWS)\n#if defined(DISABLE_SHADOWS) && DISABLE_SHADOWS\n#define SHADOWS 0\n#else\n#define SHADOWS @shadows_enabled\n#endif")
-        shadows.writeText(content + "\n#pragma CONVERTED\n")
+private fun addLineToHeader(content: String, new_line: String): String {
+    return content.replace("//HEADER_END\n", new_line + "\n//HEADER_END\n")
+}
+
+private fun patchShadersToGLES() {
+
+    File(Constants.USER_FILE_STORAGE + "/resources/shaders").walkTopDown().forEach {
+        if (it.isFile()) {
+        var content = File(it.toString()).readText()
+        if (!content.contains("#pragma GLES")) {
+
+           // comment out all extensions
+           content = content.replace("#extension", "//#extension")
+
+           // Replace version string
+           content = content.replace("#version 120", "#version 320 es\n//HEADER_END\n")
+           content = content.replace("#version 430 core", "#version 320 es\n//HEADER_END\n")
+           content = content.replace("#version 440 core", "#version 320 es\n//HEADER_END\n")
+
+           content = addLineToHeader(content, "#extension GL_EXT_clip_cull_distance : enable")
+
+           content = addLineToHeader(content, "precision highp float;")
+           content = addLineToHeader(content, "precision highp int;")
+           content = addLineToHeader(content, "precision highp sampler2D;")
+           content = addLineToHeader(content, "precision highp sampler3D;")
+           content = addLineToHeader(content, "precision highp sampler2DShadow;")
+           content = addLineToHeader(content, "precision highp sampler2DArray;")
+           content = addLineToHeader(content, "precision highp image2D;")
+
+           // replace frag output variables
+           content = content.replace("gl_FragData[0]", "Color0")
+           content = content.replace("gl_FragData[1]", "Color1")
+           content = content.replace("gl_FragColor", "Color0")
+
+
+           // replace FFP stuff with osg alternatives
+           content = content.replace("gl_Vertex", "osg_Vertex")
+           content = content.replace("gl_Normal", "osg_Normal")
+           content = content.replace("gl_Color", "osg_Color")
+           content = content.replace("gl_MultiTexCoord", "osg_MultiTexCoord")
+           content = content.replace("gl_ModelViewProjectionMatrix", "osg_ModelViewProjectionMatrix")
+           content = content.replace("gl_ModelViewMatrix", "osg_ModelViewMatrix")
+           content = content.replace("gl_NormalMatrix", "osg_NormalMatrix")
+
+           // Remove default values from uniforms (not supported on es)
+           content = content.replace("uniform bool useAdvancedShader = false;", "uniform bool useAdvancedShader;")
+           content = content.replace("uniform vec2 scaling = vec2(1.0, 1.0);", "uniform vec2 scaling;")
+           content = content.replace("uniform bool useDiffuseMapForShadowAlpha = true;", "uniform bool useDiffuseMapForShadowAlpha;")
+           content = content.replace("uniform bool alphaTestShadows = true;", "uniform bool alphaTestShadows;")
+
+           content = content.replace("textureSize2D(diffuseMap, 0);", "vec2(256.0);")
+
+
+           if (it.extension == "frag") {
+               // Add osg build-in uniforms
+               content = addLineToHeader(content, "uniform mat4 osg_ModelViewMatrix;")
+               content = addLineToHeader(content, "uniform mat3 osg_NormalMatrix;")
+
+               // slow gl_ModelViewMatrixInverse replacement
+               content = content.replace("osg_ModelViewMatrixInverse", "inverse(osg_ModelViewMatrix)")
+
+               // Add fragment output variables
+               content = addLineToHeader(content, "layout(location = 0) out vec4 Color0;")
+               content = addLineToHeader(content, "layout(location = 1) out vec4 Color1;")
+
+               // Add some defines
+               content = addLineToHeader(content, "#define texture2D texture")
+               content = addLineToHeader(content, "#define texture2DArray texture")
+               content = addLineToHeader(content, "#define textureSize2D textureSize")
+               content = addLineToHeader(content, "#define varying in")
+
+               // Add some shadows stuff
+               content = addLineToHeader(content, "#define shadow2DProj custom_shadow2DProj")
+               content = addLineToHeader(content, "vec4 custom_shadow2DProj(sampler2DShadow sampler, vec4 uv) { return vec4(textureProj(sampler, uv)); }")
+           }
+           else if (it.extension == "vert") {
+
+               content = content.replace("osg_ClipVertex = viewPos;\n", "")
+               if (it.name.contains("terrain_composite")) {
+                   content = content.replace("osg_ModelViewMatrix * ", "")
+               }
+
+
+               if (it.name.contains("shadowcasting")) {
+                   content = content.replace("    vec4 viewPos", "#if !@useDepthClamp\n    gl_Position.z = max(gl_Position.z, -gl_Position.w);\n#endif\n    vec4 viewPos")
+               }
+
+
+               // Add osg build-in attributes/uniforms
+               content = addLineToHeader(content, "in vec4 osg_Vertex;")
+               content = addLineToHeader(content, "in vec3 osg_Normal;")
+               content = addLineToHeader(content, "in vec4 osg_Color;")
+               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord0;")
+               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord1;")
+               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord2;")
+               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord3;")
+               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord4;")
+               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord5;")
+               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord6;")
+               content = addLineToHeader(content, "in vec3 osg_MultiTexCoord7;")
+
+               content = addLineToHeader(content, "uniform mat4 osg_ModelViewProjectionMatrix;")
+               content = addLineToHeader(content, "uniform mat4 osg_ModelViewMatrix;")
+               content = addLineToHeader(content, "uniform mat3 osg_NormalMatrix;")
+
+               // Add some defines
+               content = addLineToHeader(content, "#define attribute in")
+               content = addLineToHeader(content, "#define varying out")
+
+               // Fix normalMaps compile error
+               content = content.replace("passTangent = osg_MultiTexCoord7.xyzw;", "passTangent = vec4(osg_MultiTexCoord7.xyz, 1.0);")
+
+           }
+
+           File(it.toString()).writeText(content + "\n#pragma GLES\n")
+        }
+
+    }
     }
 
 }
@@ -259,28 +311,21 @@ class GameActivity : SDLActivity() {
             e.printStackTrace()
         }
 
-        if (!prefs!!.getBoolean("pref_use_spirv_shader_conv", true))
-            Os.setenv("LIBGL_SIMPLE_SHADERCONV", "1", true)
+
+        if (prefs!!.getBoolean("pref_use_spirv_shader_conv", true))
+            Os.setenv("OPENMW_SPIRV_SHADERCONV", "1", true)
 
         val enableANGLE = prefs!!.getBoolean("pref_use_angle", false)
         if (enableANGLE == true) {
-            Os.setenv("LIBGL_SIMPLE_SHADERCONV", "0", true)
-            Os.setenv("LIBGL_GLES", "libGLESv2_angle.so", true)
-            Os.setenv("LIBGL_EGL", "libEGL_angle.so", true)
+            Os.setenv("OSG_USE_ANGLE", "1", true)
             Os.setenv("SDL_VIDEO_GL_DRIVER", "libGLESv2_angle.so", true)
             Os.setenv("SDL_VIDEO_EGL_DRIVER", "libEGL_angle.so", true)
         }
 
         Os.setenv("OSG_VERTEX_BUFFER_HINT", "VBO", true)
-        Os.setenv("OSG_GL_TEXTURE_STORAGE", "OFF", true)
+        //Os.setenv("OSG_GL_TEXTURE_STORAGE", "OFF", true)
         Os.setenv("OSG_TEXT_SHADER_TECHNIQUE", "ALL", true)
 
-        Os.setenv("LIBGL_INSTANCING", "1", true)
-        Os.setenv("LIBGL_FBOFORCETEX", "0", true)
-
-        //Os.setenv("OPENMW_USER_FILE_STORAGE", Constants.USER_FILE_STORAGE + "/", true)
-        //Os.setenv("OSG_NOTIFY_LEVEL", "FATAL", true) //hide osg errors for now, gl4es bug.
-        
         val envline: String = PreferenceManager.getDefaultSharedPreferences(this).getString("envLine", "").toString()
         if (envline.length > 0) {
             val envs: List<String> = envline.split(" ", "\n")
@@ -294,9 +339,10 @@ class GameActivity : SDLActivity() {
             }
         }
 
-        patchShaders()
+        patchShadersLinking()
+        patchShadersToGLES()
 
-        System.loadLibrary("ng_gl4es")
+        //System.loadLibrary("glad")
         System.loadLibrary("openmw")
     }
 
