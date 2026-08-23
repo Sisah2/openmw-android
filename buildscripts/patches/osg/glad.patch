@@ -1,0 +1,44 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b77fb64a1..520b65eaa 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -585,7 +585,8 @@ ELSEIF(OSG_GLES3_AVAILABLE)
+         SET(OPENGL_HEADER1 "#include \"TargetConditionals.h\"" CACHE STRING "#include<> line for OpenGL Header")
+         SET(OPENGL_HEADER2 "#include <OpenGLES/ES3/gl.h>" CACHE STRING "#include<> line for additional OpenGL Headers if required")
+     ELSE()
+-        SET(OPENGL_HEADER1 "#include <GLES3/gl3.h>" CACHE STRING "#include<> line for OpenGL Header")
++        #SET(OPENGL_HEADER1 "#include <GLES3/gl3.h>" CACHE STRING "#include<> line for OpenGL Header")
++        SET(OPENGL_HEADER1 "#include <glad/gles2.h>" CACHE STRING "#include<> line for OpenGL Header")
+         SET(OPENGL_HEADER2 "" CACHE STRING "#include<> line for additional OpenGL Headers if required")
+     ENDIF()
+ ELSE()
+@@ -652,10 +653,10 @@ IF(ANDROID)
+                  PATHS
+                      ${ANDROID_SYSROOT}/usr/lib)
+     ELSEIF(OSG_GLES3_AVAILABLE)
+-        FIND_PATH(OPENGL_INCLUDE_DIR GLES3/gl3.h
++        FIND_PATH(OPENGL_INCLUDE_DIR glad/gles2.h
+               PATHS
+               ${ANDROID_SYSROOT}/usr/include)
+-        FIND_LIBRARY(OPENGL_gl_LIBRARY  GLESv3
++        FIND_LIBRARY(OPENGL_gl_LIBRARY  glad
+                  PATHS
+                      ${ANDROID_SYSROOT}/usr/lib)
+     ENDIF()
+diff --git a/src/osg/GLExtensions.cpp b/src/osg/GLExtensions.cpp
+index 357796b17..e90765e6c 100644
+--- a/src/osg/GLExtensions.cpp
++++ b/src/osg/GLExtensions.cpp
+@@ -336,7 +336,11 @@ OSG_INIT_SINGLETON_PROXY(GLExtensionDisableStringInitializationProxy, osg::getGL
+         #elif defined(OSG_GLES2_AVAILABLE)
+             static void *handle = dlopen("libGLESv2.so", RTLD_NOW);
+         #elif defined(OSG_GLES3_AVAILABLE)
+-            static void *handle = dlopen("libGLESv3.so", RTLD_NOW);
++            static void *handle;
++            if (getenv("OSG_USE_ANGLE") == nullptr)
++                handle = dlopen("libGLESv3.so", RTLD_NOW);
++            else
++                handle = dlopen("libGLESv2_angle.so", RTLD_NOW);
+         #elif defined(OSG_GL1_AVAILABLE)
+             static void *handle = dlopen("libGL.so", RTLD_NOW);
+         #endif

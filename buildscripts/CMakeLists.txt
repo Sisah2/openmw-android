@@ -456,6 +456,18 @@ ExternalProject_Add(libcollada
 	INSTALL_COMMAND ${wrapper_command} $(MAKE) install
 )
 
+ExternalProject_Add(glad
+    SOURCE_DIR ${CMAKE_SOURCE_DIR}/tool/GLAD
+
+    BUILD_COMMAND ${wrapper_command} make
+
+    INSTALL_COMMAND cp libglad.so ${prefix}/lib/
+    COMMAND cp -r ${CMAKE_SOURCE_DIR}/tool/GLAD/include ${prefix}
+
+    COMMAND cp libglad.so ${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/lib/
+    COMMAND cp -r ${CMAKE_SOURCE_DIR}/tool/GLAD/include ${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/
+
+)
 
 ExternalProject_Add(glslang
     #URL https://github.com/KhronosGroup/glslang/archive/refs/tags/${GLSLANG_VERSION}.tar.gz
@@ -552,11 +564,12 @@ set(OSG_PATCH
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/enable-some-features.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/textures.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/msaa+clean-log.patch &&
+	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/glad.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0005-CullSettings-make-inheritanceMask-atomic-to-silence-.patch
 )
 
 ExternalProject_Add(osg
-	DEPENDS libjpeg-turbo libpng freetype2 libcollada
+	DEPENDS libjpeg-turbo libpng freetype2 libcollada glad
 
 	URL https://github.com/sisah2/osg/archive/${OSG_VERSION}.tar.gz
 	DOWNLOAD_DIR ${download_dir}
@@ -609,8 +622,10 @@ set(OPENMW_COMMON
 	-DOPENMW_USE_SYSTEM_SQLITE3=OFF
 	-DOPENMW_USE_SYSTEM_YAML_CPP=OFF
 	-DOPENMW_USE_SYSTEM_ICU=ON
-        -DOPENGL_gl_LIBRARY=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/26/libGLESv3.so
-        -DOPENGL_INCLUDE_DIR=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include
+	#-DOPENGL_gl_LIBRARY=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/26/libGLESv3.so
+	#-DOPENGL_INCLUDE_DIR=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include
+	-DOPENGL_gl_LIBRARY=${prefix}/lib/libglad.so
+	-DOPENGL_INCLUDE_DIR=${prefix}/include/
 	-DOPENAL_INCLUDE_DIR=${prefix}/include/AL/
 	-DBullet_INCLUDE_DIR=${prefix}/include/bullet/
 	-DOSG_STATIC=TRUE
@@ -633,6 +648,7 @@ set(OPENMW_PATCH
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/features.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/misc.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/spirv.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/glad.patch &&
 	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/androidmain.cpp &&
 	sed -i -e "s/if(FFmpeg_FOUND)/if(NOT FFmpeg_FOUND)/g" <SOURCE_DIR>/CMakeLists.txt
 )

@@ -110,7 +110,7 @@ index 152decdcc..819337813 100644
 +        if (!osg::isGLExtensionSupported(_contextID,"GL_EXT_clip_cull_distance"))
 +        {
 +            setModeValidity(GL_CLIP_PLANE0,    false); // 0x3000
-+            OSG_NOTICE<<std::endl<<"GL_EXT_clip_cull_distance not supported."<<std::endl;
++            OSG_NOTICE<<"GL_EXT_clip_cull_distance not supported."<<std::endl;
 +        }
 +        if (!osg::isGLExtensionSupported(_contextID,"GL_EXT_depth_clamp"))
 +        {

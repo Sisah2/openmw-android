@@ -314,16 +314,14 @@ class GameActivity : SDLActivity() {
 
         if (prefs!!.getBoolean("pref_use_spirv_shader_conv", true))
             Os.setenv("OPENMW_SPIRV_SHADERCONV", "1", true)
-/*
+
         val enableANGLE = prefs!!.getBoolean("pref_use_angle", false)
         if (enableANGLE == true) {
-            Os.setenv("LIBGL_SIMPLE_SHADERCONV", "0", true)
-            Os.setenv("LIBGL_GLES", "libGLESv2_angle.so", true)
-            Os.setenv("LIBGL_EGL", "libEGL_angle.so", true)
+            Os.setenv("OSG_USE_ANGLE", "1", true)
             Os.setenv("SDL_VIDEO_GL_DRIVER", "libGLESv2_angle.so", true)
             Os.setenv("SDL_VIDEO_EGL_DRIVER", "libEGL_angle.so", true)
         }
-*/
+
         Os.setenv("OSG_VERTEX_BUFFER_HINT", "VBO", true)
         //Os.setenv("OSG_GL_TEXTURE_STORAGE", "OFF", true)
         Os.setenv("OSG_TEXT_SHADER_TECHNIQUE", "ALL", true)
@@ -344,6 +342,7 @@ class GameActivity : SDLActivity() {
         patchShadersLinking()
         patchShadersToGLES()
 
+        //System.loadLibrary("glad")
         System.loadLibrary("openmw")
     }
 
