@@ -124,10 +124,19 @@ index 357796b17..d570f65a5 100644
      if (isTextureStorageEnabled)
      {
 diff --git a/src/osg/PolygonMode.cpp b/src/osg/PolygonMode.cpp
-index 35db6758f..3a1a8bca8 100644
+index 35db6758f..f6264e696 100644
 --- a/src/osg/PolygonMode.cpp
 +++ b/src/osg/PolygonMode.cpp
-@@ -66,12 +66,15 @@ PolygonMode::Mode PolygonMode::getMode(Face face) const
+@@ -13,6 +13,8 @@
+ #include <osg/GL>
+ #include <osg/PolygonMode>
+ #include <osg/Notify>
++#include <osg/State>
++#include <osg/GLExtensions>
+ 
+ using namespace osg;
+ 
+@@ -66,12 +68,15 @@ PolygonMode::Mode PolygonMode::getMode(Face face) const
      return _modeFront;
  }
  
@@ -146,7 +155,7 @@ index 35db6758f..3a1a8bca8 100644
      }
      else
      {
-@@ -82,8 +85,5 @@ void PolygonMode::apply(State&) const
+@@ -82,8 +87,5 @@ void PolygonMode::apply(State&) const
              OSG_NOTICE << "Warning: PolygonMode::apply(State&) - only GL_FRONT_AND_BACK is supported." << std::endl;
          #endif
      }
