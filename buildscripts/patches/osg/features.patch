@@ -1,20 +1,21 @@
 diff --git a/include/osg/GLExtensions b/include/osg/GLExtensions
-index 8f047c4ab..e073e2641 100644
+index 8f047c4ab..654dddc88 100644
 --- a/include/osg/GLExtensions
 +++ b/include/osg/GLExtensions
-@@ -194,6 +194,10 @@ class OSG_EXPORT GLExtensions : public osg::Referenced
+@@ -194,6 +194,11 @@ class OSG_EXPORT GLExtensions : public osg::Referenced
          float glVersion;
          float glslLanguageVersion;
  
 +        bool isClusteredLightingSupported;
 +        bool isDepthClampSupported;
 +        bool isComputeShaderRipplesSupported;
++        bool isPolygonModeSupported;
 +
          bool isGlslSupported;
          bool isShaderObjectsSupported;
          bool isVertexShaderSupported;
 diff --git a/src/osg/GLExtensions.cpp b/src/osg/GLExtensions.cpp
-index 357796b17..c3b9bc206 100644
+index 357796b17..d570f65a5 100644
 --- a/src/osg/GLExtensions.cpp
 +++ b/src/osg/GLExtensions.cpp
 @@ -336,7 +336,11 @@ OSG_INIT_SINGLETON_PROXY(GLExtensionDisableStringInitializationProxy, osg::getGL
@@ -30,7 +31,7 @@ index 357796b17..c3b9bc206 100644
          #elif defined(OSG_GL1_AVAILABLE)
              static void *handle = dlopen("libGL.so", RTLD_NOW);
          #endif
-@@ -451,6 +455,33 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -451,6 +455,34 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      glVersion = validContext ? findAsciiToFloat( versionString ) : 0.0f;
      glslLanguageVersion = 0.0f;
  
@@ -60,11 +61,12 @@ index 357796b17..c3b9bc206 100644
 +    }
 +
 +    isDepthClampSupported = isGLExtensionSupported(contextID, "GL_EXT_depth_clamp");
++    isPolygonModeSupported = isGLExtensionSupported(contextID, "GL_NV_polygon_mode");
 +
      bool shadersBuiltIn = OSG_GLES2_FEATURES || OSG_GLES3_FEATURES || OSG_GL3_FEATURES;
  
      isShaderObjectsSupported = validContext && (shadersBuiltIn || osg::isGLExtensionSupported(contextID,"GL_ARB_shader_objects"));
-@@ -479,6 +510,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -479,6 +511,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
  
      isClipControlSupported = validContext &&
                               (isGLExtensionSupported(contextID,"GL_ARB_clip_control") ||
@@ -72,7 +74,7 @@ index 357796b17..c3b9bc206 100644
                               (glVersion >= 4.5f));
  
  
-@@ -620,7 +652,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -620,7 +653,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      setGLExtensionFuncPtr(glUniformMatrix4x3fv, "glUniformMatrix4x3fv", validContext);
  
      // ARB_clip_control
@@ -81,7 +83,7 @@ index 357796b17..c3b9bc206 100644
  
      // EXT_geometry_shader4
      setGLExtensionFuncPtr(glProgramParameteri,  "glProgramParameteri", "glProgramParameteriEXT", validContext);
-@@ -850,13 +882,16 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -850,13 +883,16 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
                                   isGLExtensionOrVersionSupported(contextID,"GL_EXT_multitexture", 1.3f));
  
      isTextureFilterAnisotropicSupported = validContext && isGLExtensionSupported(contextID,"GL_EXT_texture_filter_anisotropic");
@@ -99,7 +101,7 @@ index 357796b17..c3b9bc206 100644
                                                           isGLExtensionSupported(contextID, "WEBGL_compressed_texture_s3tc_srgb") /* TODO: separate flag */);
      isTextureCompressionPVRTC2BPPSupported = validContext && (isGLExtensionSupported(contextID,"GL_IMG_texture_compression_pvrtc") ||
                                                                isGLExtensionSupported(contextID, "WEBGL_compressed_texture_pvrtc"));
-@@ -892,7 +927,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -892,7 +928,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      isGenerateMipMapSupported = validContext && (builtInSupport || isGLExtensionOrVersionSupported(contextID,"GL_SGIS_generate_mipmap", 1.4f));
      preferGenerateMipmapSGISForPowerOfTwo = (radeonHardwareDetected||fireGLHardwareDetected) ? false : true;
      isTextureMultisampledSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_texture_multisample"));
@@ -108,7 +110,7 @@ index 357796b17..c3b9bc206 100644
      isShadowAmbientSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_shadow_ambient"));
      isClientStorageSupported = validContext && (isGLExtensionSupported(contextID,"GL_APPLE_client_storage"));
      isNonPowerOfTwoTextureMipMappedSupported = validContext && (builtInSupport || isGLExtensionSupported(contextID, "GL_OES_texture_npot") || isGLExtensionOrVersionSupported(contextID, "GL_ARB_texture_non_power_of_two", 2.0));
-@@ -919,10 +954,10 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -919,10 +955,10 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      isTextureLODBiasSupported  = (glVersion >= 3.0f) || isGLExtensionSupported(contextID, "GL_EXT_texture_lod_bias");
  #else
      isTextureMaxLevelSupported = (glVersion >= 1.2f);
@@ -121,3 +123,35 @@ index 357796b17..c3b9bc206 100644
  
      if (isTextureStorageEnabled)
      {
+diff --git a/src/osg/PolygonMode.cpp b/src/osg/PolygonMode.cpp
+index 35db6758f..3a1a8bca8 100644
+--- a/src/osg/PolygonMode.cpp
++++ b/src/osg/PolygonMode.cpp
+@@ -66,12 +66,15 @@ PolygonMode::Mode PolygonMode::getMode(Face face) const
+     return _modeFront;
+ }
+ 
+-void PolygonMode::apply(State&) const
++void PolygonMode::apply(State& state) const
+ {
+-#if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
++    const GLExtensions* extensions = state.get<GLExtensions>();
++    if (!extensions->isPolygonModeSupported)
++        return;
++
+     if (_modeFront==_modeBack)
+     {
+-        glPolygonMode(GL_FRONT_AND_BACK,(GLenum)_modeFront);
++        glPolygonModeNV(GL_FRONT_AND_BACK,(GLenum)_modeFront);
+     }
+     else
+     {
+@@ -82,8 +85,5 @@ void PolygonMode::apply(State&) const
+             OSG_NOTICE << "Warning: PolygonMode::apply(State&) - only GL_FRONT_AND_BACK is supported." << std::endl;
+         #endif
+     }
+-#else
+-    OSG_NOTICE << "Warning: PolygonMode::apply(State&) - is not supported." << std::endl;
+-#endif
+ }
+ 
