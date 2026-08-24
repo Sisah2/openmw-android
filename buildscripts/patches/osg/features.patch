@@ -15,22 +15,9 @@ index 8f047c4ab..654dddc88 100644
          bool isShaderObjectsSupported;
          bool isVertexShaderSupported;
 diff --git a/src/osg/GLExtensions.cpp b/src/osg/GLExtensions.cpp
-index 357796b17..d570f65a5 100644
+index 357796b17..1be315555 100644
 --- a/src/osg/GLExtensions.cpp
 +++ b/src/osg/GLExtensions.cpp
-@@ -336,7 +336,11 @@ OSG_INIT_SINGLETON_PROXY(GLExtensionDisableStringInitializationProxy, osg::getGL
-         #elif defined(OSG_GLES2_AVAILABLE)
-             static void *handle = dlopen("libGLESv2.so", RTLD_NOW);
-         #elif defined(OSG_GLES3_AVAILABLE)
--            static void *handle = dlopen("libGLESv3.so", RTLD_NOW);
-+            static void *handle;
-+            if (getenv("OSG_USE_ANGLE") == nullptr)
-+                handle = dlopen("libGLESv3.so", RTLD_NOW);
-+            else
-+                handle = dlopen("libGLESv2_angle.so", RTLD_NOW);
-         #elif defined(OSG_GL1_AVAILABLE)
-             static void *handle = dlopen("libGL.so", RTLD_NOW);
-         #endif
 @@ -451,6 +455,34 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      glVersion = validContext ? findAsciiToFloat( versionString ) : 0.0f;
      glslLanguageVersion = 0.0f;
@@ -83,7 +70,7 @@ index 357796b17..d570f65a5 100644
  
      // EXT_geometry_shader4
      setGLExtensionFuncPtr(glProgramParameteri,  "glProgramParameteri", "glProgramParameteriEXT", validContext);
-@@ -850,13 +883,16 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -850,14 +883,22 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
                                   isGLExtensionOrVersionSupported(contextID,"GL_EXT_multitexture", 1.3f));
  
      isTextureFilterAnisotropicSupported = validContext && isGLExtensionSupported(contextID,"GL_EXT_texture_filter_anisotropic");
@@ -99,9 +86,15 @@ index 357796b17..d570f65a5 100644
 +                                                          isGLExtensionSupported(contextID, "GL_ANGLE_texture_compression_dxt3") &&
 +                                                          isGLExtensionSupported(contextID, "GL_ANGLE_texture_compression_dxt5")) ||
                                                           isGLExtensionSupported(contextID, "WEBGL_compressed_texture_s3tc_srgb") /* TODO: separate flag */);
++
++    // just for testing sw decompression
++    if(getenv("NODXT") != nullptr)
++        isTextureCompressionS3TCSupported = false;
++
      isTextureCompressionPVRTC2BPPSupported = validContext && (isGLExtensionSupported(contextID,"GL_IMG_texture_compression_pvrtc") ||
                                                                isGLExtensionSupported(contextID, "WEBGL_compressed_texture_pvrtc"));
-@@ -892,7 +928,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+     isTextureCompressionPVRTC4BPPSupported = isTextureCompressionPVRTC2BPPSupported;//covered by same extension
+@@ -892,7 +933,7 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      isGenerateMipMapSupported = validContext && (builtInSupport || isGLExtensionOrVersionSupported(contextID,"GL_SGIS_generate_mipmap", 1.4f));
      preferGenerateMipmapSGISForPowerOfTwo = (radeonHardwareDetected||fireGLHardwareDetected) ? false : true;
      isTextureMultisampledSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_texture_multisample"));
@@ -110,7 +103,7 @@ index 357796b17..d570f65a5 100644
      isShadowAmbientSupported = validContext && (isGLExtensionSupported(contextID,"GL_ARB_shadow_ambient"));
      isClientStorageSupported = validContext && (isGLExtensionSupported(contextID,"GL_APPLE_client_storage"));
      isNonPowerOfTwoTextureMipMappedSupported = validContext && (builtInSupport || isGLExtensionSupported(contextID, "GL_OES_texture_npot") || isGLExtensionOrVersionSupported(contextID, "GL_ARB_texture_non_power_of_two", 2.0));
-@@ -919,10 +955,10 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
+@@ -919,10 +960,10 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      isTextureLODBiasSupported  = (glVersion >= 3.0f) || isGLExtensionSupported(contextID, "GL_EXT_texture_lod_bias");
  #else
      isTextureMaxLevelSupported = (glVersion >= 1.2f);
@@ -163,4 +156,33 @@ index 35db6758f..f6264e696 100644
 -    OSG_NOTICE << "Warning: PolygonMode::apply(State&) - is not supported." << std::endl;
 -#endif
  }
+ 
+diff --git a/src/osg/State.cpp b/src/osg/State.cpp
+index 152decdcc..7a010de90 100644
+--- a/src/osg/State.cpp
++++ b/src/osg/State.cpp
+@@ -297,6 +297,24 @@ void State::initializeExtensionProcs()
+     #endif
+     }
+ 
++    setModeValidity(0x0BA1, false); // GL_NORMALIZE
++
++    if (!osg::isGLExtensionSupported(_contextID,"GL_EXT_clip_cull_distance"))
++    {
++        setModeValidity(0x3000, false); // GL_CLIP_PLANE0
++        OSG_NOTICE<<"GL_EXT_clip_cull_distance not supported."<<std::endl;
++    }
++    if (!osg::isGLExtensionSupported(_contextID,"GL_EXT_depth_clamp"))
++    {
++        setModeValidity(0x864F, false); // GL_DEPTH_CLAMP
++        OSG_NOTICE<<"GL_EXT_DEPTH_CLAMP not supported."<<std::endl;
++    }
++    if (!osg::isGLExtensionSupported(_contextID,"GL_NV_polygon_mode"))
++    {
++        setModeValidity(0x2A01, false); // GL_POLYGON_OFFSET_POINT
++        setModeValidity(0x2A02, false); // GL_POLYGON_OFFSET_LINE
++        OSG_NOTICE<<"GL_NV_polygon_mode not supported."<<std::endl;
++    }
+ 
+     _extensionProcsInitialized = true;
  

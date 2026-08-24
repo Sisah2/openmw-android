@@ -1,3 +1,16 @@
+diff --git a/apps/openmw/mwrender/water.cpp b/apps/openmw/mwrender/water.cpp
+index 12e0000d92..dd4f0dc6a5 100644
+--- a/apps/openmw/mwrender/water.cpp
++++ b/apps/openmw/mwrender/water.cpp
+@@ -430,7 +430,7 @@ namespace MWRender
+         void drawImplementation(osg::RenderInfo& renderInfo, const osg::Drawable* drawable) const override
+         {
+             static bool supported = osg::isGLExtensionOrVersionSupported(
+-                renderInfo.getState()->getContextID(), "GL_ARB_depth_clamp", 3.3f);
++                renderInfo.getState()->getContextID(), "GL_EXT_depth_clamp", 3.3f);
+             if (!supported)
+             {
+                 drawable->drawImplementation(renderInfo);
 diff --git a/apps/openmw/mwrender/ripples.cpp b/apps/openmw/mwrender/ripples.cpp
 index 549d3b5bba..8880444738 100644
 --- a/apps/openmw/mwrender/ripples.cpp
