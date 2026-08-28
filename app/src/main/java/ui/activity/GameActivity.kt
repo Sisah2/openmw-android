@@ -152,7 +152,15 @@ private fun patchShadersLinking() {
     content = fog.readText()
     if (!content.contains("#pragma CONVERTED")) {
         content = content.replace("#include", "//")
+        content = content.replace("uniform DirectionalLight sun;", "")
         fog.writeText(content + "\n#pragma CONVERTED\n")
+    }
+
+    val skyFrag = File(Constants.USER_FILE_STORAGE + "/resources/shaders/compatibility/sky.frag")
+    content = skyFrag.readText()
+    if (!content.contains("#pragma CONVERTED")) {
+        content = content.replace("uniform vec4 diffuseColor;", "uniform vec4 diffuseColor;\n\n#if @skyBlending\nuniform sampler2D sky;\nvec3 sampleSkyColor(vec2 uv)\n{\n    return texture2D(sky, uv).xyz;\n}\n#endif\n\n#include " + '"' + "lib/light/struct.glsl" + '"' + "\nuniform DirectionalLight sun;\n\n")
+        skyFrag.writeText(content + "\n#pragma CONVERTED\n")
     }
 
 }

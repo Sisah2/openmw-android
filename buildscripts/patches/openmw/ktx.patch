@@ -10,6 +10,18 @@ Subject: [PATCH] astc ktx support
  components/shader/shadermanager.cpp  |  2 +-
  4 files changed, 83 insertions(+), 18 deletions(-)
 
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index fc366de5b2..f94e7e8494 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -295,6 +295,7 @@ set(USED_OSG_PLUGINS
+     osgdb_bmp
+     osgdb_dae
+     osgdb_dds
++    osgdb_ktx
+     osgdb_freetype
+     osgdb_jpeg
+     osgdb_osg
 diff --git a/components/misc/resourcehelpers.cpp b/components/misc/resourcehelpers.cpp
 index d370fe5cf25..a760498a146 100644
 --- a/components/misc/resourcehelpers.cpp
@@ -139,6 +151,14 @@ index b7a19b4d521..873b4992b82 100644
  #include <components/sceneutil/glextensions.hpp>
  #include <components/vfs/manager.hpp>
  #include <components/vfs/pathutil.hpp>
+@@ -16,6 +16,7 @@
+ USE_OSGPLUGIN(png)
+ USE_OSGPLUGIN(tga)
+ USE_OSGPLUGIN(dds)
++USE_OSGPLUGIN(ktx)
+ USE_OSGPLUGIN(jpeg)
+ USE_OSGPLUGIN(bmp)
+ USE_OSGPLUGIN(osg)
 @@ -87,7 +88,10 @@ namespace Resource
  
      osg::ref_ptr<osg::Image> ImageManager::getImage(VFS::Path::NormalizedView path, bool disableFlip)

@@ -129,31 +129,6 @@ index 1787163bab..0ebf45afef 100644
          if (ext->glDisablei)
              mNormalsSupported = true;
          else
-@@ -475,6 +471,9 @@ namespace MWRender
-             tex->setSourceFormat(GL_DEPTH_STENCIL_EXT);
-             tex->setSourceType(SceneUtil::AutoDepth::depthSourceType());
-             tex->setInternalFormat(SceneUtil::AutoDepth::depthInternalFormat());
-+
-+            tex->setFilter(osg::Texture2D::MIN_FILTER, osg::Texture::NEAREST);
-+            tex->setFilter(osg::Texture2D::MAG_FILTER, osg::Texture::NEAREST);
-         };
- 
-         setupDepth(textures[Tex_Depth]);
-@@ -541,12 +540,12 @@ namespace MWRender
-         fbos[FBO_Distortion]->setAttachment(osg::FrameBufferObject::BufferComponent::COLOR_BUFFER0,
-             Stereo::createMultiviewCompatibleAttachment(textures[Tex_Distortion]));
- 
--#ifdef __APPLE__
-+//#ifdef __APPLE__
-         if (textures[Tex_OpaqueDepth])
-             fbos[FBO_OpaqueDepth]->setAttachment(osg::FrameBufferObject::BufferComponent::COLOR_BUFFER,
-                 osg::FrameBufferAttachment(new osg::RenderBuffer(textures[Tex_OpaqueDepth]->getTextureWidth(),
-                     textures[Tex_OpaqueDepth]->getTextureHeight(), textures[Tex_Scene]->getInternalFormat())));
--#endif
-+//#endif
- 
-         mCanvases[frameId]->dirty();
-     }
 diff --git a/apps/openmw/mwrender/ripples.cpp b/apps/openmw/mwrender/ripples.cpp
 index 549d3b5bba..31d45cc88c 100644
 --- a/apps/openmw/mwrender/ripples.cpp

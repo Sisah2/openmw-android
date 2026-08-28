@@ -1,3 +1,55 @@
+diff --git a/apps/openmw/mwrender/waterawaretransparentbin.cpp b/apps/openmw/mwrender/waterawaretransparentbin.cpp
+index 645f0142cf..ceb4821244 100644
+--- a/apps/openmw/mwrender/waterawaretransparentbin.cpp
++++ b/apps/openmw/mwrender/waterawaretransparentbin.cpp
+@@ -1,7 +1,6 @@
+ #include "waterawaretransparentbin.hpp"
+ 
+ #include <osg/BoundingBox>
+-#include <osg/ClipPlane>
+ #include <osg/Plane>
+ #include <osg/State>
+ #include <osg/StateSet>
+@@ -9,6 +8,7 @@
+ #include <osgUtil/StateGraph>
+ 
+ #include <components/misc/constants.hpp>
++#include <components/sceneutil/clipplane.hpp>
+ 
+ #include "opaqueblit.hpp"
+ #include "water.hpp"
+@@ -152,8 +152,9 @@ namespace MWRender
+ 
+         osg::Plane viewPlane = worldPlane;
+         viewPlane.transformProvidingInverse(inverseView);
+-        mClipStateSet->setAttributeAndModes(new osg::ClipPlane(1, viewPlane),
+-            osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE | osg::StateAttribute::PROTECTED);
++
++        SceneUtil::setClipPlane(*mClipStateSet, 1, viewPlane.asVec4());
++        SceneUtil::setClipPlaneMode(*mClipStateSet, 1, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE | osg::StateAttribute::PROTECTED);
+ 
+         if (previous)
+             osgUtil::StateGraph::moveToRootStateGraph(state, previous->_parent->_parent);
+diff --git a/components/sceneutil/clipplane.hpp b/components/sceneutil/clipplane.hpp
+index ab76379c81..fe9a144f06 100644
+--- a/components/sceneutil/clipplane.hpp
++++ b/components/sceneutil/clipplane.hpp
+@@ -11,7 +11,7 @@ namespace osg
+ namespace SceneUtil
+ {
+     // This number may be increased, but for now OpenMW only relies on a single clip plane
+-    constexpr unsigned int NumClipPlanes = 1;
++    constexpr unsigned int NumClipPlanes = 2;
+ 
+     void setClipPlane(osg::StateSet& stateset, unsigned int index, const osg::Vec4f& plane,
+         osg::StateAttribute::OverrideValue value = osg::StateAttribute::ON);
+@@ -22,4 +22,4 @@ namespace SceneUtil
+         osg::StateAttribute::OverrideValue value = osg::StateAttribute::ON);
+ }
+ 
+-#endif
+\ No newline at end of file
++#endif
 diff --git a/apps/openmw/mwrender/localmap.cpp b/apps/openmw/mwrender/localmap.cpp
 index ade0faafac..278da9c435 100644
 --- a/apps/openmw/mwrender/localmap.cpp
@@ -11,26 +63,6 @@ index ade0faafac..278da9c435 100644
          osg::ref_ptr<SceneUtil::Light> light = new SceneUtil::Light;
          light->setPosition(osg::Vec4(-0.3f, -0.3f, 0.7f, 0.f));
          light->setDiffuse(osg::Vec4(0.7f, 0.7f, 0.7f, 1.f));
-diff --git a/files/shaders/compatibility/sky.frag b/files/shaders/compatibility/sky.frag
-index 7f5658a36c..d9aadd7070 100644
---- a/files/shaders/compatibility/sky.frag
-+++ b/files/shaders/compatibility/sky.frag
-@@ -11,6 +11,15 @@ uniform vec4 moonBlend;         // PASS_MOON
- uniform vec4 atmosphereFade;    // PASS_MOON
- uniform vec4 diffuseColor;
- 
-+#if @skyBlending
-+uniform sampler2D sky;
-+
-+vec3 sampleSkyColor(vec2 uv)
-+{
-+    return texture2D(sky, uv).xyz;
-+}
-+#endif
-+
- #include "fog.glsl"
- 
- varying vec2 diffuseMapUV;
 diff --git a/apps/openmw/mwsound/ffmpegdecoder.cpp b/apps/openmw/mwsound/ffmpegdecoder.cpp
 index 406bd47d66..ade613f13b 100644
 --- a/apps/openmw/mwsound/ffmpegdecoder.cpp
@@ -44,38 +76,28 @@ index 406bd47d66..ade613f13b 100644
              return false;
  
          formatCtx.reset(std::exchange(ctx, nullptr));
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index fc366de5b2..f94e7e8494 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -295,6 +295,7 @@ set(USED_OSG_PLUGINS
-     osgdb_bmp
-     osgdb_dae
-     osgdb_dds
-+    osgdb_ktx
-     osgdb_freetype
-     osgdb_jpeg
-     osgdb_osg
+diff --git a/files/shaders/compatibility/water.frag b/files/shaders/compatibility/water.frag
+index e202c3b5bc..6fa32f2758 100644
+--- a/files/shaders/compatibility/water.frag
++++ b/files/shaders/compatibility/water.frag
+@@ -206,10 +206,10 @@ void main(void)
+     rawRefraction = refraction;
+ 
+     // brighten up the refraction underwater
+-    if (cameraPos.z < 0)
++    if (cameraPos.z < 0.0)
+         refraction = clamp(refraction * 1.5, 0.0, 1.0);
+ 
+-    if (cameraPos.z >= 0)
++    if (cameraPos.z >= 0.0)
+     {
+         vec3 deepWaterColor = waterColor * fogScale + fogOffset;
+         if (!hasOpaqueGeometry(refractionCoords))
 diff --git a/files/shaders/core/lighting/cluster.comp b/files/shaders/core/lighting/cluster.comp
-old mode 100644
-new mode 100755
-index 2ef435b483..6e948835bf
+index 2ef435b483..ce5ba77470 100644
 --- a/files/shaders/core/lighting/cluster.comp
 +++ b/files/shaders/core/lighting/cluster.comp
-@@ -1,4 +1,11 @@
--#version 430 core
-+#version 320 es
-+precision highp float;
-+precision highp int;
-+precision highp image2D;
-+
-+//HEADER_END
-+
-+#define COMPUTE 1
- 
- layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
- 
-@@ -30,16 +37,16 @@ vec3 screenToView(vec2 screenCoord)
+@@ -30,16 +30,16 @@ vec3 screenToView(vec2 screenCoord)
  void main()
  {
      uint tileIndex = gl_WorkGroupID.x + (gl_WorkGroupID.y * uint(gridSize.x)) + (gl_WorkGroupID.z * uint(gridSize.x) * uint(gridSize.y));
@@ -85,7 +107,7 @@ index 2ef435b483..6e948835bf
 -    vec2 minTile_screenspace = gl_WorkGroupID.xy * tileSize;
 -    vec2 maxTile_screenspace = (gl_WorkGroupID.xy + 1) * tileSize;
 +    vec2 minTile_screenspace = vec2(gl_WorkGroupID.xy) * tileSize;
-+    vec2 maxTile_screenspace = vec2(gl_WorkGroupID.xy + uint(1)) * tileSize;
++    vec2 maxTile_screenspace = vec2(gl_WorkGroupID.xy + 1u) * tileSize;
  
      vec3 minTile = screenToView(minTile_screenspace);
      vec3 maxTile = screenToView(maxTile_screenspace);
@@ -93,36 +115,15 @@ index 2ef435b483..6e948835bf
 -    float planeNear = near * pow(clusterFar / near, gl_WorkGroupID.z / gridSize.z);
 -    float planeFar = near * pow(clusterFar / near, (gl_WorkGroupID.z + 1) / gridSize.z);
 +    float planeNear = near * pow(clusterFar / near, float(gl_WorkGroupID.z) / gridSize.z);
-+    float planeFar = near * pow(clusterFar / near, float(gl_WorkGroupID.z + uint(1)) / gridSize.z);
++    float planeFar = near * pow(clusterFar / near, float(gl_WorkGroupID.z + 1u) / gridSize.z);
  
      vec3 minPointNear = lineIntersectionWithZPlane(vec3(0, 0, 0), minTile, planeNear);
      vec3 minPointFar = lineIntersectionWithZPlane(vec3(0, 0, 0), minTile, planeFar);
-@@ -49,3 +56,5 @@ void main()
-     clusters[tileIndex].minPoint = vec4(min(minPointNear, minPointFar), 0.0);
-     clusters[tileIndex].maxPoint = vec4(max(maxPointNear, maxPointFar), 0.0);
- }
-+
-+#pragma GLES
 diff --git a/files/shaders/core/lighting/cull.comp b/files/shaders/core/lighting/cull.comp
-old mode 100644
-new mode 100755
-index 43772b2df1..41dafe917f
+index 43772b2df1..379ddbffa5 100644
 --- a/files/shaders/core/lighting/cull.comp
 +++ b/files/shaders/core/lighting/cull.comp
-@@ -1,4 +1,11 @@
--#version 430 core
-+#version 320 es
-+precision highp float;
-+precision highp int;
-+precision highp image2D;
-+
-+//HEADER_END
-+
-+#define COMPUTE 1
- 
- layout(local_size_x = @workGroupSize, local_size_y = 1, local_size_z = 1) in;
- 
-@@ -29,16 +36,16 @@ bool testSphereAABB(int i, Cluster cluster)
+@@ -29,16 +29,16 @@ bool testSphereAABB(int i, Cluster cluster)
  
  void main()
  {
@@ -143,7 +144,7 @@ index 43772b2df1..41dafe917f
          PointLight light = pointLight[i];
  
          vec3 center = light.position.xyz;
-@@ -48,9 +55,9 @@ void main()
+@@ -48,9 +48,9 @@ void main()
          vec3 aabbMax = g_cluster.maxPoint.xyz;
  
          if (sphereAABBIntersection(center, radius, aabbMin, aabbMax)) {
@@ -155,7 +156,7 @@ index 43772b2df1..41dafe917f
  
              g_List[index] = i;
          }
-@@ -58,14 +65,16 @@ void main()
+@@ -58,14 +58,14 @@ void main()
  
      barrier();
  
@@ -172,8 +173,6 @@ index 43772b2df1..41dafe917f
          lightIndexList[g_Offset + i] = g_List[i];
      }
  }
-+
-+#pragma GLES
 diff --git a/files/shaders/core/ripples_blobber.comp b/files/shaders/core/ripples_blobber.comp
 index 235f58a5ba..81e849b2f4 100644
 --- a/files/shaders/core/ripples_blobber.comp

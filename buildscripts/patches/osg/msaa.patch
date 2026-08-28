@@ -36,3 +36,86 @@ index 152decdcc..7a010de90 100644
          _readBuffer=buffer;
      }
  }
+diff --git a/src/osgUtil/RenderStage.cpp b/src/osgUtil/RenderStage.cpp
+index f0d23158f..1e47b2cdd 100644
+--- a/src/osgUtil/RenderStage.cpp
++++ b/src/osgUtil/RenderStage.cpp
+@@ -517,10 +517,10 @@ void RenderStage::runCameraSetUp(osg::RenderInfo& renderInfo)
+             // and before call to glCheckFramebufferStatus
+             if ( !colorAttached )
+             {
+-            #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
++//            #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
+                 setDrawBuffer( GL_NONE, true );
+                 state.glDrawBuffer( GL_NONE );
+-            #endif
++//            #endif
+             }
+ 
+             GLenum status = ext->glCheckFramebufferStatus(GL_FRAMEBUFFER_EXT);
+@@ -808,9 +808,9 @@ void RenderStage::copyTexture(osg::RenderInfo& renderInfo)
+ 
+     if ( _readBufferApplyMask )
+     {
+-        #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE)
++//        #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE)
+             glReadBuffer(_readBuffer);
+-        #endif
++//        #endif
+     }
+ 
+     // need to implement texture cube map etc...
+@@ -909,7 +909,7 @@ void RenderStage::drawInner(osg::RenderInfo& renderInfo,RenderLeaf*& previous, b
+ 
+     if (!using_multiple_render_targets)
+     {
+-        #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
++//        #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
+ 
+             if( getDrawBufferApplyMask() )
+                 state.glDrawBuffer(_drawBuffer);
+@@ -917,7 +917,7 @@ void RenderStage::drawInner(osg::RenderInfo& renderInfo,RenderLeaf*& previous, b
+             if( getReadBufferApplyMask() )
+                 state.glReadBuffer(_readBuffer);
+ 
+-        #endif
++//        #endif
+     }
+ 
+     if (fbo_supported)
+@@ -995,7 +995,7 @@ void RenderStage::drawInner(osg::RenderInfo& renderInfo,RenderLeaf*& previous, b
+                 blitMask, GL_NEAREST);
+         }
+ 
+-#if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
++//#if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
+         if (needToBlitColorBuffers)
+         {
+             for (FrameBufferObject::AttachmentMap::const_iterator
+@@ -1021,7 +1021,7 @@ void RenderStage::drawInner(osg::RenderInfo& renderInfo,RenderLeaf*& previous, b
+             // glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
+             // glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
+         }
+-#endif
++//#endif
+ 
+         apply_read_fbo = true;
+         read_fbo = _resolveFbo.get();
+@@ -1044,7 +1044,7 @@ void RenderStage::drawInner(osg::RenderInfo& renderInfo,RenderLeaf*& previous, b
+         {
+             if (read_fbo) SubFunc::applyReadFBO(apply_read_fbo, read_fbo, state);
+ 
+-            #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE)
++//            #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE)
+ 
+                 if (using_multiple_render_targets)
+                 {
+@@ -1062,7 +1062,7 @@ void RenderStage::drawInner(osg::RenderInfo& renderInfo,RenderLeaf*& previous, b
+                     }
+                 }
+ 
+-            #endif
++//            #endif
+ 
+             GLenum pixelFormat = itr->second._image->getPixelFormat();
+             if (pixelFormat==0) pixelFormat = _imageReadPixelFormat;

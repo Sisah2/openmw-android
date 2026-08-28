@@ -31,19 +31,6 @@ index 8d8a0bc7b9..abe143fa03 100644
      // Save user settings
      Settings::Manager::saveUser(mCfgMgr.getUserConfigPath() / "settings.cfg");
      Settings::ShaderManager::get().save();
-
-diff --git a/components/resource/imagemanager.cpp b/components/resource/imagemanager.cpp
-index 082b3a2536..a9883e562b 100644
---- a/components/resource/imagemanager.cpp
-+++ b/components/resource/imagemanager.cpp
-@@ -16,6 +16,7 @@
- USE_OSGPLUGIN(png)
- USE_OSGPLUGIN(tga)
- USE_OSGPLUGIN(dds)
-+USE_OSGPLUGIN(ktx)
- USE_OSGPLUGIN(jpeg)
- USE_OSGPLUGIN(bmp)
- USE_OSGPLUGIN(osg)
 diff --git a/files/data/mygui/openmw_postprocessor_hud.layout b/files/data/mygui/openmw_postprocessor_hud.layout
 index 4ed8ecdb36..758b1b2e99 100644
 --- a/files/data/mygui/openmw_postprocessor_hud.layout

@@ -11,7 +11,7 @@ index 8f047c4ab..a4543f9ba 100644
 +        bool isComputeShaderRipplesSupported;
 +        bool isPolygonModeSupported;
 +
-+        bool isTextureCompressionBPTCSupported;
++        bool isTextureCompressionBPTSupported;
 +
          bool isGlslSupported;
          bool isShaderObjectsSupported;
@@ -20,6 +20,19 @@ diff --git a/src/osg/GLExtensions.cpp b/src/osg/GLExtensions.cpp
 index 357796b17..7387fb3e4 100644
 --- a/src/osg/GLExtensions.cpp
 +++ b/src/osg/GLExtensions.cpp
+@@ -336,7 +336,11 @@ OSG_INIT_SINGLETON_PROXY(GLExtensionDisableStringInitializationProxy, osg::getGL
+         #elif defined(OSG_GLES2_AVAILABLE)
+             static void *handle = dlopen("libGLESv2.so", RTLD_NOW);
+         #elif defined(OSG_GLES3_AVAILABLE)
+-            static void *handle = dlopen("libGLESv3.so", RTLD_NOW);
++            static void *handle;
++            if (getenv("OSG_USE_ANGLE") == nullptr)
++                handle = dlopen("libGLESv3.so", RTLD_NOW);
++            else
++                handle = dlopen("libGLESv2_angle.so", RTLD_NOW);
+         #elif defined(OSG_GL1_AVAILABLE)
+             static void *handle = dlopen("libGL.so", RTLD_NOW);
+         #endif
 @@ -451,6 +455,36 @@ GLExtensions::GLExtensions(unsigned int in_contextID):
      glVersion = validContext ? findAsciiToFloat( versionString ) : 0.0f;
      glslLanguageVersion = 0.0f;
@@ -52,7 +65,7 @@ index 357796b17..7387fb3e4 100644
 +    isDepthClampSupported = isGLExtensionSupported(contextID, "GL_EXT_depth_clamp");
 +    isPolygonModeSupported = isGLExtensionSupported(contextID, "GL_NV_polygon_mode");
 +
-+    isTextureCompressionBPTCSupported = isGLExtensionSupported(contextID, "GL_EXT_texture_compression_bptc");
++    isTextureCompressionBPTSupported = isGLExtensionSupported(contextID, "GL_EXT_texture_compression_bptc");
 +
      bool shadersBuiltIn = OSG_GLES2_FEATURES || OSG_GLES3_FEATURES || OSG_GL3_FEATURES;
  
@@ -101,7 +114,7 @@ index 357796b17..7387fb3e4 100644
 +    // just for testing sw decompression
 +    if(getenv("NODXT") != nullptr) {
 +        isTextureCompressionS3TCSupported = false;
-+        isTextureCompressionBPTCSupported = false;
++        isTextureCompressionBPTCupported = false;
 +        isTextureCompressionRGTCSupported = false;
 +    }
 +
@@ -200,4 +213,37 @@ index 152decdcc..7a010de90 100644
  
      _extensionProcsInitialized = true;
  
- 
+@@ -459,9 +477,18 @@ void State::glDrawBuffer(GLenum buffer)
+ {
+     if (_drawBuffer!=buffer)
+     {
+-        #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
+-        ::glDrawBuffer(buffer);
+-        #endif
++//        #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
++
++        if (buffer == GL_COLOR_ATTACHMENT1) {
++            GLenum buffers[2] = {GL_NONE, buffer};
++            ::glDrawBuffers(2, buffers);
++        }
++        else
++        {
++            GLenum buffers[1] = {buffer};
++            ::glDrawBuffers(1, buffers);
++        }
++//        #endif
+         _drawBuffer=buffer;
+     }
+ }
+@@ -470,9 +497,9 @@ void State::glReadBuffer(GLenum buffer)
+ {
+     if (_readBuffer!=buffer)
+     {
+-        #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
++//        #if !defined(OSG_GLES1_AVAILABLE) && !defined(OSG_GLES2_AVAILABLE) && !defined(OSG_GLES3_AVAILABLE)
+         ::glReadBuffer(buffer);
+-        #endif
++//        #endif
+         _readBuffer=buffer;
+     }
+ }
