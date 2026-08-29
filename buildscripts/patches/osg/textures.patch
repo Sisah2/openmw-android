@@ -1,3 +1,29 @@
+diff --git a/src/osg/Image.cpp b/src/osg/Image.cpp
+index 7e2d0af25..8eb681d53 100644
+--- a/src/osg/Image.cpp
++++ b/src/osg/Image.cpp
+@@ -1382,7 +1382,20 @@ void Image::readPixels(int x,int y,int width,int height,
+     glPixelStorei(GL_PACK_ALIGNMENT,_packing);
+     glPixelStorei(GL_PACK_ROW_LENGTH,_rowLength);
+ 
+-    glReadPixels(x,y,width,height,format,type,_data);
++    if (format == GL_RGB) {
++        unsigned char* RGBA_data = new unsigned char[width*height*4];
++        format = GL_RGBA;
++        glReadPixels(x,y,width,height,format,type,RGBA_data);
++
++        for (int i = 0; i < width * height; i++) {
++            _data[i * 3 + 0] = RGBA_data[i * 4 + 0];
++            _data[i * 3 + 1] = RGBA_data[i * 4 + 1];
++            _data[i * 3 + 2] = RGBA_data[i * 4 + 2];
++        }
++        delete RGBA_data;
++    }
++    else
++        glReadPixels(x,y,width,height,format,type,_data);
+ }
+ 
+ 
 diff --git a/src/osg/Texture.cpp b/src/osg/Texture.cpp
 index 5978009fb..d693100ed 100644
 --- a/src/osg/Texture.cpp

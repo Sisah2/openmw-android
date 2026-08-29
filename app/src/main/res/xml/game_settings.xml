@@ -12,11 +12,6 @@
         />
 
     <Preference
-        android:key="game_settings_shadows"
-        android:title="Shadows"
-        />
-
-    <Preference
         android:key="game_settings_animations"
         android:title="Animations"
         />

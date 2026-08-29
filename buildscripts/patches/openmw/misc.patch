@@ -1,3 +1,19 @@
+diff --git a/files/shaders/lib/core/clip.glsl b/files/shaders/lib/core/clip.glsl
+index 9fa427ef57..eced01ad3f 100644
+--- a/files/shaders/lib/core/clip.glsl
++++ b/files/shaders/lib/core/clip.glsl
+@@ -10,9 +10,9 @@ void applyClipPlanes(vec4 pos)
+ {
+     @foreach clipPlaneIndex @clipPlaneList
+         #ifdef GL_EXT_clip_cull_distance
+-            if (isReflection) gl_ClipDistance[@clipPlaneIndex] = dot(clipPlane@clipPlaneIndex, pos);
++            if (isReflection && @clipPlaneIndex == 0) gl_ClipDistance[@clipPlaneIndex] = dot(clipPlane@clipPlaneIndex, pos);
+         #else
+-            if (isReflection) clip = dot(clipPlane@clipPlaneIndex, pos);
++            if (isReflection && @clipPlaneIndex == 0) clip = dot(clipPlane@clipPlaneIndex, pos);
+         #endif
+     @endforeach
+ }
 diff --git a/apps/openmw/mwrender/waterawaretransparentbin.cpp b/apps/openmw/mwrender/waterawaretransparentbin.cpp
 index 645f0142cf..ceb4821244 100644
 --- a/apps/openmw/mwrender/waterawaretransparentbin.cpp

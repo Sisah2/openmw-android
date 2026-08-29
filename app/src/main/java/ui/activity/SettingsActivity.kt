@@ -83,12 +83,6 @@ class FragmentGameSettings : PreferenceFragment() {
             true
         }
 
-        findPreference("game_settings_shadows").setOnPreferenceClickListener {
-            val intent = Intent(activity, Shadows_SettingsActivity::class.java)
-            this.startActivity(intent)
-            true
-        }
-
         findPreference("game_settings_animations").setOnPreferenceClickListener {
             val intent = Intent(activity, Animations_SettingsActivity::class.java)
             this.startActivity(intent)
@@ -278,29 +272,6 @@ class Visuals_SettingsActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         fragmentManager.beginTransaction().replace(R.id.settings_frame, FragmentGameSettingsPage(R.xml.gs_visuals)).commit()
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-}
-
-class Shadows_SettingsActivity : AppCompatActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
-
-        setSupportActionBar(findViewById(R.id.settings_toolbar))
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-
-        fragmentManager.beginTransaction().replace(R.id.settings_frame, FragmentGameSettingsPage(R.xml.gs_shadows)).commit()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
