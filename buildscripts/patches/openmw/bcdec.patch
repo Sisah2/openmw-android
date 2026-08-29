@@ -1653,7 +1653,7 @@ index 917bf487bd..06c842a9aa 100644
 +            return SceneUtil::getGLExtensions().isTextureCompressionS3TCSupported;
 +
 +        if (image->getPixelFormat() == GL_COMPRESSED_RGBA_BPTC_UNORM_EXT)
-+            return SceneUtil::getGLExtensions().isTextureCompressionBPTCupported;
++            return SceneUtil::getGLExtensions().isTextureCompressionBPTCSupported;
 +
 +        if (image->getPixelFormat() == GL_COMPRESSED_RED_GREEN_RGTC2_EXT || image->getPixelFormat() == GL_COMPRESSED_SIGNED_RED_GREEN_RGTC2_EXT)
 +            return SceneUtil::getGLExtensions().isTextureCompressionRGTCSupported;
