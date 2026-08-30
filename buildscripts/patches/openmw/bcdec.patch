@@ -1488,7 +1488,7 @@ index e69de29bb2..e3992c73af 100644
 +                        uncompRGBData[i * 3 + 1] = uncompData[i * 4 + 1];
 +                        uncompRGBData[i * 3 + 2] = uncompData[i * 4 + 2];
 +                    }
-+                    delete uncompData;
++                    delete[] uncompData;
 +
 +                    inImage->setImage(inImage->s(), inImage->t(), inImage->r(), GL_RGB, GL_RGB, GL_UNSIGNED_BYTE, uncompRGBData, osg::Image::USE_NEW_DELETE);
 +                }
