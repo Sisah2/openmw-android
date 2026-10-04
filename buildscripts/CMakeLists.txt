@@ -468,8 +468,8 @@ ExternalProject_Add(glad
     INSTALL_COMMAND cp libglad.so ${prefix}/lib/
     COMMAND cp -r ${CMAKE_SOURCE_DIR}/tool/GLAD/include ${prefix}
 
-    COMMAND cp libglad.so ${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/lib/
-    COMMAND cp -r ${CMAKE_SOURCE_DIR}/tool/GLAD/include ${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/
+    #COMMAND cp libglad.so ${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/lib/
+    #COMMAND cp -r ${CMAKE_SOURCE_DIR}/tool/GLAD/include ${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/
 
 )
 
