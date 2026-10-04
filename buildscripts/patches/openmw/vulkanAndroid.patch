@@ -1,0 +1,384 @@
+diff --git a/cmake/OpenMWVulkan.cmake b/cmake/OpenMWVulkan.cmake
+index 876366677f..d432ab2929 100644
+--- a/cmake/OpenMWVulkan.cmake
++++ b/cmake/OpenMWVulkan.cmake
+@@ -79,6 +79,12 @@ function(openmw_configure_vulkan)
+     if (NOT OPENMW_USE_SYSTEM_VULKAN_HEADERS)
+         openmw_fetch_headers()
+     endif()
++
++    if (ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Android")
++        if (NOT DEFINED Vulkan_LIBRARY AND DEFINED CMAKE_ANDROID_NDK)
++            set(Vulkan_LIBRARY "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_HOST_TAG}/sysroot/usr/lib/${NDK_TRIPLET}/34/libvulkan.so")
++        endif()
++    endif()
+     find_package(Vulkan ${OPENMW_VULKAN_HEADERS_MINIMUM} REQUIRED)
+ 
+     set(glslang_VERSION ${glslang_VERSION} PARENT_SCOPE)
+diff --git a/components/CMakeLists.txt b/components/CMakeLists.txt
+index 2cc5969c34..59ac9498ec 100644
+--- a/components/CMakeLists.txt
++++ b/components/CMakeLists.txt
+@@ -154,7 +154,7 @@ if (OPENMW_USE_VULKAN)
+ 
+     add_component_dir (vulkan
+         vmaimpl instance device devicetable deviceprofile frame pipelinecache bindings descriptors images swapchain
+-        breadcrumbs addresstable commands renderpasses blockdecode
++        breadcrumbs addresstable commands renderpasses blockdecode androiddispatch
+         )
+ endif()
+ 
+diff --git a/components/vulkan/androiddispatch.cpp b/components/vulkan/androiddispatch.cpp
+new file mode 100644
+index 0000000000..4049d1b9d1
+--- /dev/null
++++ b/components/vulkan/androiddispatch.cpp
+@@ -0,0 +1,286 @@
++#if defined(ANDROID) || defined(__ANDROID__)
++#include "androiddispatch.hpp"
++
++#include <vulkan/vulkan.h>
++
++extern "C" {
++
++static PFN_vkEnumerateInstanceVersion p_vkEnumerateInstanceVersion = nullptr;
++static PFN_vkGetPhysicalDeviceProperties2 p_vkGetPhysicalDeviceProperties2 = nullptr;
++static PFN_vkGetPhysicalDeviceFeatures2 p_vkGetPhysicalDeviceFeatures2 = nullptr;
++static PFN_vkGetPhysicalDeviceFormatProperties2 p_vkGetPhysicalDeviceFormatProperties2 = nullptr;
++static PFN_vkGetPhysicalDeviceMemoryProperties2 p_vkGetPhysicalDeviceMemoryProperties2 = nullptr;
++static PFN_vkGetPhysicalDeviceToolProperties p_vkGetPhysicalDeviceToolProperties = nullptr;
++
++static PFN_vkCreateRenderPass2 p_vkCreateRenderPass2 = nullptr;
++static PFN_vkCmdBeginRendering p_vkCmdBeginRendering = nullptr;
++static PFN_vkCmdEndRendering p_vkCmdEndRendering = nullptr;
++static PFN_vkCmdBeginRenderPass2 p_vkCmdBeginRenderPass2 = nullptr;
++static PFN_vkCmdEndRenderPass2 p_vkCmdEndRenderPass2 = nullptr;
++static PFN_vkCmdPipelineBarrier2 p_vkCmdPipelineBarrier2 = nullptr;
++static PFN_vkQueueSubmit2 p_vkQueueSubmit2 = nullptr;
++static PFN_vkCmdWriteTimestamp2 p_vkCmdWriteTimestamp2 = nullptr;
++static PFN_vkCmdCopyBuffer2 p_vkCmdCopyBuffer2 = nullptr;
++static PFN_vkCmdCopyImage2 p_vkCmdCopyImage2 = nullptr;
++static PFN_vkCmdCopyBufferToImage2 p_vkCmdCopyBufferToImage2 = nullptr;
++static PFN_vkCmdCopyImageToBuffer2 p_vkCmdCopyImageToBuffer2 = nullptr;
++static PFN_vkCmdBlitImage2 p_vkCmdBlitImage2 = nullptr;
++static PFN_vkGetSemaphoreCounterValue p_vkGetSemaphoreCounterValue = nullptr;
++static PFN_vkWaitSemaphores p_vkWaitSemaphores = nullptr;
++static PFN_vkCmdSetFrontFace p_vkCmdSetFrontFace = nullptr;
++
++} // extern "C"
++
++namespace Vulkan
++{
++    void initAndroidInstance(VkInstance instance)
++    {
++        if (!instance) return;
++        p_vkGetPhysicalDeviceProperties2 = (PFN_vkGetPhysicalDeviceProperties2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2");
++        if (!p_vkGetPhysicalDeviceProperties2)
++            p_vkGetPhysicalDeviceProperties2 = (PFN_vkGetPhysicalDeviceProperties2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2KHR");
++
++        p_vkGetPhysicalDeviceFeatures2 = (PFN_vkGetPhysicalDeviceFeatures2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceFeatures2");
++        if (!p_vkGetPhysicalDeviceFeatures2)
++            p_vkGetPhysicalDeviceFeatures2 = (PFN_vkGetPhysicalDeviceFeatures2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceFeatures2KHR");
++
++        p_vkGetPhysicalDeviceFormatProperties2 = (PFN_vkGetPhysicalDeviceFormatProperties2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceFormatProperties2");
++        if (!p_vkGetPhysicalDeviceFormatProperties2)
++            p_vkGetPhysicalDeviceFormatProperties2 = (PFN_vkGetPhysicalDeviceFormatProperties2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceFormatProperties2KHR");
++
++        p_vkGetPhysicalDeviceMemoryProperties2 = (PFN_vkGetPhysicalDeviceMemoryProperties2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceMemoryProperties2");
++        if (!p_vkGetPhysicalDeviceMemoryProperties2)
++            p_vkGetPhysicalDeviceMemoryProperties2 = (PFN_vkGetPhysicalDeviceMemoryProperties2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceMemoryProperties2KHR");
++
++        p_vkGetPhysicalDeviceToolProperties = (PFN_vkGetPhysicalDeviceToolProperties)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceToolProperties");
++        if (!p_vkGetPhysicalDeviceToolProperties)
++            p_vkGetPhysicalDeviceToolProperties = (PFN_vkGetPhysicalDeviceToolProperties)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceToolPropertiesEXT");
++    }
++
++    void initAndroidDevice(VkDevice device)
++    {
++        if (!device) return;
++        p_vkCreateRenderPass2 = (PFN_vkCreateRenderPass2)vkGetDeviceProcAddr(device, "vkCreateRenderPass2");
++        if (!p_vkCreateRenderPass2)
++            p_vkCreateRenderPass2 = (PFN_vkCreateRenderPass2)vkGetDeviceProcAddr(device, "vkCreateRenderPass2KHR");
++
++        p_vkCmdBeginRendering = (PFN_vkCmdBeginRendering)vkGetDeviceProcAddr(device, "vkCmdBeginRendering");
++        if (!p_vkCmdBeginRendering)
++            p_vkCmdBeginRendering = (PFN_vkCmdBeginRendering)vkGetDeviceProcAddr(device, "vkCmdBeginRenderingKHR");
++
++        p_vkCmdEndRendering = (PFN_vkCmdEndRendering)vkGetDeviceProcAddr(device, "vkCmdEndRendering");
++        if (!p_vkCmdEndRendering)
++            p_vkCmdEndRendering = (PFN_vkCmdEndRendering)vkGetDeviceProcAddr(device, "vkCmdEndRenderingKHR");
++
++        p_vkCmdBeginRenderPass2 = (PFN_vkCmdBeginRenderPass2)vkGetDeviceProcAddr(device, "vkCmdBeginRenderPass2");
++        if (!p_vkCmdBeginRenderPass2)
++            p_vkCmdBeginRenderPass2 = (PFN_vkCmdBeginRenderPass2)vkGetDeviceProcAddr(device, "vkCmdBeginRenderPass2KHR");
++
++        p_vkCmdEndRenderPass2 = (PFN_vkCmdEndRenderPass2)vkGetDeviceProcAddr(device, "vkCmdEndRenderPass2");
++        if (!p_vkCmdEndRenderPass2)
++            p_vkCmdEndRenderPass2 = (PFN_vkCmdEndRenderPass2)vkGetDeviceProcAddr(device, "vkCmdEndRenderPass2KHR");
++
++        p_vkCmdPipelineBarrier2 = (PFN_vkCmdPipelineBarrier2)vkGetDeviceProcAddr(device, "vkCmdPipelineBarrier2");
++        if (!p_vkCmdPipelineBarrier2)
++            p_vkCmdPipelineBarrier2 = (PFN_vkCmdPipelineBarrier2)vkGetDeviceProcAddr(device, "vkCmdPipelineBarrier2KHR");
++
++        p_vkQueueSubmit2 = (PFN_vkQueueSubmit2)vkGetDeviceProcAddr(device, "vkQueueSubmit2");
++        if (!p_vkQueueSubmit2)
++            p_vkQueueSubmit2 = (PFN_vkQueueSubmit2)vkGetDeviceProcAddr(device, "vkQueueSubmit2KHR");
++
++        p_vkCmdWriteTimestamp2 = (PFN_vkCmdWriteTimestamp2)vkGetDeviceProcAddr(device, "vkCmdWriteTimestamp2");
++        if (!p_vkCmdWriteTimestamp2)
++            p_vkCmdWriteTimestamp2 = (PFN_vkCmdWriteTimestamp2)vkGetDeviceProcAddr(device, "vkCmdWriteTimestamp2KHR");
++
++        p_vkCmdCopyBuffer2 = (PFN_vkCmdCopyBuffer2)vkGetDeviceProcAddr(device, "vkCmdCopyBuffer2");
++        if (!p_vkCmdCopyBuffer2)
++            p_vkCmdCopyBuffer2 = (PFN_vkCmdCopyBuffer2)vkGetDeviceProcAddr(device, "vkCmdCopyBuffer2KHR");
++
++        p_vkCmdCopyImage2 = (PFN_vkCmdCopyImage2)vkGetDeviceProcAddr(device, "vkCmdCopyImage2");
++        if (!p_vkCmdCopyImage2)
++            p_vkCmdCopyImage2 = (PFN_vkCmdCopyImage2)vkGetDeviceProcAddr(device, "vkCmdCopyImage2KHR");
++
++        p_vkCmdCopyBufferToImage2 = (PFN_vkCmdCopyBufferToImage2)vkGetDeviceProcAddr(device, "vkCmdCopyBufferToImage2");
++        if (!p_vkCmdCopyBufferToImage2)
++            p_vkCmdCopyBufferToImage2 = (PFN_vkCmdCopyBufferToImage2)vkGetDeviceProcAddr(device, "vkCmdCopyBufferToImage2KHR");
++
++        p_vkCmdCopyImageToBuffer2 = (PFN_vkCmdCopyImageToBuffer2)vkGetDeviceProcAddr(device, "vkCmdCopyImageToBuffer2");
++        if (!p_vkCmdCopyImageToBuffer2)
++            p_vkCmdCopyImageToBuffer2 = (PFN_vkCmdCopyImageToBuffer2)vkGetDeviceProcAddr(device, "vkCmdCopyImageToBuffer2KHR");
++
++        p_vkCmdBlitImage2 = (PFN_vkCmdBlitImage2)vkGetDeviceProcAddr(device, "vkCmdBlitImage2");
++        if (!p_vkCmdBlitImage2)
++            p_vkCmdBlitImage2 = (PFN_vkCmdBlitImage2)vkGetDeviceProcAddr(device, "vkCmdBlitImage2KHR");
++
++        p_vkGetSemaphoreCounterValue = (PFN_vkGetSemaphoreCounterValue)vkGetDeviceProcAddr(device, "vkGetSemaphoreCounterValue");
++        if (!p_vkGetSemaphoreCounterValue)
++            p_vkGetSemaphoreCounterValue = (PFN_vkGetSemaphoreCounterValue)vkGetDeviceProcAddr(device, "vkGetSemaphoreCounterValueKHR");
++
++        p_vkWaitSemaphores = (PFN_vkWaitSemaphores)vkGetDeviceProcAddr(device, "vkWaitSemaphores");
++        if (!p_vkWaitSemaphores)
++            p_vkWaitSemaphores = (PFN_vkWaitSemaphores)vkGetDeviceProcAddr(device, "vkWaitSemaphoresKHR");
++
++        p_vkCmdSetFrontFace = (PFN_vkCmdSetFrontFace)vkGetDeviceProcAddr(device, "vkCmdSetFrontFace");
++        if (!p_vkCmdSetFrontFace)
++            p_vkCmdSetFrontFace = (PFN_vkCmdSetFrontFace)vkGetDeviceProcAddr(device, "vkCmdSetFrontFaceEXT");
++    }
++}
++
++extern "C" {
++
++VkResult vkEnumerateInstanceVersion(uint32_t* pApiVersion)
++{
++    if (!p_vkEnumerateInstanceVersion)
++    {
++        PFN_vkGetInstanceProcAddr gipa = (PFN_vkGetInstanceProcAddr)vkGetInstanceProcAddr(nullptr, "vkGetInstanceProcAddr");
++        if (gipa)
++            p_vkEnumerateInstanceVersion = (PFN_vkEnumerateInstanceVersion)gipa(nullptr, "vkEnumerateInstanceVersion");
++    }
++    if (p_vkEnumerateInstanceVersion)
++        return p_vkEnumerateInstanceVersion(pApiVersion);
++    if (pApiVersion)
++        *pApiVersion = VK_API_VERSION_1_0;
++    return VK_SUCCESS;
++}
++
++void vkGetPhysicalDeviceProperties2(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties2* pProperties)
++{
++    if (p_vkGetPhysicalDeviceProperties2)
++        p_vkGetPhysicalDeviceProperties2(physicalDevice, pProperties);
++}
++
++void vkGetPhysicalDeviceFeatures2(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures2* pFeatures)
++{
++    if (p_vkGetPhysicalDeviceFeatures2)
++        p_vkGetPhysicalDeviceFeatures2(physicalDevice, pFeatures);
++}
++
++void vkGetPhysicalDeviceFormatProperties2(
++    VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties2* pFormatProperties)
++{
++    if (p_vkGetPhysicalDeviceFormatProperties2)
++        p_vkGetPhysicalDeviceFormatProperties2(physicalDevice, format, pFormatProperties);
++}
++
++void vkGetPhysicalDeviceMemoryProperties2(
++    VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties2* pMemoryProperties)
++{
++    if (p_vkGetPhysicalDeviceMemoryProperties2)
++        p_vkGetPhysicalDeviceMemoryProperties2(physicalDevice, pMemoryProperties);
++}
++
++VkResult vkGetPhysicalDeviceToolProperties(
++    VkPhysicalDevice physicalDevice, uint32_t* pToolCount, VkPhysicalDeviceToolProperties* pToolProperties)
++{
++    if (p_vkGetPhysicalDeviceToolProperties)
++        return p_vkGetPhysicalDeviceToolProperties(physicalDevice, pToolCount, pToolProperties);
++    if (pToolCount)
++        *pToolCount = 0;
++    return VK_SUCCESS;
++}
++
++VkResult vkCreateRenderPass2(VkDevice device, const VkRenderPassCreateInfo2* pCreateInfo,
++    const VkAllocationCallbacks* pAllocator, VkRenderPass* pRenderPass)
++{
++    if (p_vkCreateRenderPass2)
++        return p_vkCreateRenderPass2(device, pCreateInfo, pAllocator, pRenderPass);
++    return VK_ERROR_INITIALIZATION_FAILED;
++}
++
++void vkCmdBeginRendering(VkCommandBuffer commandBuffer, const VkRenderingInfo* pRenderingInfo)
++{
++    if (p_vkCmdBeginRendering)
++        p_vkCmdBeginRendering(commandBuffer, pRenderingInfo);
++}
++
++void vkCmdEndRendering(VkCommandBuffer commandBuffer)
++{
++    if (p_vkCmdEndRendering)
++        p_vkCmdEndRendering(commandBuffer);
++}
++
++void vkCmdBeginRenderPass2(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo* pRenderPassBegin,
++    const VkSubpassBeginInfo* pSubpassBeginInfo)
++{
++    if (p_vkCmdBeginRenderPass2)
++        p_vkCmdBeginRenderPass2(commandBuffer, pRenderPassBegin, pSubpassBeginInfo);
++}
++
++void vkCmdEndRenderPass2(VkCommandBuffer commandBuffer, const VkSubpassEndInfo* pSubpassEndInfo)
++{
++    if (p_vkCmdEndRenderPass2)
++        p_vkCmdEndRenderPass2(commandBuffer, pSubpassEndInfo);
++}
++
++void vkCmdPipelineBarrier2(VkCommandBuffer commandBuffer, const VkDependencyInfo* pDependencyInfo)
++{
++    if (p_vkCmdPipelineBarrier2)
++        p_vkCmdPipelineBarrier2(commandBuffer, pDependencyInfo);
++}
++
++VkResult vkQueueSubmit2(VkQueue queue, uint32_t submitCount, const VkSubmitInfo2* pSubmits, VkFence fence)
++{
++    if (p_vkQueueSubmit2)
++        return p_vkQueueSubmit2(queue, submitCount, pSubmits, fence);
++    return VK_ERROR_INITIALIZATION_FAILED;
++}
++
++void vkCmdWriteTimestamp2(
++    VkCommandBuffer commandBuffer, VkPipelineStageFlags2 stage, VkQueryPool queryPool, uint32_t query)
++{
++    if (p_vkCmdWriteTimestamp2)
++        p_vkCmdWriteTimestamp2(commandBuffer, stage, queryPool, query);
++}
++
++void vkCmdCopyBuffer2(VkCommandBuffer commandBuffer, const VkCopyBufferInfo2* pCopyBufferInfo)
++{
++    if (p_vkCmdCopyBuffer2)
++        p_vkCmdCopyBuffer2(commandBuffer, pCopyBufferInfo);
++}
++
++void vkCmdCopyImage2(VkCommandBuffer commandBuffer, const VkCopyImageInfo2* pCopyImageInfo)
++{
++    if (p_vkCmdCopyImage2)
++        p_vkCmdCopyImage2(commandBuffer, pCopyImageInfo);
++}
++
++void vkCmdCopyBufferToImage2(VkCommandBuffer commandBuffer, const VkCopyBufferToImageInfo2* pCopyBufferToImageInfo)
++{
++    if (p_vkCmdCopyBufferToImage2)
++        p_vkCmdCopyBufferToImage2(commandBuffer, pCopyBufferToImageInfo);
++}
++
++void vkCmdCopyImageToBuffer2(VkCommandBuffer commandBuffer, const VkCopyImageToBufferInfo2* pCopyImageToBufferInfo)
++{
++    if (p_vkCmdCopyImageToBuffer2)
++        p_vkCmdCopyImageToBuffer2(commandBuffer, pCopyImageToBufferInfo);
++}
++
++void vkCmdBlitImage2(VkCommandBuffer commandBuffer, const VkBlitImageInfo2* pBlitImageInfo)
++{
++    if (p_vkCmdBlitImage2)
++        p_vkCmdBlitImage2(commandBuffer, pBlitImageInfo);
++}
++
++VkResult vkGetSemaphoreCounterValue(VkDevice device, VkSemaphore semaphore, uint64_t* pValue)
++{
++    if (p_vkGetSemaphoreCounterValue)
++        return p_vkGetSemaphoreCounterValue(device, semaphore, pValue);
++    return VK_ERROR_INITIALIZATION_FAILED;
++}
++
++VkResult vkWaitSemaphores(VkDevice device, const VkSemaphoreWaitInfo* pWaitInfo, uint64_t timeout)
++{
++    if (p_vkWaitSemaphores)
++        return p_vkWaitSemaphores(device, pWaitInfo, timeout);
++    return VK_ERROR_INITIALIZATION_FAILED;
++}
++
++void vkCmdSetFrontFace(VkCommandBuffer commandBuffer, VkFrontFace frontFace)
++{
++    if (p_vkCmdSetFrontFace)
++        p_vkCmdSetFrontFace(commandBuffer, frontFace);
++}
++
++} // extern "C"
++#endif
+diff --git a/components/vulkan/androiddispatch.hpp b/components/vulkan/androiddispatch.hpp
+new file mode 100644
+index 0000000000..289f8ba4e5
+--- /dev/null
++++ b/components/vulkan/androiddispatch.hpp
+@@ -0,0 +1,14 @@
++#ifndef OPENMW_COMPONENTS_VULKAN_ANDROIDDISPATCH_H
++#define OPENMW_COMPONENTS_VULKAN_ANDROIDDISPATCH_H
++
++#if defined(ANDROID) || defined(__ANDROID__)
++#include <vulkan/vulkan.h>
++
++namespace Vulkan
++{
++    void initAndroidInstance(VkInstance instance);
++    void initAndroidDevice(VkDevice device);
++}
++#endif
++
++#endif
+diff --git a/components/vulkan/device.cpp b/components/vulkan/device.cpp
+index df49cb662d..b59cfb2128 100644
+--- a/components/vulkan/device.cpp
++++ b/components/vulkan/device.cpp
+@@ -16,6 +16,7 @@
+ #include "breadcrumbs.hpp"
+ #include "commands.hpp"
+ #include "descriptors.hpp"
++#include "androiddispatch.hpp"
+ 
+ namespace Vulkan
+ {
+@@ -795,6 +796,9 @@ namespace Vulkan
+         createInfo.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
+         createInfo.ppEnabledExtensionNames = extensions.data();
+         check(vkCreateDevice(mPhysical, &createInfo, nullptr, &mDevice), "vkCreateDevice");
++#if defined(ANDROID) || defined(__ANDROID__)
++        initAndroidDevice(mDevice);
++#endif
+         mEnabled.assign(extensions.begin(), extensions.end());
+         if (addresses)
+             instance.hearBindings();
+diff --git a/components/vulkan/instance.cpp b/components/vulkan/instance.cpp
+index 07ca596db2..84e424a7bf 100644
+--- a/components/vulkan/instance.cpp
++++ b/components/vulkan/instance.cpp
+@@ -1,4 +1,5 @@
+ #include "instance.hpp"
++#include "androiddispatch.hpp"
+ 
+ #include <algorithm>
+ #include <array>
+@@ -410,6 +411,9 @@ namespace Vulkan
+         }
+ 
+         check(vkCreateInstance(&createInfo, nullptr, &mInstance), "vkCreateInstance");
++#if defined(ANDROID) || defined(__ANDROID__)
++        initAndroidInstance(mInstance);
++#endif
+ 
+         // No destructor runs for a failed constructor.
+         try

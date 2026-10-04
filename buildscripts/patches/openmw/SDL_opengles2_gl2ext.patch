@@ -1,0 +1,88 @@
+diff --git a/apps/openmw/engine.cpp b/apps/openmw/engine.cpp
+index 20452a894d..d8a3e3eeba 100644
+--- a/apps/openmw/engine.cpp
++++ b/apps/openmw/engine.cpp
+@@ -13,7 +13,11 @@
+ #include <osgViewer/ViewerEventHandlers>
+
+ #include <SDL.h>
++#if defined(ANDROID) || defined(__ANDROID__)
++#include <SDL_opengles2_gl2ext.h>
++#else
+ #include <SDL_opengl_glext.h>
++#endif
+ #ifdef OPENMW_USE_VULKAN
+ #include <SDL_vulkan.h>
+ #endif
+@@ -204,6 +208,9 @@ namespace
+             facts.mGlVersion = readString(GL_VERSION);
+             facts.mGlShadingLanguage = readString(GL_SHADING_LANGUAGE_VERSION);
+             // GL_CONTEXT_FLAGS needs OpenGL 3.0.
++#ifndef GL_CONTEXT_FLAGS
++#define GL_CONTEXT_FLAGS 0x821E
++#endif
+             if (osg::getGLVersionNumber() >= 3.f)
+                 glGetIntegerv(GL_CONTEXT_FLAGS, &facts.mGlContextFlags);
+         }
+diff --git a/apps/openmw/mwrender/clockwork/frame/postchain.cpp b/apps/openmw/mwrender/clockwork/frame/postchain.cpp
+index 38102f64a1..438c18efe9 100644
+--- a/apps/openmw/mwrender/clockwork/frame/postchain.cpp
++++ b/apps/openmw/mwrender/clockwork/frame/postchain.cpp
+@@ -13,7 +13,11 @@
+ #include <stdexcept>
+ #include <utility>
+
++#if defined(ANDROID) || defined(__ANDROID__)
++#include <SDL_opengles2_gl2ext.h>
++#else
+ #include <SDL_opengl_glext.h>
++#endif
+
+ #include <osg/StateSet>
+ #include <osg/Texture>
+diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postprocessor.cpp
+index 1234567..89abcdef 100644
+--- a/apps/openmw/mwrender/postprocessor.cpp
++++ b/apps/openmw/mwrender/postprocessor.cpp
+@@ -1,5 +1,9 @@
+ #include "postprocessor.hpp"
+
++#if defined(ANDROID) || defined(__ANDROID__)
++#include <SDL_opengles2_gl2ext.h>
++#else
+ #include <SDL_opengl_glext.h>
++#endif
+ #include <algorithm>
+ #include <chrono>
+diff --git a/components/debug/gldebug.cpp b/components/debug/gldebug.cpp
+index 1234567..89abcdef 100644
+--- a/components/debug/gldebug.cpp
++++ b/components/debug/gldebug.cpp
+@@ -38,7 +38,11 @@
+ #include <components/debug/debuglog.hpp>
+
+ // OpenGL constants not provided by OSG:
++#if defined(ANDROID) || defined(__ANDROID__)
++#include <SDL_opengles2_gl2ext.h>
++#else
+ #include <SDL_opengl_glext.h>
++#endif
+
+ namespace Debug
+ {
+diff --git a/components/fx/technique.cpp b/components/fx/technique.cpp
+index 1234567..89abcdef 100644
+--- a/components/fx/technique.cpp
++++ b/components/fx/technique.cpp
+@@ -9,7 +9,11 @@
+ #include <osg/Texture2D>
+ #include <osg/Texture3D>
+
++#if defined(ANDROID) || defined(__ANDROID__)
++#include <SDL_opengles2_gl2ext.h>
++#else
+ #include <SDL_opengl_glext.h>
++#endif
+
+ #include <components/debug/debuglog.hpp>
+ #include <components/files/conversion.hpp>
