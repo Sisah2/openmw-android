@@ -47,17 +47,17 @@ index b57c95e3ba..82fe36898a 100644
          mSupportsClustered = supportsSSBO;
  
 diff --git a/components/sceneutil/mwshadowtechnique.cpp b/components/sceneutil/mwshadowtechnique.cpp
-index 2bcdf91392..86ad143efb 100644
+index 811111b0b7..0f7a6d7896 100644
 --- a/components/sceneutil/mwshadowtechnique.cpp
 +++ b/components/sceneutil/mwshadowtechnique.cpp
-@@ -923,8 +923,9 @@ void SceneUtil::MWShadowTechnique::setupCastingShader(Shader::ShaderManager & sh
- {
+@@ -980,7 +980,9 @@ void SceneUtil::MWShadowTechnique::setupCastingShader(Shader::ShaderManager & sh
      // This can't be part of the constructor as OSG mandates that there be a trivial constructor available
  
--    osg::ref_ptr<osg::Shader> castingVertexShader = shaderManager.getShader("shadowcasting.vert");
-     std::string useGPUShader4 = SceneUtil::getGLExtensions().isGpuShader4Supported ? "1" : "0";
+     const bool vulkan = Diagnostics::runtime().mRendererEntry != "opengl";
+-    osg::ref_ptr<osg::Shader> castingVertexShader = vulkan ? nullptr : shaderManager.getShader("shadowcasting.vert");
 +    std::string useDepthClamp = SceneUtil::getGLExtensions().isDepthClampSupported ? "1" : "0";
-+    osg::ref_ptr<osg::Shader> castingVertexShader = shaderManager.getShader("shadowcasting.vert", { {"useDepthClamp", useDepthClamp} });
++    osg::ref_ptr<osg::Shader> castingVertexShader = vulkan ? nullptr : shaderManager.getShader("shadowcasting.vert", { {"useDepthClamp", useDepthClamp} });
++
+     std::string useGPUShader4 = SceneUtil::getGLExtensions().isGpuShader4Supported ? "1" : "0";
      for (int alphaFunc = GL_NEVER; alphaFunc <= GL_ALWAYS; ++alphaFunc)
      {
-         auto& program = _castingPrograms[alphaFunc - GL_NEVER];

@@ -52,7 +52,7 @@ set(LIBICU_VERSION 70-1)
 set(LIBICU_HASH SHA256=4013d7aff8a34bae410664bdb16554d7eda03654b22627b9284ab55a685492d4)
 
 # https://github.com/sisah2/openmw/commits/master
-set(OPENMW_VERSION cdfe3df4e264869804f7fa0d8d4e51ead1a12462)
+set(OPENMW_VERSION e05452c4b5d875a86907ea7918c4e27ede7fb71e)
 set(OPENMW_HASH SHA256=44d044ad0a5546216fe611fe92c37065bb07e2efeeeaac4f049dae03df313186)
 
 # End of configurable options
@@ -486,7 +486,7 @@ ExternalProject_Add(glslang
     -DBUILD_EXTERNAL=OFF
     -DENABLE_OPT=OFF
     -DENABLE_PCH=OFF
-    -DENABLE_GLSLANG_BINARIES=OFF
+    -DENABLE_GLSLANG_BINARIES=ON
 
     BUILD_COMMAND ${wrapper_command} make
 
@@ -608,6 +608,9 @@ ExternalProject_Add(kram
 )
 
 set(OPENMW_COMMON
+        -DOPENMW_USE_VULKAN=ON
+        -DOPENMW_USE_SYSTEM_VULKAN_HEADERS=OFF
+        -DOPENMW_USE_SYSTEM_GLSLANG=OFF
 	-DBUILD_BSATOOL=1
 	-DBUILD_NIFTEST=0
 	-DBUILD_ESMTOOL=0
@@ -623,6 +626,7 @@ set(OPENMW_COMMON
 	-DOPENMW_USE_SYSTEM_YAML_CPP=OFF
 	-DOPENMW_USE_SYSTEM_ICU=ON
 	-DOPENGL_gl_LIBRARY=${prefix}/lib/libglad.so
+	-DVulkan_LIBRARY=${CMAKE_SOURCE_DIR}/toolchain/arm64/sysroot/usr/lib/arm-linux-androideabi/34/libvulkan.so
 	-DOPENGL_INCLUDE_DIR=${prefix}/include/
 	-DOPENAL_INCLUDE_DIR=${prefix}/include/AL/
 	-DBullet_INCLUDE_DIR=${prefix}/include/bullet/
@@ -636,15 +640,15 @@ set(OPENMW_COMMON
 set(OPENMW_PATCH
         #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0001-loadingscreen-disable-for-now.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/0009-windowmanagerimp-always-show-mouse-when-possible-pat.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/navmeshtool.patch &&
+        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/navmeshtool.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/ktx.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/bsatool-extract-dds-only.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/base-changes.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/gui.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/textures.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/features.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/misc.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/spirv.patch &&
+        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/misc.patch &&
+        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/spirv.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/glad.patch &&
 	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/androidmain.cpp &&
 	sed -i -e "s/if(FFmpeg_FOUND)/if(NOT FFmpeg_FOUND)/g" <SOURCE_DIR>/CMakeLists.txt
@@ -653,7 +657,8 @@ set(OPENMW_PATCH
 ExternalProject_Add(openmw
 	DEPENDS boost openal osg mygui ffmpeg sdl2 bullet lz4 luajit libicu glslang spirv-cross
 
-	URL https://github.com/sisah2/openmw/archive/${OPENMW_VERSION}.tar.gz
+	#URL https://github.com/sisah2/openmw/archive/${OPENMW_VERSION}.tar.gz
+URL https://gitlab.com/OursCodeur/openmw/-/archive/clockwork-alpha/openmw-clockwork-alpha.tar.gz
 #	URL_HASH ${OPENMW_HASH}
 	DOWNLOAD_DIR ${download_dir}
 

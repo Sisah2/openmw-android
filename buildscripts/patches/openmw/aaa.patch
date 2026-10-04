@@ -31,25 +31,18 @@ index 6e4a2d2f8d..94c6291734 100644
      // Save user settings
      Settings::Manager::saveUser(mCfgMgr.getUserConfigPath() / "settings.cfg");
      Settings::ShaderManager::get().save();
-diff --git a/files/data/mygui/openmw_postprocessor_hud.layout b/files/data/mygui/openmw_postprocessor_hud.layout
-index 4ed8ecdb36..758b1b2e99 100644
---- a/files/data/mygui/openmw_postprocessor_hud.layout
-+++ b/files/data/mygui/openmw_postprocessor_hud.layout
-@@ -3,7 +3,7 @@
-   <Widget type="Window" skin="MW_Window" position="0 0 500 500" layer="Debug" name="_Main" align="Stretch">
-     <Property key="Visible" value="false"/>
-     <Property key="Caption" value="#{OMWShaders:PostProcessHUD}"/>
--    <Property key="MinSize" value="600 600"/>
-+    <Property key="MinSize" value="600 430"/>
+diff --git a/components/sceneutil/mwshadowtechnique.cpp b/components/sceneutil/mwshadowtechnique.cpp
+index 811111b0b7..0f7a6d7896 100644
+--- a/components/sceneutil/mwshadowtechnique.cpp
++++ b/components/sceneutil/mwshadowtechnique.cpp
+@@ -980,7 +980,9 @@ void SceneUtil::MWShadowTechnique::setupCastingShader(Shader::ShaderManager & sh
+     // This can't be part of the constructor as OSG mandates that there be a trivial constructor available
  
-     <Widget type="TabControl" skin="TabControl_NoBorder" position="8 8 468 450" align="Stretch" name="TabControl">
-         <Property key="ButtonAutoWidth" value="true"/>
-@@ -20,7 +20,7 @@
-             <Property key="Padding" value="0"/>
-             <Property key="Spacing" value="8"/>
- 
--            <Widget type="Widget" position ="0 0 0 300">
-+            <Widget type="Widget" position ="0 0 0 250">
-                 <UserString key="HStretch" value="true"/>
-                 <UserString key="VStretch" value="false"/>
- 
+     const bool vulkan = Diagnostics::runtime().mRendererEntry != "opengl";
+-    osg::ref_ptr<osg::Shader> castingVertexShader = vulkan ? nullptr : shaderManager.getShader("shadowcasting.vert");
++    std::string useDepthClamp = SceneUtil::getGLExtensions().isDepthClampSupported ? "1" : "0";
++    osg::ref_ptr<osg::Shader> castingVertexShader = vulkan ? nullptr : shaderManager.getShader("shadowcasting.vert", { {"useDepthClamp", useDepthClamp} });
++
+     std::string useGPUShader4 = SceneUtil::getGLExtensions().isGpuShader4Supported ? "1" : "0";
+     for (int alphaFunc = GL_NEVER; alphaFunc <= GL_ALWAYS; ++alphaFunc)
+     {
