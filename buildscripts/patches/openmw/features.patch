@@ -47,7 +47,7 @@ index b57c95e3ba..82fe36898a 100644
          mSupportsClustered = supportsSSBO;
  
 diff --git a/components/sceneutil/mwshadowtechnique.cpp b/components/sceneutil/mwshadowtechnique.cpp
-index 811111b0b7..0f7a6d7896 100644
+index 65b01e0bd0..0cec7fd48a 100644
 --- a/components/sceneutil/mwshadowtechnique.cpp
 +++ b/components/sceneutil/mwshadowtechnique.cpp
 @@ -980,7 +980,9 @@ void SceneUtil::MWShadowTechnique::setupCastingShader(Shader::ShaderManager & sh

@@ -1,4 +1,4 @@
-int stderr = 0; // Hack: fix linker error
+//int stderr = 0; // Hack: fix linker error
 
 #include "SDL_main.h"
 #include "engine.hpp"

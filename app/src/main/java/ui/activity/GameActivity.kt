@@ -352,8 +352,8 @@ class GameActivity : SDLActivity() {
             }
         }
 
-        patchShadersLinking()
-        patchShadersToGLES()
+        //patchShadersLinking()
+        //patchShadersToGLES()
 
         System.loadLibrary("openmw")
     }

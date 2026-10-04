@@ -13,11 +13,11 @@ set(FREETYPE2_VERSION 2.10.4)
 set(FREETYPE2_HASH SHA256=5eab795ebb23ac77001cfb68b7d4d50b5d6c7469247b0b01b2c953269f658dac)
 
 # https://github.com/kcat/openal-soft/releases
-set(OPENAL_VERSION 1.21.1)
+set(OPENAL_VERSION 1.24.3)
 set(OPENAL_HASH SHA256=8ac17e4e3b32c1af3d5508acfffb838640669b4274606b7892aa796ca9d7467f)
 
 # http://www.boost.org/users/download/
-set(BOOST_VERSION 1.83.0)
+set(BOOST_VERSION 1.88.0)
 set(BOOST_HASH SHA256=8f32d4617390d1c2d16f26a27ab60d97807b35440d45891fa340fc2648b04406)
 
 # https://www.ffmpeg.org/download.html
@@ -197,7 +197,7 @@ ExternalProject_Add(freetype2
 ExternalProject_Add(openal
 	URL https://github.com/kcat/openal-soft/archive/${OPENAL_VERSION}.tar.gz
 	https://github.com/xyzz/openmw-deps/releases/download/v0/openal-soft-${OPENAL_VERSION}.tar.gz
-	URL_HASH ${OPENAL_HASH}
+	#URL_HASH ${OPENAL_HASH}
 	DOWNLOAD_DIR ${download_dir}
 
 	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
@@ -333,6 +333,10 @@ ExternalProject_Add(mygui
 	DOWNLOAD_DIR ${download_dir}
 
         #PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/mygui-dont-set-debug-postfix.patch
+
+
+        PATCH_COMMAND sed -i -e "s/unicode_char = uint32/unicode_char = char32_t/g" <SOURCE_DIR>/MyGUIEngine/include/MyGUI_UString.h
+        COMMAND sed -i -e "s/code_point = uint16/code_point = char16_t/g" <SOURCE_DIR>/MyGUIEngine/include/MyGUI_UString.h
 
 	CONFIGURE_COMMAND ${wrapper_command} cmake <SOURCE_DIR>
 	${COMMON_CMAKE_ARGS}
@@ -611,7 +615,7 @@ set(OPENMW_COMMON
         -DOPENMW_USE_VULKAN=ON
         -DOPENMW_USE_SYSTEM_VULKAN_HEADERS=OFF
         -DOPENMW_USE_SYSTEM_GLSLANG=OFF
-	-DBUILD_BSATOOL=1
+	-DBUILD_BSATOOL=0
 	-DBUILD_NIFTEST=0
 	-DBUILD_ESMTOOL=0
 	-DBUILD_LAUNCHER=0
@@ -626,7 +630,7 @@ set(OPENMW_COMMON
 	-DOPENMW_USE_SYSTEM_YAML_CPP=OFF
 	-DOPENMW_USE_SYSTEM_ICU=ON
 	-DOPENGL_gl_LIBRARY=${prefix}/lib/libglad.so
-	-DVulkan_LIBRARY=${CMAKE_SOURCE_DIR}/toolchain/arm64/sysroot/usr/lib/arm-linux-androideabi/34/libvulkan.so
+	-DVulkan_LIBRARY=${CMAKE_SOURCE_DIR}/toolchain/arm64/sysroot/usr/lib/aarch64-linux-android/34/libvulkan.so
 	-DOPENGL_INCLUDE_DIR=${prefix}/include/
 	-DOPENAL_INCLUDE_DIR=${prefix}/include/AL/
 	-DBullet_INCLUDE_DIR=${prefix}/include/bullet/

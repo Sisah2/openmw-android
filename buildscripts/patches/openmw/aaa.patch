@@ -1,38 +1,5 @@
-diff --git a/apps/openmw/engine.cpp b/apps/openmw/engine.cpp
-index 6e4a2d2f8d..94c6291734 100644
---- a/apps/openmw/engine.cpp
-+++ b/apps/openmw/engine.cpp
-@@ -623,6 +623,9 @@ void OMW::Engine::setSkipMenu(bool skipMenu, bool newGame)
-     mNewGame = newGame;
- }
- 
-+// To share the viewer with Android interfaces
-+osg::ref_ptr<osgViewer::Viewer> g_viewer;
-+
- void OMW::Engine::createWindow(bool hidden)
- {
-     const int screen = Settings::video().mScreen;
-@@ -875,6 +878,9 @@ void OMW::Engine::createWindow(bool hidden)
- 
-     mViewer->getEventQueue()->getCurrentEventState()->setWindowRectangle(
-         0, 0, graphicsWindow->getTraits()->width, graphicsWindow->getTraits()->height);
-+
-+    // To share the viewer with Android interfaces
-+    g_viewer = mViewer;
- }
- 
- bool OMW::Engine::createVulkanWindow(std::uint32_t flags, int posX, int posY, Settings::RendererEntry entry)
-@@ -1807,6 +1813,8 @@ void OMW::Engine::go()
- 
-     mLuaWorker->join();
- 
-+    g_viewer.release();
-+
-     // Save user settings
-     Settings::Manager::saveUser(mCfgMgr.getUserConfigPath() / "settings.cfg");
-     Settings::ShaderManager::get().save();
 diff --git a/components/sceneutil/mwshadowtechnique.cpp b/components/sceneutil/mwshadowtechnique.cpp
-index 811111b0b7..0f7a6d7896 100644
+index 65b01e0bd0..0cec7fd48a 100644
 --- a/components/sceneutil/mwshadowtechnique.cpp
 +++ b/components/sceneutil/mwshadowtechnique.cpp
 @@ -980,7 +980,9 @@ void SceneUtil::MWShadowTechnique::setupCastingShader(Shader::ShaderManager & sh
