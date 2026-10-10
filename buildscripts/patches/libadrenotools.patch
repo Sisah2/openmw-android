@@ -1,0 +1,13 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 16c6092..2723816 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -16,7 +16,7 @@ set(LIB_SOURCES src/bcenabler.cpp
+                 include/adrenotools/driver.h
+                 include/adrenotools/priv.h)
+ 
+-add_library(adrenotools ${LIB_SOURCES})
++add_library(adrenotools SHARED ${LIB_SOURCES})
+ 
+ target_include_directories(adrenotools PUBLIC include)
+ target_include_directories(adrenotools PRIVATE .)

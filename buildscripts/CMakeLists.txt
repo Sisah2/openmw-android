@@ -476,6 +476,8 @@ ExternalProject_Add(glad
 ExternalProject_Add(libadrenotools
     DOWNLOAD_COMMAND git clone https://github.com/bylaws/libadrenotools --recurse-submodules
 
+    PATCH_COMMAND patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/libadrenotools.patch
+
     BUILD_COMMAND ${wrapper_command} make
 
     INSTALL_COMMAND cp libadrenotools.so ${prefix}/lib/
