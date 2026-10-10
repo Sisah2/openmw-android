@@ -316,7 +316,7 @@ class GameActivity : SDLActivity() {
         System.loadLibrary("openal")
         System.loadLibrary("SDL2")
 
-        System.loadLibrary("libadrenotools")
+        //System.loadLibrary("libadrenotools")
 
         try {
             Os.setenv("OPENMW_GLES_VERSION", "32", true)
