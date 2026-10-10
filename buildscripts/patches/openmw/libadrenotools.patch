@@ -1,22 +1,17 @@
-diff --git a/cmake/OpenMWVulkan.cmake b/cmake/OpenMWVulkan.cmake
-index 876366677f..d432ab2929 100644
---- a/cmake/OpenMWVulkan.cmake
-+++ b/cmake/OpenMWVulkan.cmake
-@@ -79,6 +79,12 @@ function(openmw_configure_vulkan)
-     if (NOT OPENMW_USE_SYSTEM_VULKAN_HEADERS)
-         openmw_fetch_headers()
-     endif()
-+
-+    if (ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Android")
-+        if (NOT DEFINED Vulkan_LIBRARY AND DEFINED CMAKE_ANDROID_NDK)
-+            set(Vulkan_LIBRARY "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_HOST_TAG}/sysroot/usr/lib/${NDK_TRIPLET}/34/libvulkan.so")
-+        endif()
-+    endif()
-     find_package(Vulkan ${OPENMW_VULKAN_HEADERS_MINIMUM} REQUIRED)
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 952add01d3..d8e465b273 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -559,6 +559,7 @@ include_directories(
+     ${OPENGL_INCLUDE_DIR}
+     ${BULLET_INCLUDE_DIRS}
+     ${ICU_INCLUDE_DIRS}
++    ${ADRENOTOOLS_INCLUDE_DIR}
+ )
+ include_directories(".")
  
-     set(glslang_VERSION ${glslang_VERSION} PARENT_SCOPE)
 diff --git a/components/CMakeLists.txt b/components/CMakeLists.txt
-index 2cc5969c34..59ac9498ec 100644
+index 39301d52e8..e705940f8f 100644
 --- a/components/CMakeLists.txt
 +++ b/components/CMakeLists.txt
 @@ -154,7 +154,7 @@ if (OPENMW_USE_VULKAN)
@@ -24,20 +19,73 @@ index 2cc5969c34..59ac9498ec 100644
      add_component_dir (vulkan
          vmaimpl instance device devicetable deviceprofile frame pipelinecache bindings descriptors images swapchain
 -        breadcrumbs addresstable commands renderpasses blockdecode
-+        breadcrumbs addresstable commands renderpasses blockdecode androiddispatch
++        breadcrumbs addresstable commands renderpasses blockdecode vulkanmobiledispatch
          )
  endif()
  
-diff --git a/components/vulkan/androiddispatch.cpp b/components/vulkan/androiddispatch.cpp
-new file mode 100644
-index 0000000000..4049d1b9d1
---- /dev/null
-+++ b/components/vulkan/androiddispatch.cpp
-@@ -0,0 +1,286 @@
+@@ -656,6 +656,7 @@ target_link_libraries(components
+ 
+     SDL2::SDL2
+     ${OPENGL_gl_LIBRARY}
++    ${ADRENOTOOLS_LIBRARY}
+     ${MyGUI_LIBRARIES}
+     LZ4::LZ4
+     RecastNavigation::DebugUtils
+diff --git a/components/vulkan/device.cpp b/components/vulkan/device.cpp
+index dd57f16c46..fe445c8cd7 100644
+--- a/components/vulkan/device.cpp
++++ b/components/vulkan/device.cpp
+@@ -16,6 +16,7 @@
+ #include "breadcrumbs.hpp"
+ #include "commands.hpp"
+ #include "descriptors.hpp"
++#include "vulkanmobiledispatch.hpp"
+ 
+ namespace Vulkan
+ {
+@@ -840,6 +841,9 @@ namespace Vulkan
+         createInfo.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
+         createInfo.ppEnabledExtensionNames = extensions.data();
+         check(vkCreateDevice(mPhysical, &createInfo, nullptr, &mDevice), "vkCreateDevice");
++//#ifdef OPENMW_VULKAN_MOBILE
++        initMobileDevice(mDevice);
++//#endif
+         mEnabled.assign(extensions.begin(), extensions.end());
+         if (addresses)
+             instance.hearBindings();
+diff --git a/components/vulkan/instance.cpp b/components/vulkan/instance.cpp
+index 569d18ea28..45d7161020 100644
+--- a/components/vulkan/instance.cpp
++++ b/components/vulkan/instance.cpp
+@@ -1,4 +1,5 @@
+ #include "instance.hpp"
++#include "vulkanmobiledispatch.hpp"
+ 
+ #include <algorithm>
+ #include <array>
+@@ -410,6 +411,9 @@ namespace Vulkan
+         }
+ 
+         check(vkCreateInstance(&createInfo, nullptr, &mInstance), "vkCreateInstance");
++#ifdef OPENMW_VULKAN_MOBILE
++        initMobileInstance(mInstance);
++#endif
+ 
+         // No destructor runs for a failed constructor.
+         try
+diff --git a/components/vulkan/vulkanmobiledispatch.cpp b/components/vulkan/vulkanmobiledispatch.cpp
+index e69de29bb2..c1431552f8 100644
+--- a/components/vulkan/vulkanmobiledispatch.cpp
++++ b/components/vulkan/vulkanmobiledispatch.cpp
+@@ -0,0 +1,398 @@
++#include "vulkanmobiledispatch.hpp"
 +#if defined(ANDROID) || defined(__ANDROID__)
-+#include "androiddispatch.hpp"
 +
 +#include <vulkan/vulkan.h>
++#include <dlfcn.h>
++#include <cstdlib>
++
++extern void* g_vulkanHandle;
 +
 +extern "C" {
 +
@@ -64,12 +112,15 @@ index 0000000000..4049d1b9d1
 +static PFN_vkGetSemaphoreCounterValue p_vkGetSemaphoreCounterValue = nullptr;
 +static PFN_vkWaitSemaphores p_vkWaitSemaphores = nullptr;
 +static PFN_vkCmdSetFrontFace p_vkCmdSetFrontFace = nullptr;
++static PFN_vkGetBufferDeviceAddress p_vkGetBufferDeviceAddress = nullptr;
++static PFN_vkCmdDrawIndirectCount p_vkCmdDrawIndirectCount = nullptr;
++static PFN_vkCmdDrawIndexedIndirectCount p_vkCmdDrawIndexedIndirectCount = nullptr;
 +
 +} // extern "C"
 +
 +namespace Vulkan
 +{
-+    void initAndroidInstance(VkInstance instance)
++    void initMobileInstance(VkInstance instance)
 +    {
 +        if (!instance) return;
 +        p_vkGetPhysicalDeviceProperties2 = (PFN_vkGetPhysicalDeviceProperties2)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2");
@@ -93,7 +144,7 @@ index 0000000000..4049d1b9d1
 +            p_vkGetPhysicalDeviceToolProperties = (PFN_vkGetPhysicalDeviceToolProperties)vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceToolPropertiesEXT");
 +    }
 +
-+    void initAndroidDevice(VkDevice device)
++    void initMobileDevice(VkDevice device)
 +    {
 +        if (!device) return;
 +        p_vkCreateRenderPass2 = (PFN_vkCreateRenderPass2)vkGetDeviceProcAddr(device, "vkCreateRenderPass2");
@@ -159,13 +210,84 @@ index 0000000000..4049d1b9d1
 +        p_vkCmdSetFrontFace = (PFN_vkCmdSetFrontFace)vkGetDeviceProcAddr(device, "vkCmdSetFrontFace");
 +        if (!p_vkCmdSetFrontFace)
 +            p_vkCmdSetFrontFace = (PFN_vkCmdSetFrontFace)vkGetDeviceProcAddr(device, "vkCmdSetFrontFaceEXT");
++
++        p_vkGetBufferDeviceAddress = (PFN_vkGetBufferDeviceAddress)vkGetDeviceProcAddr(device, "vkGetBufferDeviceAddress");
++        if (!p_vkGetBufferDeviceAddress)
++            p_vkGetBufferDeviceAddress = (PFN_vkGetBufferDeviceAddress)vkGetDeviceProcAddr(device, "vkGetBufferDeviceAddressKHR");
++
++        p_vkCmdDrawIndirectCount = (PFN_vkCmdDrawIndirectCount)vkGetDeviceProcAddr(device, "vkCmdDrawIndirectCount");
++        if (!p_vkCmdDrawIndirectCount)
++            p_vkCmdDrawIndirectCount = (PFN_vkCmdDrawIndirectCount)vkGetDeviceProcAddr(device, "vkCmdDrawIndirectCountKHR");
++
++        p_vkCmdDrawIndexedIndirectCount = (PFN_vkCmdDrawIndexedIndirectCount)vkGetDeviceProcAddr(device, "vkCmdDrawIndexedIndirectCount");
++        if (!p_vkCmdDrawIndexedIndirectCount)
++            p_vkCmdDrawIndexedIndirectCount = (PFN_vkCmdDrawIndexedIndirectCount)vkGetDeviceProcAddr(device, "vkCmdDrawIndexedIndirectCountKHR");
 +    }
 +}
 +
 +extern "C" {
 +
++VkResult vkCreateInstance(const VkInstanceCreateInfo* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkInstance* pInstance)
++{
++    void* handle = g_vulkanHandle;
++    if (handle)
++    {
++        typedef VkResult (*PFN_func)(const VkInstanceCreateInfo*, const VkAllocationCallbacks*, VkInstance*);
++        auto proc = (PFN_func)dlsym(handle, "vkCreateInstance");
++        if (proc) return proc(pCreateInfo, pAllocator, pInstance);
++    }
++
++    return VK_ERROR_INITIALIZATION_FAILED;
++}
++
++PFN_vkVoidFunction vkGetInstanceProcAddr(VkInstance instance, const char* pName)
++{
++    void* handle = g_vulkanHandle;
++    if (handle)
++    {
++        typedef PFN_vkVoidFunction (*PFN_func)(VkInstance, const char*);
++        auto proc = (PFN_func)dlsym(handle, "vkGetInstanceProcAddr");
++        if (proc) return proc(instance, pName);
++    }
++
++    return nullptr;
++}
++
++VkResult vkEnumerateInstanceExtensionProperties(const char* pLayerName, uint32_t* pPropertyCount, VkExtensionProperties* pProperties)
++{
++    void* handle = g_vulkanHandle;
++    if (handle)
++    {
++        typedef VkResult (*PFN_func)(const char*, uint32_t*, VkExtensionProperties*);
++        auto proc = (PFN_func)dlsym(handle, "vkEnumerateInstanceExtensionProperties");
++        if (proc) return proc(pLayerName, pPropertyCount, pProperties);
++    }
++
++    return VK_ERROR_INITIALIZATION_FAILED;
++}
++
++VkResult vkEnumerateInstanceLayerProperties(uint32_t* pPropertyCount, VkLayerProperties* pProperties)
++{
++    void* handle = g_vulkanHandle;
++    if (handle)
++    {
++        typedef VkResult (*PFN_func)(uint32_t*, VkLayerProperties*);
++        auto proc = (PFN_func)dlsym(handle, "vkEnumerateInstanceLayerProperties");
++        if (proc) return proc(pPropertyCount, pProperties);
++    }
++
++    return VK_ERROR_INITIALIZATION_FAILED;
++}
++
 +VkResult vkEnumerateInstanceVersion(uint32_t* pApiVersion)
 +{
++    void* handle = g_vulkanHandle;
++    if (handle)
++    {
++        typedef VkResult (*PFN_func)(uint32_t*);
++        auto proc = (PFN_func)dlsym(handle, "vkEnumerateInstanceVersion");
++        if (proc) return proc(pApiVersion);
++    }
 +    if (!p_vkEnumerateInstanceVersion)
 +    {
 +        PFN_vkGetInstanceProcAddr gipa = (PFN_vkGetInstanceProcAddr)vkGetInstanceProcAddr(nullptr, "vkGetInstanceProcAddr");
@@ -177,6 +299,19 @@ index 0000000000..4049d1b9d1
 +    if (pApiVersion)
 +        *pApiVersion = VK_API_VERSION_1_0;
 +    return VK_SUCCESS;
++}
++
++VkResult vkEnumeratePhysicalDevices(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices)
++{
++    void* handle = g_vulkanHandle;
++    if (handle)
++    {
++        typedef VkResult (*PFN_func)(VkInstance, uint32_t*, VkPhysicalDevice*);
++        auto proc = (PFN_func)dlsym(handle, "vkEnumeratePhysicalDevices");
++        if (proc) return proc(instance, pPhysicalDeviceCount, pPhysicalDevices);
++    }
++
++    return VK_ERROR_INITIALIZATION_FAILED;
 +}
 +
 +void vkGetPhysicalDeviceProperties2(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties2* pProperties)
@@ -318,67 +453,48 @@ index 0000000000..4049d1b9d1
 +        p_vkCmdSetFrontFace(commandBuffer, frontFace);
 +}
 +
-+} // extern "C"
-+#endif
-diff --git a/components/vulkan/androiddispatch.hpp b/components/vulkan/androiddispatch.hpp
-new file mode 100644
-index 0000000000..289f8ba4e5
---- /dev/null
-+++ b/components/vulkan/androiddispatch.hpp
-@@ -0,0 +1,14 @@
-+#ifndef OPENMW_COMPONENTS_VULKAN_ANDROIDDISPATCH_H
-+#define OPENMW_COMPONENTS_VULKAN_ANDROIDDISPATCH_H
++VkDeviceAddress vkGetBufferDeviceAddress(VkDevice device, const VkBufferDeviceAddressInfo* pInfo)
++{
++    if (p_vkGetBufferDeviceAddress)
++        return p_vkGetBufferDeviceAddress(device, pInfo);
++    return 0;
++}
 +
++void vkCmdDrawIndirectCount(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
++    VkBuffer countBuffer, VkDeviceSize countBufferOffset, uint32_t maxDrawCount, uint32_t stride)
++{
++    if (p_vkCmdDrawIndirectCount)
++        p_vkCmdDrawIndirectCount(commandBuffer, buffer, offset, countBuffer, countBufferOffset, maxDrawCount, stride);
++}
++
++void vkCmdDrawIndexedIndirectCount(VkCommandBuffer commandBuffer, VkBuffer buffer, VkDeviceSize offset,
++    VkBuffer countBuffer, VkDeviceSize countBufferOffset, uint32_t maxDrawCount, uint32_t stride)
++{
++    if (p_vkCmdDrawIndexedIndirectCount)
++        p_vkCmdDrawIndexedIndirectCount(commandBuffer, buffer, offset, countBuffer, countBufferOffset, maxDrawCount, stride);
++}
++
++}
++#endif
+diff --git a/components/vulkan/vulkanmobiledispatch.hpp b/components/vulkan/vulkanmobiledispatch.hpp
+index e69de29bb2..a0c293cd7c 100644
+--- a/components/vulkan/vulkanmobiledispatch.hpp
++++ b/components/vulkan/vulkanmobiledispatch.hpp
+@@ -0,0 +1,17 @@
++#ifndef OPENMW_COMPONENTS_VULKAN_VULKANMOBILEDISPATCH_H
++#define OPENMW_COMPONENTS_VULKAN_VULKANMOBILEDISPATCH_H
++
++
++// Android and iOS: Vulkan entry points need explicit setup (Android: libvulkan/adrenotools, iOS: MoltenVK)
 +#if defined(ANDROID) || defined(__ANDROID__)
++#define OPENMW_VULKAN_MOBILE 1
 +#include <vulkan/vulkan.h>
 +
 +namespace Vulkan
 +{
-+    void initAndroidInstance(VkInstance instance);
-+    void initAndroidDevice(VkDevice device);
++    void initMobileInstance(VkInstance instance);
++    void initMobileDevice(VkDevice device);
 +}
 +#endif
 +
 +#endif
-diff --git a/components/vulkan/device.cpp b/components/vulkan/device.cpp
-index df49cb662d..b59cfb2128 100644
---- a/components/vulkan/device.cpp
-+++ b/components/vulkan/device.cpp
-@@ -16,6 +16,7 @@
- #include "breadcrumbs.hpp"
- #include "commands.hpp"
- #include "descriptors.hpp"
-+#include "androiddispatch.hpp"
- 
- namespace Vulkan
- {
-@@ -795,6 +796,9 @@ namespace Vulkan
-         createInfo.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
-         createInfo.ppEnabledExtensionNames = extensions.data();
-         check(vkCreateDevice(mPhysical, &createInfo, nullptr, &mDevice), "vkCreateDevice");
-+#if defined(ANDROID) || defined(__ANDROID__)
-+        initAndroidDevice(mDevice);
-+#endif
-         mEnabled.assign(extensions.begin(), extensions.end());
-         if (addresses)
-             instance.hearBindings();
-diff --git a/components/vulkan/instance.cpp b/components/vulkan/instance.cpp
-index 07ca596db2..84e424a7bf 100644
---- a/components/vulkan/instance.cpp
-+++ b/components/vulkan/instance.cpp
-@@ -1,4 +1,5 @@
- #include "instance.hpp"
-+#include "androiddispatch.hpp"
- 
- #include <algorithm>
- #include <array>
-@@ -410,6 +411,9 @@ namespace Vulkan
-         }
- 
-         check(vkCreateInstance(&createInfo, nullptr, &mInstance), "vkCreateInstance");
-+#if defined(ANDROID) || defined(__ANDROID__)
-+        initAndroidInstance(mInstance);
-+#endif
- 
-         // No destructor runs for a failed constructor.
-         try

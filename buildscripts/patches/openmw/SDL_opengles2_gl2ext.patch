@@ -25,21 +25,27 @@ index 20452a894d..d8a3e3eeba 100644
                  glGetIntegerv(GL_CONTEXT_FLAGS, &facts.mGlContextFlags);
          }
 diff --git a/apps/openmw/mwrender/clockwork/frame/postchain.cpp b/apps/openmw/mwrender/clockwork/frame/postchain.cpp
-index 38102f64a1..438c18efe9 100644
+index b4dd96df3c..08293fec1b 100644
 --- a/apps/openmw/mwrender/clockwork/frame/postchain.cpp
 +++ b/apps/openmw/mwrender/clockwork/frame/postchain.cpp
-@@ -13,7 +13,11 @@
- #include <stdexcept>
+@@ -16,7 +16,7 @@
+ #include <unordered_map>
  #include <utility>
-
-+#if defined(ANDROID) || defined(__ANDROID__)
+ 
+-#include <SDL_opengl_glext.h>
 +#include <SDL_opengles2_gl2ext.h>
-+#else
- #include <SDL_opengl_glext.h>
-+#endif
-
+ 
  #include <osg/StateSet>
  #include <osg/Texture>
+@@ -476,7 +476,7 @@ namespace MWRender::Clockwork
+         for (const osg::ref_ptr<osg::Texture>& texture : technique.getTextures())
+         {
+             const GLenum target = texture->getTextureTarget();
+-            const VkImageType type = target == GL_TEXTURE_1D
++            const VkImageType type = target == 0x0DE0
+                 ? VK_IMAGE_TYPE_1D
+                 : (target == GL_TEXTURE_3D ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D);
+             result.mTextures.push_back({ texture->getImage(0), samplerOptions(*texture), type });
 diff --git a/apps/openmw/mwrender/postprocessor.cpp b/apps/openmw/mwrender/postprocessor.cpp
 index 1234567..89abcdef 100644
 --- a/apps/openmw/mwrender/postprocessor.cpp
@@ -86,3 +92,16 @@ index 1234567..89abcdef 100644
 
  #include <components/debug/debuglog.hpp>
  #include <components/files/conversion.hpp>
+diff --git a/apps/openmw/mwrender/sky.cpp b/apps/openmw/mwrender/sky.cpp
+index 917e353cbf..45039a23d0 100644
+--- a/apps/openmw/mwrender/sky.cpp
++++ b/apps/openmw/mwrender/sky.cpp
+@@ -277,7 +277,7 @@ namespace MWRender
+         // render before the world is rendered
+         mEarlyRenderBinRoot->getOrCreateStateSet()->setRenderBinDetails(RenderBin_Sky, "RenderBin");
+         // Prevent unwanted clipping by water reflection camera's clipping plane
+-        mEarlyRenderBinRoot->getOrCreateStateSet()->setMode(GL_CLIP_PLANE0, osg::StateAttribute::OFF);
++        mEarlyRenderBinRoot->getOrCreateStateSet()->setMode(0x3000/*GL_CLIP_PLANE0*/, osg::StateAttribute::OFF);
+ 
+         this->enableSkyRTT(enableSkyRTT);
+ 

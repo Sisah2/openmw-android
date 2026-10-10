@@ -16,6 +16,10 @@
  *******************************************************************************/
 #include <jni.h>
 
+#include <adrenotools/driver.h>
+#include <dlfcn.h>
+#include <string>
+
 /* Called before  to initialize JNI bindings  */
 
 extern void SDL_Android_Init(JNIEnv* env, jclass cls);
@@ -23,6 +27,37 @@ extern int argcData;
 extern const char **argvData;
 void releaseArgv();
 
+
+void* g_vulkanHandle = nullptr;
+
+static std::string withTrailingSlash(std::string dir)
+{
+    if (!dir.empty() && dir.back() != '/')
+        dir += '/';
+    return dir;
+}
+
+bool initVulkanDriver()
+{
+    if (g_vulkanHandle)
+        return true;
+
+    const std::string libDir = withTrailingSlash(getenv("LIB_DIR"));
+    const std::string tmpDir = withTrailingSlash(getenv("TMP_DIR"));
+    const std::string name = "libvulkan_freedreno.so";
+
+    g_vulkanHandle = adrenotools_open_libvulkan(
+        RTLD_NOW, ADRENOTOOLS_DRIVER_CUSTOM, tmpDir.c_str(), libDir.c_str(),
+        libDir.c_str(), name.c_str(), nullptr, nullptr);
+
+    if (!g_vulkanHandle)
+        g_vulkanHandle = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
+
+    if (!g_vulkanHandle)
+        return false;
+
+    return true;
+}
 
 extern "C" int Java_org_libsdl_app_SDLActivity_getMouseX(JNIEnv *env, jclass cls, jobject obj) {
     int ret = 0;
@@ -55,8 +90,10 @@ extern "C" void Java_org_libsdl_app_SDLActivity_sendMouseButton(JNIEnv *env, jcl
 extern "C" int Java_org_libsdl_app_SDLActivity_nativeInit(JNIEnv* env, jclass cls, jobject obj) {
     setenv("OPENMW_DECOMPRESS_TEXTURES", "1", 1);
 
+    initVulkanDriver();
+
     // On Android, we use a virtual controller with guid="Virtual"
-    SDL_GameControllerAddMapping("5669727475616c000000000000000000,Virtual,a:b0,b:b1,back:b15,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b16,leftshoulder:b6,leftstick:b13,lefttrigger:a5,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b14,righttrigger:a4,rightx:a2,righty:a3,start:b11,x:b3,y:b4");
+     SDL_GameControllerAddMapping("5669727475616c000000000000000000,Virtual,a:b0,b:b1,back:b15,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b16,leftshoulder:b6,leftstick:b13,lefttrigger:a5,leftx:a0,lefty:a1,rightshoulder:b7,rightstick:b14,righttrigger:a4,rightx:a2,righty:a3,start:b11,x:b3,y:b4");
 
     SDL_SetHint(SDL_HINT_ANDROID_BLOCK_ON_PAUSE, "0");
     SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");

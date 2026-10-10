@@ -473,6 +473,15 @@ ExternalProject_Add(glad
 
 )
 
+ExternalProject_Add(libadrenotools
+    DOWNLOAD_COMMAND git clone https://github.com/bylaws/libadrenotools --recurse-submodules
+
+    BUILD_COMMAND ${wrapper_command} make
+
+    INSTALL_COMMAND cp libadrenotools.so ${prefix}/lib/
+    COMMAND cp -r ../libadrenotools/include ${prefix}
+)
+
 ExternalProject_Add(glslang
     #URL https://github.com/KhronosGroup/glslang/archive/refs/tags/${GLSLANG_VERSION}.tar.gz
     #URL_HASH ${GLSLANG_HASH}
@@ -568,7 +577,7 @@ set(OSG_PATCH
 	#patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/features.patch &&
 	#patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/textures.patch &&
 	#patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/msaa.patch &&
-	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/glad.patch &&
+	#patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/glad.patch &&
 	patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/osg/0005-CullSettings-make-inheritanceMask-atomic-to-silence-.patch
 )
 
@@ -629,10 +638,10 @@ set(OPENMW_COMMON
 	-DOPENMW_USE_SYSTEM_SQLITE3=OFF
 	-DOPENMW_USE_SYSTEM_YAML_CPP=OFF
 	-DOPENMW_USE_SYSTEM_ICU=ON
-	-DOPENGL_gl_LIBRARY=${prefix}/lib/libglad.so
-	-DOPENGL_INCLUDE_DIR=${prefix}/include/
-        #-DOPENGL_gl_LIBRARY=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/34/libGLESv3.so
-	#-DOPENGL_INCLUDE_DIR=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/
+	#-DOPENGL_gl_LIBRARY=${prefix}/lib/libglad.so
+	#-DOPENGL_INCLUDE_DIR=${prefix}/include/
+        -DOPENGL_gl_LIBRARY=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/34/libGLESv3.so
+	-DOPENGL_INCLUDE_DIR=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/
 	-DVulkan_LIBRARY=${CMAKE_SOURCE_DIR}/toolchain/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/34/libvulkan.so
 	-DOPENAL_INCLUDE_DIR=${prefix}/include/AL/
 	-DBullet_INCLUDE_DIR=${prefix}/include/bullet/
@@ -641,6 +650,8 @@ set(OPENMW_COMMON
 	-DMyGUI_LIBRARY=${prefix}/lib/libMyGUIEngineStatic.a
 	-Dglslang_DIR=<SOURCE_DIR>/cmake
 	#-DSPIRV-Cross_DIR=<SOURCE_DIR>/cmake
+	-DADRENOTOOLS_LIBRARY=${prefix}/lib/libadrenotools.so
+	-DADRENOTOOLS_INCLUDE_DIR=${prefix}/include/
 )
 
 set(OPENMW_PATCH
@@ -651,13 +662,13 @@ set(OPENMW_PATCH
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/bsatool-extract-dds-only.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/base-changes.patch &&
         patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/gui.patch &&
-        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/SDL_opengles2_gl2ext.patch &&
-        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/vulkanAndroid.patch &&
-        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/textures.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/SDL_opengles2_gl2ext.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/libadrenotools.patch &&
+        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/textures.patch &&
         #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/features.patch &&
         #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/misc.patch &&
         #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/spirv.patch &&
-        patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/glad.patch &&
+        #patch -d <SOURCE_DIR> -p1 -t -N < ${CMAKE_SOURCE_DIR}/patches/openmw/glad.patch &&
 	cp ${CMAKE_SOURCE_DIR}/patches/openmw/android_main.cpp <SOURCE_DIR>/apps/openmw/androidmain.cpp &&
 	sed -i -e "s/if(FFmpeg_FOUND)/if(NOT FFmpeg_FOUND)/g" <SOURCE_DIR>/CMakeLists.txt
 )

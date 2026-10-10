@@ -66,16 +66,3 @@ index e6c5814cef..c4d93e0dbd 100644
  
      if (CMAKE_CXX_COMPILER_ID STREQUAL Clang AND NOT APPLE)
          if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 3.6 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 3.6)
-diff --git a/apps/openmw/mwrender/clockwork/frame/postchain.cpp b/apps/openmw/mwrender/clockwork/frame/postchain.cpp
-index 38102f64a1..1116fc5f65 100644
---- a/apps/openmw/mwrender/clockwork/frame/postchain.cpp
-+++ b/apps/openmw/mwrender/clockwork/frame/postchain.cpp
-@@ -381,7 +381,7 @@ namespace MWRender::Clockwork
-         for (const osg::ref_ptr<osg::Texture>& texture : technique.getTextures())
-         {
-             const GLenum target = texture->getTextureTarget();
--            const VkImageType type = target == GL_TEXTURE_1D
-+            const VkImageType type = target == 0x0DE0/*GL_TEXTURE_1D*/
-                 ? VK_IMAGE_TYPE_1D
-                 : (target == GL_TEXTURE_3D ? VK_IMAGE_TYPE_3D : VK_IMAGE_TYPE_2D);
-             result.mTextures.push_back({ texture->getImage(0), samplerOptions(*texture), type });
